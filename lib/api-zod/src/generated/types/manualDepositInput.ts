@@ -10,7 +10,7 @@ import type { ManualDepositInputMethod } from './manualDepositInputMethod';
 export interface ManualDepositInput {
   method: ManualDepositInputMethod;
   /**
-     * @minimum 1500
+     * @minimum 100
      * @maximum 1000000
      */
   amountCents: number;

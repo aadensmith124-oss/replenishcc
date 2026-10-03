@@ -1,5 +1,5 @@
 import { useEffect, useRef, type KeyboardEvent } from 'react';
-import { Activity, Archive, Headphones, PackageCheck, ShieldCheck, Trash2, WalletCards, Megaphone } from 'lucide-react';
+import { Activity, Archive, Headphones, PackageCheck, ShieldCheck, Trash2, WalletCards, Megaphone, TicketPercent } from 'lucide-react';
 import { useGetAuthMe } from '@workspace/api-client-react';
 import { useLocation } from 'wouter';
 import { MemberShell } from '../components/MemberShell';
@@ -8,12 +8,14 @@ import { AdminAnnouncementsPage } from './AdminAnnouncementsPage';
 import { AdminAccountDeletionRequestsPage } from './AccountManagementPages';
 import { AdminLicenseProductsPage } from './LicensePages';
 import { AdminSupportTicketsPage } from './SupportPages';
+import { AdminCouponsPage } from './AdminCouponsPage';
 
 const sections = [
   { id: 'deposits', label: 'Deposits', hint: 'Payment review', icon: WalletCards, legacy: '/admin/deposits' },
   { id: 'announcements', label: 'Announcements', hint: 'Member communications', icon: Megaphone, legacy: '/admin/announcements' },
   { id: 'deletions', label: 'Deletion requests', hint: 'Account review', icon: Trash2, legacy: '/admin/account-deletion-requests' },
   { id: 'inventory', label: 'Log inventory', hint: 'Products & stock', icon: PackageCheck, legacy: '/admin/license-products' },
+  { id: 'coupons', label: 'Coupon codes', hint: 'Store discounts', icon: TicketPercent, legacy: '/admin/dashboard/coupons' },
   { id: 'tickets', label: 'Support inbox', hint: 'Member care', icon: Headphones, legacy: '/admin/support/tickets' },
 ] as const;
 
@@ -59,6 +61,7 @@ export function AdminDashboardPage() {
   const ActiveSection = sectionId === 'announcements' ? AdminAnnouncementsPage
     : sectionId === 'deletions' ? AdminAccountDeletionRequestsPage
       : sectionId === 'inventory' ? AdminLicenseProductsPage
+        : sectionId === 'coupons' ? AdminCouponsPage
         : sectionId === 'tickets' ? AdminSupportTicketsPage : AdminDepositsPage;
 
   return <MemberShell pageTitle="Admin dashboard" user={user} shellMode="force" contentClassName="admin-dashboard-content">

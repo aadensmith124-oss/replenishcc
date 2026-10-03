@@ -701,6 +701,12 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .license-order-label { color: #a99d61; font-size: 8px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 .license-order-head h2 { margin: 6px 0 0; color: #e8ebe4; font: 600 19px var(--app-font-serif); }
 .license-order-total { color: #e0d38d; font: 600 19px var(--app-font-serif); font-variant-numeric: tabular-nums; }
+.license-order-coupon { margin: 7px 0 0; color: #aebd9b; font-size: 9px; }
+.license-coupon-entry { display: grid; grid-template-columns: minmax(150px,.4fr) minmax(220px,.7fr); gap: 6px 12px; align-items: center; max-width: 560px; margin: 0 0 16px; border: 1px solid #344238; border-radius: 8px; padding: 12px; background: #19211b; }
+.license-coupon-entry label { color: #d0d8cc; font-size: 10px; font-weight: 600; }
+.license-coupon-entry label span { color: #879287; font-weight: 400; }
+.license-coupon-entry input { min-height: 38px; border: 1px solid #354139; border-radius: 6px; padding: 8px 10px; color: #e0e6dc; background: #121814; font-size: 11px; text-transform: uppercase; }
+.license-coupon-entry p { grid-column: 1 / -1; margin: 0; color: #89958a; font-size: 9px; }
 .license-order-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 11px; color: #8e998f; font-size: 9px; }
 .license-order-meta span { display: inline-flex; align-items: center; gap: 5px; }.license-order-meta svg { width: 12px; height: 12px; }
 .license-order-description { color: #a0a99f; font-size: 10px; line-height: 1.6; }
@@ -730,6 +736,11 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .license-admin-products { display: grid; gap: 10px; margin-top: 17px; }
 .license-admin-product { border: 1px solid #344037; border-radius: 8px; padding: 14px; background: #171e19; }
 .license-admin-product-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.admin-product-actions { display: flex; align-items: center; gap: 12px; }
+.admin-delete-product { display: inline-flex; align-items: center; gap: 5px; border: 1px solid #59433b; border-radius: 5px; padding: 6px 8px; color: #d8a897; background: #29201d; font-size: 8px; cursor: pointer; }
+.admin-delete-product:hover:not(:disabled) { border-color: #875647; color: #f0c1ae; }
+.admin-delete-product:disabled { opacity: .55; cursor: wait; }
+.admin-delete-product svg { width: 12px; height: 12px; }
 .license-admin-product h3 { margin: 8px 0 0; color: #e4e9df; font: 600 15px var(--app-font-serif); }
 .license-admin-product > p { margin: 8px 0; color: #919c91; font-size: 9px; line-height: 1.6; }
 .admin-product-stock { display: grid; justify-items: end; gap: 2px; }.admin-product-stock strong { color: #d9d28b; font: 600 20px var(--app-font-serif); }.admin-product-stock span { color: #8d998e; font-size: 8px; }
@@ -737,6 +748,28 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .license-admin-product > label { display: flex; justify-content: space-between; gap: 8px; margin-top: 14px; }.license-admin-product > label span { color: #879287; font-weight: 400; }
 .license-admin-product textarea { min-height: 82px; margin-top: 7px; font: 10px/1.6 var(--app-font-mono); }
 .license-stock-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 8px; }.license-stock-foot > span { color: #7f8b81; font-size: 8px; }.license-stock-foot .workspace-secondary-button { min-height: 32px; font-size: 9px; }.license-stock-foot svg { width: 12px; }
+.coupon-admin-layout { display: grid; grid-template-columns: minmax(270px,.8fr) minmax(0,1.3fr); align-items: start; gap: 14px; }
+.coupon-create-panel,.coupon-list-panel { padding: 20px; }
+.coupon-create-panel h2,.coupon-list-panel h2 { margin-top: 7px; }
+.coupon-create-panel > p,.coupon-list-panel .license-stock-panel-heading p { margin: 7px 0 0; color: #929d91; font-size: 10px; line-height: 1.6; }
+.coupon-admin-layout .license-admin-form .license-form-pair { margin-top: 5px; }
+.created-coupon-result { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; border: 1px solid #435b42; border-radius: 7px; padding: 12px; background: #202b21; }
+.created-coupon-result > div { display: grid; gap: 5px; min-width: 0; }
+.created-coupon-result span,.created-coupon-result small { color: #9eaa98; font-size: 9px; }
+.created-coupon-result strong { color: #e1d48d; font: 600 14px var(--app-font-mono); overflow-wrap: anywhere; }
+.created-coupon-result .workspace-secondary-button { min-height: 34px; flex: 0 0 auto; }
+.admin-coupon-list { display: grid; gap: 10px; margin-top: 16px; }
+.admin-coupon-card { border: 1px solid #344037; border-radius: 8px; padding: 13px; background: #171e19; }
+.admin-coupon-card.exhausted { opacity: .68; }
+.admin-coupon-card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.admin-coupon-card-head > div { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.admin-coupon-card-head strong { color: #e2e7dd; font: 600 12px var(--app-font-mono); overflow-wrap: anywhere; }
+.admin-coupon-card .workspace-icon-button { width: 32px; height: 32px; flex: 0 0 auto; }
+.admin-coupon-usage { display: flex; justify-content: space-between; gap: 10px; margin: 12px 0 7px; color: #a7b1a5; font-size: 9px; }
+.admin-coupon-usage strong { color: #d5ca85; font-weight: 500; text-align: right; }
+.admin-coupon-progress { height: 5px; overflow: hidden; border-radius: 5px; background: #2a332c; }
+.admin-coupon-progress i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg,#bca954,#e0d58b); }
+.admin-coupon-card > small { display: block; margin-top: 9px; color: #849084; font-size: 8px; }
 @media (max-width: 900px) {
   .license-product-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .license-admin-layout { grid-template-columns: 1fr; }
@@ -2227,6 +2260,29 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .redeem-create-form .amount-input-wrap input { font-size: 13px; }
 .optional-label { color: #7e897f; font-size: 9px; font-weight: 500; }
 .redeem-create-form .field-assist { line-height: 1.45; }
+.redeem-batch-form { display: grid; grid-template-columns: minmax(130px,.55fr) minmax(160px,.7fr) auto; align-items: end; gap: 12px; margin-top: 16px; border: 1px solid #354139; border-radius: 8px; padding: 14px; background: #171e19; }
+.redeem-batch-heading { grid-column: 1 / -1; display: grid; gap: 4px; }
+.redeem-batch-heading strong { color: #dce3d7; font-size: 11px; }
+.redeem-batch-heading span { color: #8e998c; font-size: 9px; }
+.redeem-batch-form .field-input,.redeem-batch-form .amount-input-wrap { height: 43px; }
+.redeem-batch-form .redeem-create-button { min-height: 43px; }
+.created-code-batch { display: grid; gap: 10px; margin-top: 14px; border: 1px solid #435b42; border-radius: 7px; padding: 12px; background: #202b21; }
+.created-code-batch-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.created-code-batch-heading > div { display: grid; gap: 4px; }
+.created-code-batch-heading strong { color: #dce7d9; font-size: 10px; }
+.created-code-batch-heading small { color: #9eaa98; font-size: 8px; }
+.created-code-batch textarea { width: 100%; min-height: 70px; resize: vertical; border: 1px solid #354139; border-radius: 5px; padding: 9px; color: #e2d78f; background: #121814; font: 10px/1.6 var(--app-font-mono); }
+@media (max-width: 900px) {
+  .coupon-admin-layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .license-coupon-entry { grid-template-columns: 1fr; }
+  .license-coupon-entry p { grid-column: auto; }
+  .admin-product-actions { gap: 7px; }
+  .redeem-batch-form { grid-template-columns: 1fr; align-items: stretch; }
+  .redeem-batch-heading { grid-column: auto; }
+  .redeem-batch-form .redeem-create-button { width: 100%; }
+}
 .redeem-create-button { width: auto; min-width: 180px; min-height: 44px; margin-bottom: 1px; padding: 0 15px; font-size: 11px; }
 .created-code-result { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-top: 16px; border: 1px solid #465a43; border-radius: 7px; padding: 12px 14px; background: #1e291f; }
 .created-code-result span,.created-code-result small { display: block; color: #9eac9a; font-size: 9px; }

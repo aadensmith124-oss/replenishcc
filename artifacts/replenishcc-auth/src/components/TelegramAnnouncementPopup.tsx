@@ -61,7 +61,7 @@ function PopupDialog({ announcement, onDismiss }: { announcement: Announcement; 
           onClick={onDismiss}
           data-testid="link-telegram-channel"
         >
-          Visit Telegram channel <ExternalLink aria-hidden="true" />
+          {announcement.telegramButtonText} <ExternalLink aria-hidden="true" />
         </a>
         <button type="button" className="telegram-popup-secondary" onClick={onDismiss} data-testid="button-later-telegram-popup">
           Maybe later

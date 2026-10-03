@@ -27,7 +27,7 @@ function AnnouncementCard({ item, onAction, busy }: { item: Announcement; onActi
   return <article className={`admin-announcement-card${archived ? ' is-archived' : ''}`} data-testid={`card-announcement-${item.id}`}>
     <div className="admin-announcement-card-top"><div className="announcement-card-badges"><span className={archived ? 'publish-state archived' : 'publish-state'}><i />{archived ? 'Archived' : 'Published'}</span>{item.showAsPopup && <span className="announcement-popup-badge">Telegram pop-up</span>}</div><span className="announcement-created">Created {readableDate(item.createdAt)}</span></div>
     <h3>{item.title}</h3><p>{item.body}</p>
-    {item.showAsPopup && item.telegramUrl && <a className="announcement-telegram-link" href={item.telegramUrl} target="_blank" rel="noopener noreferrer"><ExternalLink aria-hidden="true" /> Telegram channel link</a>}
+    {item.showAsPopup && item.telegramUrl && <a className="announcement-telegram-link" href={item.telegramUrl} target="_blank" rel="noopener noreferrer"><ExternalLink aria-hidden="true" />{item.telegramButtonText}</a>}
     <div className="admin-announcement-card-foot"><span>{archived ? `Archived ${readableDate(item.archivedAt!)}` : `Published ${readableDate(item.publishedAt)}`}</span>
       <button type="button" className={archived ? 'admin-action-button restore-action' : 'admin-action-button'} disabled={busy} onClick={() => onAction(item, archived ? 'restore' : 'archive')} data-testid={`${archived ? 'button-restore' : 'button-archive'}-${item.id}`}>
         {busy ? <LoaderCircle className="spin" aria-hidden="true" /> : archived ? <RotateCcw aria-hidden="true" /> : <Archive aria-hidden="true" />}{archived ? 'Restore' : 'Archive'}
@@ -48,6 +48,7 @@ export function AdminAnnouncementsPage() {
   const [body, setBody] = useState('');
   const [showAsPopup, setShowAsPopup] = useState(false);
   const [telegramUrl, setTelegramUrl] = useState('');
+  const [telegramButtonText, setTelegramButtonText] = useState('Visit Telegram channel');
   const [notice, setNotice] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
   const [filter, setFilter] = useState<'all' | 'published' | 'archived'>('all');
   useEffect(() => { document.title = 'Announcements | ReplenishCC Admin'; }, []);
@@ -71,9 +72,10 @@ export function AdminAnnouncementsPage() {
       return;
     }
     setNotice(null);
-    create.mutate({ data: { title: cleanTitle, body: cleanBody, showAsPopup, telegramUrl: showAsPopup ? cleanTelegramUrl : null } }, {
+    const cleanButtonText = telegramButtonText.trim() || 'Visit Telegram channel';
+    create.mutate({ data: { title: cleanTitle, body: cleanBody, showAsPopup, telegramUrl: showAsPopup ? cleanTelegramUrl : null, telegramButtonText: showAsPopup ? cleanButtonText : null } }, {
       onSuccess: () => {
-        setTitle(''); setBody(''); setShowAsPopup(false); setTelegramUrl('');
+        setTitle(''); setBody(''); setShowAsPopup(false); setTelegramUrl(''); setTelegramButtonText('Visit Telegram channel');
         setNotice({ kind: 'success', text: showAsPopup ? 'Telegram pop-up published. Signed-in members will see it once until dismissed.' : 'Announcement published. Members can now see this update.' });
         void client.invalidateQueries({ queryKey: getGetAnnouncementsQueryKey() });
         void client.invalidateQueries({ queryKey: getGetAdminAnnouncementsQueryKey() });
@@ -116,6 +118,8 @@ export function AdminAnnouncementsPage() {
             {showAsPopup && <>
               <label className="finance-label" htmlFor="announcement-telegram-url">Telegram channel URL</label>
               <input id="announcement-telegram-url" className="announcement-input" type="url" value={telegramUrl} onChange={(event) => setTelegramUrl(event.target.value)} required maxLength={2048} placeholder="https://t.me/yourchannel" data-testid="input-announcement-telegram-url" />
+              <label className="finance-label" htmlFor="announcement-telegram-button-text">Pop-up button text <span>{telegramButtonText.length}/60</span></label>
+              <input id="announcement-telegram-button-text" className="announcement-input" value={telegramButtonText} onChange={(event) => setTelegramButtonText(event.target.value)} required maxLength={60} placeholder="Visit Telegram channel" data-testid="input-announcement-telegram-button-text" />
               <p className="announcement-popup-hint">Use a secure channel link on t.me or telegram.me.</p>
             </>}
             <div className="compose-form-foot"><span>Posts publish immediately.</span><button type="submit" className="workspace-primary-button" disabled={create.isPending} data-testid="button-publish-announcement">{create.isPending ? <LoaderCircle className="spin" aria-hidden="true" /> : <Send aria-hidden="true" />}{create.isPending ? 'Publishing…' : 'Publish update'}</button></div>

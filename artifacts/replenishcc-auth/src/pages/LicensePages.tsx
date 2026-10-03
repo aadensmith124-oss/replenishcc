@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useLocation, Link } from 'wouter';
 import {
   ArrowRight, Check, CircleAlert, Clipboard, Clock3, KeyRound, PackageCheck,
-  Plus, RotateCcw, ShieldCheck, ShoppingBag,
+  Plus, RotateCcw, ShieldCheck, ShoppingBag, Trash2,
 } from 'lucide-react';
 import {
   getGetAdminLicenseProductsQueryKey,
@@ -13,6 +13,7 @@ import {
   useAddAdminLicenseStock,
   useCreateAdminLicenseProduct,
   useCreateLicenseOrder,
+  useDeleteAdminLicenseProduct,
   useGetAdminLicenseProducts,
   useGetAuthMe,
   useGetLicenseProducts,
@@ -25,7 +26,11 @@ const money = (cents: number) => new Intl.NumberFormat('en-US', { style: 'curren
 const date = (value: string) => new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 const logsText = (value: string) => value.replace(/\blicenses\b/gi, 'logs').replace(/\blicense\b/gi, 'log');
 function message(error: unknown) {
-  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') return error.message;
+  if (error && typeof error === 'object') {
+    const candidate = error as { message?: unknown; response?: { data?: { error?: unknown } } };
+    if (typeof candidate.response?.data?.error === 'string') return candidate.response.data.error;
+    if (typeof candidate.message === 'string') return candidate.message;
+  }
   return 'The request could not be completed. Please try again.';
 }
 function useMemberGuard(title: string) {
@@ -48,6 +53,7 @@ export function LicenseProductsPage() {
   const productsQuery = useGetLicenseProducts({ query: { queryKey: getGetLicenseProductsQueryKey(), enabled: Boolean(user) } });
   const purchase = useCreateLicenseOrder();
   const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [couponCode, setCouponCode] = useState('');
   const [notice, setNotice] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
   const [category, setCategory] = useState('All products');
   const products = productsQuery.data?.products ?? [];
@@ -55,14 +61,19 @@ export function LicenseProductsPage() {
   const shown = category === 'All products' ? products : products.filter((p) => p.category === category);
   const buy = (product: LicenseProduct) => {
     const quantity = Math.max(1, Math.min(product.availableCount, Math.floor(quantities[product.id] ?? 1)));
+    const normalizedCoupon = couponCode.trim().toUpperCase();
     setNotice(null);
-    purchase.mutate({ data: { productId: product.id, quantity } }, {
+    purchase.mutate({ data: { productId: product.id, quantity, ...(normalizedCoupon ? { couponCode: normalizedCoupon } : {}) } }, {
       onSuccess: (result) => {
         void client.invalidateQueries({ queryKey: getGetLicenseProductsQueryKey() });
         void client.invalidateQueries({ queryKey: getGetMyLicenseOrdersQueryKey() });
         void client.invalidateQueries({ queryKey: getGetMyDepositsQueryKey() });
-        setNotice({ kind: 'success', text: `${result.order.quantity} ${logsText(result.order.productName)} log${result.order.quantity === 1 ? '' : 's'} purchased. Your logs are ready in order history.` });
+        const savings = result.order.discountCents > 0
+          ? ` Coupon ${result.order.couponCode} saved ${money(result.order.discountCents)}.`
+          : '';
+        setNotice({ kind: 'success', text: `${result.order.quantity} ${logsText(result.order.productName)} log${result.order.quantity === 1 ? '' : 's'} purchased. Your logs are ready in order history.${savings}` });
         setQuantities((current) => ({ ...current, [product.id]: 1 }));
+        setCouponCode('');
       },
       onError: (error) => setNotice({ kind: 'error', text: message(error) }),
     });
@@ -75,6 +86,7 @@ export function LicenseProductsPage() {
       </header>
       {notice && <div className={`license-notice ${notice.kind}`} role={notice.kind === 'error' ? 'alert' : 'status'}>{notice.kind === 'success' ? <Check aria-hidden="true" /> : <CircleAlert aria-hidden="true" />}{notice.text}{notice.kind === 'success' && <Link href="/my-log-orders">View keys</Link>}</div>}
       <div className="license-catalog-top"><label className="license-category">Category<select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Filter products by category" data-testid="select-license-category">{categories.map((item) => <option key={item} value={item}>{logsText(item)}</option>)}</select></label></div>
+      <div className="license-coupon-entry"><label htmlFor="license-coupon-code">Coupon code <span>optional</span></label><input id="license-coupon-code" value={couponCode} onChange={(event) => setCouponCode(event.target.value.toUpperCase())} maxLength={40} autoComplete="off" placeholder="Enter a coupon before purchasing" data-testid="input-license-coupon-code" /><p>The code is applied to your next log purchase if it is valid and still has redemptions available.</p></div>
       {productsQuery.isLoading ? <div className="license-product-grid" aria-label="Loading products" aria-busy="true">{[1, 2, 3].map((n) => <div className="license-card license-card-skeleton" key={n}><i /><i /><i /><i /></div>)}</div>
         : productsQuery.isError ? <QueryError retry={() => void productsQuery.refetch()}>We couldn’t load log products.</QueryError>
           : products.length === 0 ? <div className="license-empty"><div className="license-empty-icon"><ShoppingBag aria-hidden="true" /></div><h2>No logs available yet</h2><p>There are no products in the catalog right now. Please check back later.</p></div>
@@ -87,7 +99,7 @@ export function LicenseProductsPage() {
                   <div className="license-card-price"><strong>{money(product.priceCents)}</strong><span>per log</span></div>
                   <div className="license-buy-row"><label htmlFor={`quantity-${product.id}`}>Quantity</label><input id={`quantity-${product.id}`} type="number" min={1} max={Math.max(1, product.availableCount)} value={quantity} disabled={!product.availableCount} onChange={(e) => setQuantities((current) => ({ ...current, [product.id]: Math.max(1, Math.min(product.availableCount || 1, Number(e.target.value) || 1)) }))} data-testid={`input-quantity-${product.id}`} />
                     <button type="button" className="workspace-primary-button" disabled={!product.availableCount || purchase.isPending} onClick={() => buy(product)} data-testid={`button-buy-license-${product.id}`}>{purchase.isPending && purchase.variables?.data.productId === product.id ? 'Processing…' : 'Purchase'} <ArrowRight aria-hidden="true" /></button>
-                  </div><div className="license-total">Order total <strong>{money(product.priceCents * quantity)}</strong></div>
+                  </div><div className="license-total">Subtotal <strong>{money(product.priceCents * quantity)}</strong></div>
                 </article>;
               })}</div>}
       <div className="license-bottom-note"><ShieldCheck aria-hidden="true" /><span>Every purchase is associated with your signed-in account. Your logs are only shown in your private order history.</span></div>
@@ -114,6 +126,7 @@ export function LicenseOrdersPage() {
             : <div className="license-orders-list">{orders.map((order) => <article className="license-order-card" key={order.id} data-testid={`card-license-order-${order.id}`}>
               <div className="license-order-head"><div><span className="license-order-label">Log order</span><h2>{logsText(order.productName)}</h2></div><span className="license-order-total">{money(order.totalCents)}</span></div>
               <div className="license-order-meta"><span>{order.quantity} log{order.quantity === 1 ? '' : 's'} · {money(order.unitPriceCents)} each</span><span><Clock3 aria-hidden="true" /> {date(order.createdAt)}</span></div>
+              {order.couponCode && <p className="license-order-coupon">Coupon {order.couponCode} · {order.couponPercentOff}% off · saved {money(order.discountCents)}</p>}
               {order.description && <p className="license-order-description">{logsText(order.description)}</p>}
               <div className="license-keys-heading"><strong>Delivered keys</strong><span>{order.deliveredKeys.length} of {order.quantity} delivered</span></div>
               {order.deliveredKeys.length ? <div className="license-keys">{order.deliveredKeys.map((key, index) => {
@@ -133,6 +146,7 @@ export function AdminLicenseProductsPage() {
   const productsQuery = useGetAdminLicenseProducts({ query: { queryKey: getGetAdminLicenseProductsQueryKey(), enabled: Boolean(user?.isDepositAdmin) } });
   const create = useCreateAdminLicenseProduct();
   const addStock = useAddAdminLicenseStock();
+  const deleteProduct = useDeleteAdminLicenseProduct();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
@@ -175,6 +189,18 @@ export function AdminLicenseProductsPage() {
       onError: (error) => setNotice({ kind: 'error', text: message(error) }),
     });
   };
+  const removeProduct = (productId: string, productName: string) => {
+    if (!window.confirm(`Delete "${productName}"? This only works when the product has no inventory or order history.`)) return;
+    setNotice(null);
+    deleteProduct.mutate({ productId }, {
+      onSuccess: () => {
+        setNotice({ kind: 'success', text: `${productName} was deleted.` });
+        void client.invalidateQueries({ queryKey: getGetAdminLicenseProductsQueryKey() });
+        void client.invalidateQueries({ queryKey: getGetLicenseProductsQueryKey() });
+      },
+      onError: (error) => setNotice({ kind: 'error', text: message(error) }),
+    });
+  };
   if (session.isLoading || !user || !user.isDepositAdmin) return <MemberShell pageTitle="Log inventory" user={null} loading />;
   return <MemberShell pageTitle="Log inventory" user={user} contentClassName="member-dashboard-content">
     <div className="workspace-page license-page admin-license-page">
@@ -189,14 +215,14 @@ export function AdminLicenseProductsPage() {
             <button className="workspace-primary-button license-submit" type="submit" disabled={create.isPending} data-testid="button-create-license-product">{create.isPending ? 'Creating…' : 'Create product'} <ArrowRight aria-hidden="true" /></button>
           </form>
         </section>
-        <section className="workspace-panel license-stock-panel"><div className="license-stock-panel-heading"><div><div className="section-kicker">Live catalog</div><h2>Products & stock</h2><p>Available counts reflect actual inventory.</p></div><button className="workspace-icon-button" type="button" onClick={() => void productsQuery.refetch()} disabled={productsQuery.isFetching} aria-label="Refresh product inventory" data-testid="button-refresh-license-inventory"><RotateCcw aria-hidden="true" /></button></div>
+        <section className="workspace-panel license-stock-panel"><div className="license-stock-panel-heading"><div><div className="section-kicker">Live catalog</div><h2>Products & stock</h2><p>Products with inventory or order history are protected from deletion.</p></div><button className="workspace-icon-button" type="button" onClick={() => void productsQuery.refetch()} disabled={productsQuery.isFetching} aria-label="Refresh product inventory" data-testid="button-refresh-license-inventory"><RotateCcw aria-hidden="true" /></button></div>
           {productsQuery.isLoading ? <div className="license-orders-loading" aria-busy="true"><div className="license-order-skeleton"><i /><i /><i /></div><div className="license-order-skeleton"><i /><i /><i /></div></div>
             : productsQuery.isError ? <QueryError retry={() => void productsQuery.refetch()}>We couldn’t load product inventory.</QueryError>
               : products.length === 0 ? <div className="workspace-empty compact"><PackageCheck aria-hidden="true" /><strong>No products created</strong><span>Create the first listing using the form. Products are never pre-populated.</span></div>
                 : <div className="license-admin-products">{products.map((product) => {
                   const lines = (stockText[product.id] ?? '').split(/\r?\n/).filter((line) => line.trim()).length;
                   return <article className="license-admin-product" key={product.id} data-testid={`admin-product-${product.id}`}>
-                    <div className="license-admin-product-head"><div><span className="license-category-tag">{product.category}</span><h3>{product.name}</h3></div><div className="admin-product-stock"><strong>{product.availableCount}</strong><span>available</span></div></div>
+                    <div className="license-admin-product-head"><div><span className="license-category-tag">{product.category}</span><h3>{product.name}</h3></div><div className="admin-product-actions"><div className="admin-product-stock"><strong>{product.availableCount}</strong><span>available</span></div><button className="admin-delete-product" type="button" onClick={() => removeProduct(product.id, product.name)} disabled={deleteProduct.isPending} aria-label={`Delete ${product.name}`} data-testid={`button-delete-license-product-${product.id}`}><Trash2 aria-hidden="true" /> Delete</button></div></div>
                     <p>{product.description}</p><div className="admin-product-price">{money(product.priceCents)} <span>per license</span></div>
                     <label htmlFor={`stock-${product.id}`}>Add keys <span>one key per line · {lines} ready</span></label>
                     <textarea id={`stock-${product.id}`} value={stockText[product.id] ?? ''} onChange={(e) => setStockText((current) => ({ ...current, [product.id]: e.target.value }))} rows={4} placeholder={'XXXXX-XXXXX-XXXXX\nXXXXX-XXXXX-XXXXX'} data-testid={`textarea-stock-${product.id}`} />

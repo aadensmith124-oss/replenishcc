@@ -17,4 +17,9 @@ export interface DepositMethodsInput {
      * @nullable
      */
   chimeHandle: string | null;
+  /**
+     * @minimum 100
+     * @maximum 1000000
+     */
+  minimumAmountCents: number;
 }

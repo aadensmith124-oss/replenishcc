@@ -25,6 +25,8 @@ import type {
   AddLicenseStockInput,
   AddLicenseStockResponse,
   AdminAccountDeletionRequestsResponse,
+  AdminCoupon,
+  AdminCouponsResponse,
   AdminDepositsResponse,
   AdminLicenseProductsResponse,
   AdminRedeemCode,
@@ -37,6 +39,7 @@ import type {
   AuthMeResponse,
   AuthResponse,
   ChangePasswordInput,
+  CreateCouponInput,
   CreateLicenseOrderInput,
   CreateLicenseProductInput,
   CreateRedeemCodeInput,
@@ -60,6 +63,7 @@ import type {
   MyDepositsResponse,
   MyLicenseOrdersResponse,
   NowPaymentsWebhookInput,
+  RedeemCodeBatchInput,
   RedeemCodeInput,
   RedeemCodeResult,
   ReferralSummary,
@@ -2919,7 +2923,7 @@ export const getGetAdminDepositMethodsUrl = () => {
 }
 
 /**
- * @summary Get admin payment-recipient settings
+ * @summary Get admin payment-recipient and minimum-deposit settings
  */
 export const getAdminDepositMethods = async ( options?: Parameters<typeof customFetch>[1]): Promise<DepositMethodsResponse> => {
 
@@ -2966,7 +2970,7 @@ export type GetAdminDepositMethodsQueryError = ErrorType<void>
 
 
 /**
- * @summary Get admin payment-recipient settings
+ * @summary Get admin payment-recipient and minimum-deposit settings
  */
 
 export function useGetAdminDepositMethods<TData = Awaited<ReturnType<typeof getAdminDepositMethods>>, TError = ErrorType<void>>(
@@ -2996,7 +3000,7 @@ export const getUpdateAdminDepositMethodsUrl = () => {
 }
 
 /**
- * @summary Update Cash App and Chime recipient settings
+ * @summary Update payment handles and the minimum deposit threshold
  */
 export const updateAdminDepositMethods = async (depositMethodsInput: DepositMethodsInput, options?: Parameters<typeof customFetch>[1]): Promise<DepositMethodsResponse> => {
 
@@ -3062,7 +3066,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type UpdateAdminDepositMethodsMutationVariables = {data: BodyType<DepositMethodsInput>}
 
     /**
- * @summary Update Cash App and Chime recipient settings
+ * @summary Update payment handles and the minimum deposit threshold
  */
 export const useUpdateAdminDepositMethods = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminDepositMethods>>, TError,UpdateAdminDepositMethodsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -3238,6 +3242,94 @@ export const useCreateAdminRedeemCode = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getCreateAdminRedeemCodeMutationOptions(options));
+    }
+
+export const getCreateAdminRedeemCodeBatchUrl = () => {
+
+
+
+
+  return `/api/admin/redeem-codes/bulk`
+}
+
+/**
+ * @summary Create a batch of one-time balance codes
+ */
+export const createAdminRedeemCodeBatch = async (redeemCodeBatchInput: RedeemCodeBatchInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminRedeemCodesResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AdminRedeemCodesResponse>(getCreateAdminRedeemCodeBatchUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(redeemCodeBatchInput)
+  }
+);}
+
+
+
+
+
+export const getCreateAdminRedeemCodeBatchMutationKey = () => ['createAdminRedeemCodeBatch'] as const;
+
+export const getCreateAdminRedeemCodeBatchMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminRedeemCodeBatch>>, TError,CreateAdminRedeemCodeBatchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAdminRedeemCodeBatch>>, TError,CreateAdminRedeemCodeBatchMutationVariables, TContext> => {
+
+const mutationKey = getCreateAdminRedeemCodeBatchMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminRedeemCodeBatch>>, CreateAdminRedeemCodeBatchMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAdminRedeemCodeBatch(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAdminRedeemCodeBatchMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminRedeemCodeBatch>>>
+    export type CreateAdminRedeemCodeBatchMutationBody = BodyType<RedeemCodeBatchInput>
+    export type CreateAdminRedeemCodeBatchMutationError = ErrorType<void>
+    export type CreateAdminRedeemCodeBatchMutationVariables = {data: BodyType<RedeemCodeBatchInput>}
+
+    /**
+ * @summary Create a batch of one-time balance codes
+ */
+export const useCreateAdminRedeemCodeBatch = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminRedeemCodeBatch>>, TError,CreateAdminRedeemCodeBatchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAdminRedeemCodeBatch>>,
+        TError,
+        CreateAdminRedeemCodeBatchMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateAdminRedeemCodeBatchMutationOptions(options));
     }
 
 export const getRedeemCodeUrl = () => {
@@ -3735,6 +3827,80 @@ export const useCreateAdminLicenseProduct = <TError = ErrorType<void>,
       return useMutation(getCreateAdminLicenseProductMutationOptions(options));
     }
 
+export const getDeleteAdminLicenseProductUrl = (productId: string,) => {
+
+
+
+
+  return `/api/admin/license-products/${productId}`
+}
+
+/**
+ * @summary Delete a product that has no inventory or order history
+ */
+export const deleteAdminLicenseProduct = async (productId: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteAdminLicenseProductUrl(productId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteAdminLicenseProductMutationKey = () => ['deleteAdminLicenseProduct'] as const;
+
+export const getDeleteAdminLicenseProductMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminLicenseProduct>>, TError,DeleteAdminLicenseProductMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAdminLicenseProduct>>, TError,DeleteAdminLicenseProductMutationVariables, TContext> => {
+
+const mutationKey = getDeleteAdminLicenseProductMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAdminLicenseProduct>>, DeleteAdminLicenseProductMutationVariables> = (props) => {
+          const {productId} = props ?? {};
+
+          return  deleteAdminLicenseProduct(productId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAdminLicenseProductMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAdminLicenseProduct>>>
+
+    export type DeleteAdminLicenseProductMutationError = ErrorType<void>
+    export type DeleteAdminLicenseProductMutationVariables = {productId: string}
+
+    /**
+ * @summary Delete a product that has no inventory or order history
+ */
+export const useDeleteAdminLicenseProduct = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminLicenseProduct>>, TError,DeleteAdminLicenseProductMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAdminLicenseProduct>>,
+        TError,
+        DeleteAdminLicenseProductMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteAdminLicenseProductMutationOptions(options));
+    }
+
 export const getAddAdminLicenseStockUrl = (productId: string,) => {
 
 
@@ -3822,5 +3988,170 @@ export const useAddAdminLicenseStock = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getAddAdminLicenseStockMutationOptions(options));
+    }
+
+export const getGetAdminCouponsUrl = () => {
+
+
+
+
+  return `/api/admin/coupons`
+}
+
+/**
+ * @summary List checkout discount coupons for administrators
+ */
+export const getAdminCoupons = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminCouponsResponse> => {
+
+  return customFetch<AdminCouponsResponse>(getGetAdminCouponsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminCouponsQueryKey = () => {
+    return [
+    `/api/admin/coupons`
+    ] as const;
+    }
+
+
+export const getGetAdminCouponsQueryOptions = <TData = Awaited<ReturnType<typeof getAdminCoupons>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminCoupons>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminCouponsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminCoupons>>> = ({ signal }) => getAdminCoupons({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminCoupons>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminCouponsQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminCoupons>>>
+export type GetAdminCouponsQueryError = ErrorType<void>
+
+
+/**
+ * @summary List checkout discount coupons for administrators
+ */
+
+export function useGetAdminCoupons<TData = Awaited<ReturnType<typeof getAdminCoupons>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminCoupons>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminCouponsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateAdminCouponUrl = () => {
+
+
+
+
+  return `/api/admin/coupons`
+}
+
+/**
+ * @summary Create a percentage-off checkout coupon with a redemption cap
+ */
+export const createAdminCoupon = async (createCouponInput: CreateCouponInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminCoupon> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AdminCoupon>(getCreateAdminCouponUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createCouponInput)
+  }
+);}
+
+
+
+
+
+export const getCreateAdminCouponMutationKey = () => ['createAdminCoupon'] as const;
+
+export const getCreateAdminCouponMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminCoupon>>, TError,CreateAdminCouponMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAdminCoupon>>, TError,CreateAdminCouponMutationVariables, TContext> => {
+
+const mutationKey = getCreateAdminCouponMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminCoupon>>, CreateAdminCouponMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAdminCoupon(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAdminCouponMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminCoupon>>>
+    export type CreateAdminCouponMutationBody = BodyType<CreateCouponInput>
+    export type CreateAdminCouponMutationError = ErrorType<void>
+    export type CreateAdminCouponMutationVariables = {data: BodyType<CreateCouponInput>}
+
+    /**
+ * @summary Create a percentage-off checkout coupon with a redemption cap
+ */
+export const useCreateAdminCoupon = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminCoupon>>, TError,CreateAdminCouponMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAdminCoupon>>,
+        TError,
+        CreateAdminCouponMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateAdminCouponMutationOptions(options));
     }
 

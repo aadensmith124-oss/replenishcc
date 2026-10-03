@@ -8,7 +8,7 @@
 
 export interface CryptoDepositInput {
   /**
-     * @minimum 1500
+     * @minimum 100
      * @maximum 1000000
      */
   amountCents: number;

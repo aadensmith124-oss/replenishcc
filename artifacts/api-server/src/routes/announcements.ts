@@ -44,6 +44,7 @@ function serializeAnnouncement(announcement: AnnouncementRecord) {
     archivedAt: announcement.archivedAt,
     showAsPopup: announcement.showAsPopup,
     telegramUrl: announcement.telegramUrl,
+    telegramButtonText: announcement.telegramButtonText,
   };
 }
 
@@ -148,6 +149,10 @@ router.post(
       typeof parsed.data.telegramUrl === "string"
         ? parsed.data.telegramUrl.trim()
         : null;
+    const telegramButtonText =
+      typeof parsed.data.telegramButtonText === "string"
+        ? parsed.data.telegramButtonText.trim()
+        : "";
     if (!title || !body) {
       res.status(400).json({
         error: "Announcement title and message cannot be blank.",
@@ -163,6 +168,10 @@ router.post(
       });
       return;
     }
+    if (showAsPopup && telegramButtonText.length > 60) {
+      res.status(400).json({ error: "Pop-up button text must be 60 characters or fewer." });
+      return;
+    }
 
     const [created] = await db
       .insert(announcementsTable)
@@ -171,6 +180,10 @@ router.post(
         body,
         showAsPopup,
         telegramUrl: showAsPopup ? telegramUrl : null,
+        telegramButtonText:
+          showAsPopup && telegramButtonText
+            ? telegramButtonText
+            : "Visit Telegram channel",
         createdByUserId: user.id,
       })
       .returning();

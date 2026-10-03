@@ -13,4 +13,9 @@ export interface CreateLicenseOrderInput {
      * @maximum 100
      */
   quantity: number;
+  /**
+     * @maxLength 40
+     * @pattern ^[a-zA-Z0-9-]+$
+     */
+  couponCode?: string;
 }

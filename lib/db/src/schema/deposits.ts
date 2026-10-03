@@ -19,6 +19,7 @@ export const depositSettingsTable = pgTable("deposit_settings", {
   id: integer("id").primaryKey().default(1),
   cashAppHandle: varchar("cash_app_handle", { length: 100 }),
   chimeHandle: varchar("chime_handle", { length: 100 }),
+  minimumAmountCents: integer("minimum_amount_cents").notNull().default(1500),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow()

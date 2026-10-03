@@ -19,6 +19,9 @@ export const announcementsTable = pgTable(
     body: text("body").notNull(),
     showAsPopup: boolean("show_as_popup").notNull().default(false),
     telegramUrl: text("telegram_url"),
+    telegramButtonText: varchar("telegram_button_text", { length: 60 })
+      .notNull()
+      .default("Visit Telegram channel"),
     createdByUserId: uuid("created_by_user_id").references(
       () => usersTable.id,
       { onDelete: "set null" },

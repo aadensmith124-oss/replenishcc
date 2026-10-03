@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import {
   getGetAdminDepositMethodsQueryKey, getGetAdminDepositsQueryKey, getGetDepositMethodsQueryKey,
-  getGetAdminRedeemCodesQueryKey, getGetMyDepositsQueryKey, getGetMyReferralSummaryQueryKey, useCreateAdminRedeemCode, useGetAdminRedeemCodes, useCreateCryptoDeposit,
+  getGetAdminRedeemCodesQueryKey, getGetMyDepositsQueryKey, getGetMyReferralSummaryQueryKey, useCreateAdminRedeemCode, useCreateAdminRedeemCodeBatch, useGetAdminRedeemCodes, useCreateCryptoDeposit,
   useCreateManualDeposit, useGetAdminDepositMethods, useGetAdminDeposits, useGetAuthMe,
   useGetCryptoCurrencies, useGetDepositMethods, useGetMyDeposits, useGetMyReferralSummary,
   useReviewDeposit, useUpdateAdminDepositMethods,
@@ -103,7 +103,7 @@ export function DepositsPage() {
     if (config.cashAppHandle) setMethod('cashapp');
     else if (config.chimeHandle) setMethod('chime');
   }, [config, method]);
-  const minimum = config ? Math.max(1500, config.minimumAmountCents) : 1500;
+  const minimum = config?.minimumAmountCents ?? 1500;
   const maximum = config ? Math.min(1_000_000, config.maximumAmountCents) : 1_000_000;
   const methodsError = methods.isError ? <QueryError error={methods.error} retry={() => void methods.refetch()} /> : null;
   const historyError = account.isError ? <QueryError error={account.error} retry={() => void account.refetch()} /> : null;
@@ -365,10 +365,14 @@ function AdminRedeemCodes() {
   const client = useQueryClient();
   const codesQuery = useGetAdminRedeemCodes({ query: { queryKey: getGetAdminRedeemCodesQueryKey() } });
   const createCode = useCreateAdminRedeemCode();
+  const createBatch = useCreateAdminRedeemCodeBatch();
   const [amount, setAmount] = useState('');
   const [code, setCode] = useState('');
+  const [batchAmount, setBatchAmount] = useState('');
+  const [batchCount, setBatchCount] = useState('10');
   const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
   const [createdCode, setCreatedCode] = useState<AdminRedeemCode | null>(null);
+  const [createdBatch, setCreatedBatch] = useState<AdminRedeemCode[]>([]);
   const create = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage(null);
@@ -403,6 +407,39 @@ function AdminRedeemCodes() {
       setMessage({ kind: 'error', text: 'Clipboard unavailable. Select and copy the code manually.' });
     }
   };
+  const createCodeBatch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setMessage(null);
+    setCreatedCode(null);
+    setCreatedBatch([]);
+    const value = Number(batchAmount);
+    const count = Number(batchCount);
+    if (!Number.isInteger(count) || count < 1 || count > 500) {
+      setMessage({ kind: 'error', text: 'Choose a batch size from 1 to 500 codes.' });
+      return;
+    }
+    if (!Number.isFinite(value) || value <= 0 || Math.round(value * 100) < 1 || value > 21_474_836.47) {
+      setMessage({ kind: 'error', text: 'Enter a positive credit amount up to $21,474,836.47.' });
+      return;
+    }
+    createBatch.mutate({ data: { count, amountCents: Math.round(value * 100) } }, {
+      onSuccess: (result) => {
+        setCreatedBatch(result.codes);
+        setBatchAmount('');
+        setMessage({ kind: 'success', text: `${result.codes.length} one-time redeem codes created.` });
+        void client.invalidateQueries({ queryKey: getGetAdminRedeemCodesQueryKey() });
+      },
+      onError: (error) => setMessage({ kind: 'error', text: errorText(error) }),
+    });
+  };
+  const copyBatch = async () => {
+    try {
+      await navigator.clipboard.writeText(createdBatch.map((item) => item.code).join('\n'));
+      setMessage({ kind: 'success', text: `${createdBatch.length} codes copied to clipboard.` });
+    } catch {
+      setMessage({ kind: 'error', text: 'Clipboard unavailable. Select and copy the codes manually.' });
+    }
+  };
   return <section className="finance-panel redeem-admin-panel" aria-labelledby="admin-redeem-title">
     <div className="redeem-admin-head"><div><div className="panel-overline">Member account credits</div><h2 id="admin-redeem-title">Redeem codes</h2><p>Create single-use codes while managing deposits. Each successful redemption is credited directly to the member balance.</p></div><span className="redeem-admin-mark"><Gift aria-hidden="true" /></span></div>
     <form className="redeem-create-form" onSubmit={create} noValidate>
@@ -410,10 +447,20 @@ function AdminRedeemCodes() {
       <div><label className="finance-label" htmlFor="admin-redeem-code">Custom code <span className="optional-label">optional</span></label><input id="admin-redeem-code" className="field-input" value={code} onChange={(event) => setCode(event.target.value.toUpperCase())} maxLength={40} placeholder="Leave blank to generate" autoComplete="off" data-testid="input-admin-redeem-code" /><span className="field-assist">Letters, numbers, and hyphens only. Blank creates a unique code.</span></div>
       <button className="primary-button redeem-create-button" type="submit" disabled={createCode.isPending} data-testid="button-create-redeem-code">{createCode.isPending ? 'Creating code…' : <>Create redeem code <ArrowRight aria-hidden="true" /></>}</button>
     </form>
+    <form className="redeem-batch-form" onSubmit={createCodeBatch} noValidate>
+      <div className="redeem-batch-heading"><strong>Create a batch</strong><span>Each code has the same credit amount and can be redeemed once.</span></div>
+      <div><label className="finance-label" htmlFor="admin-redeem-batch-count">Number of codes</label><input id="admin-redeem-batch-count" className="field-input" type="number" min="1" max="500" step="1" value={batchCount} onChange={(event) => setBatchCount(event.target.value)} required data-testid="input-admin-redeem-batch-count" /></div>
+      <div><label className="finance-label" htmlFor="admin-redeem-batch-amount">Credit per code (USD)</label><div className="amount-input-wrap"><span>$</span><input id="admin-redeem-batch-amount" type="number" min="0.01" max="21474836.47" step="0.01" inputMode="decimal" value={batchAmount} onChange={(event) => setBatchAmount(event.target.value)} placeholder="25.00" required data-testid="input-admin-redeem-batch-amount" /></div></div>
+      <button className="primary-button redeem-create-button" type="submit" disabled={createBatch.isPending} data-testid="button-create-redeem-batch">{createBatch.isPending ? 'Creating batch…' : <>Create codes <ArrowRight aria-hidden="true" /></>}</button>
+    </form>
     {message && <Alert kind={message.kind}>{message.text}</Alert>}
     {createdCode && <div className="created-code-result" role="status" aria-live="polite" data-testid="status-admin-code-created">
       <div><span>New code</span><strong data-testid="text-created-redeem-code">{createdCode.code}</strong><small>{dollars(createdCode.amountCents)} · Available until redeemed</small></div>
       <button className="quiet-button" type="button" onClick={() => void copyCode()} data-testid="button-copy-created-redeem-code"><Copy aria-hidden="true" /> Copy</button>
+    </div>}
+    {createdBatch.length > 0 && <div className="created-code-batch" role="status" aria-live="polite" data-testid="status-admin-code-batch-created">
+      <div className="created-code-batch-heading"><div><strong>{createdBatch.length} new codes</strong><small>{dollars(createdBatch[0]!.amountCents)} credit each · copy and distribute securely</small></div><button className="quiet-button" type="button" onClick={() => void copyBatch()} data-testid="button-copy-redeem-code-batch"><Copy aria-hidden="true" /> Copy all</button></div>
+      <textarea readOnly rows={Math.min(8, createdBatch.length)} value={createdBatch.map((item) => item.code).join('\n')} aria-label="Newly created redeem codes" data-testid="textarea-created-redeem-code-batch" />
     </div>}
     <div className="redeem-code-list-heading"><div><h3>Issued codes</h3><p>Current server record and redemption status.</p></div><button type="button" className="quiet-button" onClick={() => void codesQuery.refetch()} disabled={codesQuery.isFetching} data-testid="button-refresh-redeem-codes"><RefreshCw className={codesQuery.isFetching ? 'spin' : ''} /> Refresh</button></div>
     {codesQuery.isLoading ? <LoadingBlock label="Loading issued redeem codes" /> : codesQuery.isError ? <QueryError error={codesQuery.error} retry={() => void codesQuery.refetch()} /> : !codesQuery.data?.codes.length ? <div className="finance-empty compact-empty" data-testid="empty-admin-redeem-codes"><span className="empty-mark"><Gift /></span><h3>No codes issued</h3><p>Codes you create will appear here with their live redemption status.</p></div> : <div className="redeem-code-table-wrap"><table className="deposit-table redeem-code-table"><thead><tr><th>Code</th><th>Credit</th><th>Status</th><th>Redeemed by</th><th>Created</th></tr></thead><tbody>
@@ -436,6 +483,7 @@ export function AdminDepositsPage() {
   const client = useQueryClient();
   const [cashAppHandle, setCashAppHandle] = useState('');
   const [chimeHandle, setChimeHandle] = useState('');
+  const [minimumAmount, setMinimumAmount] = useState('15.00');
   const [initialized, setInitialized] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
   const [reviewMessage, setReviewMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
@@ -446,6 +494,7 @@ export function AdminDepositsPage() {
     if (!methods.data || initialized) return;
     setCashAppHandle(methods.data.cashAppHandle ?? '');
     setChimeHandle(methods.data.chimeHandle ?? '');
+    setMinimumAmount((methods.data.minimumAmountCents / 100).toFixed(2));
     setInitialized(true);
   }, [methods.data, initialized]);
   if (session.isLoading) return <PortalFrame title="Deposit review"><LoadingBlock label="Checking administrator access" /></PortalFrame>;
@@ -454,8 +503,13 @@ export function AdminDepositsPage() {
   }
   const save = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); setSettingsMessage(null);
-    saveMethods.mutate({ data: { cashAppHandle: cashAppHandle.trim() || null, chimeHandle: chimeHandle.trim() || null } }, {
-      onSuccess: () => { setSettingsMessage({ kind: 'success', text: 'Recipient settings saved.' }); void client.invalidateQueries({ queryKey: getGetDepositMethodsQueryKey() }); void client.invalidateQueries({ queryKey: getGetAdminDepositMethodsQueryKey() }); },
+    const minimumAmountCents = Math.round(Number(minimumAmount) * 100);
+    if (!Number.isFinite(minimumAmountCents) || minimumAmountCents < 100 || minimumAmountCents > 1_000_000) {
+      setSettingsMessage({ kind: 'error', text: 'Set a minimum deposit between $1.00 and $10,000.00.' });
+      return;
+    }
+    saveMethods.mutate({ data: { cashAppHandle: cashAppHandle.trim() || null, chimeHandle: chimeHandle.trim() || null, minimumAmountCents } }, {
+      onSuccess: () => { setSettingsMessage({ kind: 'success', text: 'Deposit settings saved.' }); void client.invalidateQueries({ queryKey: getGetDepositMethodsQueryKey() }); void client.invalidateQueries({ queryKey: getGetAdminDepositMethodsQueryKey() }); },
       onError: (error) => setSettingsMessage({ kind: 'error', text: errorText(error) }),
     });
   };
@@ -489,10 +543,11 @@ export function AdminDepositsPage() {
       </article>)}</div>}
     </section>
     <section className="finance-panel settings-panel" aria-labelledby="recipient-settings-title">
-      <div className="panel-overline">Payment routing</div><h2 id="recipient-settings-title">Recipient settings</h2><p>These handles are shown to members when they create a manual request. Leave blank to make that method unavailable.</p>
+      <div className="panel-overline">Payment routing</div><h2 id="recipient-settings-title">Deposit settings</h2><p>Set available manual payment handles and the minimum deposit members may request. The threshold applies to manual and cryptocurrency deposits.</p>
       {methods.isLoading ? <LoadingBlock label="Loading recipient settings" /> : methods.isError ? <QueryError error={methods.error} retry={() => void methods.refetch()} /> : <form onSubmit={save} className="recipient-settings-form">
         <div><label className="finance-label" htmlFor="admin-cashapp">Cash App handle</label><input id="admin-cashapp" className="field-input" value={cashAppHandle} onChange={(event) => setCashAppHandle(event.target.value)} maxLength={100} placeholder="Leave empty to disable" data-testid="input-admin-cashapp-handle" /></div>
         <div><label className="finance-label" htmlFor="admin-chime">Chime handle</label><input id="admin-chime" className="field-input" value={chimeHandle} onChange={(event) => setChimeHandle(event.target.value)} maxLength={100} placeholder="Leave empty to disable" data-testid="input-admin-chime-handle" /></div>
+        <div><label className="finance-label" htmlFor="admin-minimum-deposit">Minimum deposit (USD)</label><div className="amount-input-wrap"><span>$</span><input id="admin-minimum-deposit" type="number" min="1.00" max="10000.00" step="0.01" inputMode="decimal" value={minimumAmount} onChange={(event) => setMinimumAmount(event.target.value)} required data-testid="input-admin-minimum-deposit" /></div></div>
         {settingsMessage && <Alert kind={settingsMessage.kind}>{settingsMessage.text}</Alert>}
         <button className="primary-button settings-save" type="submit" disabled={saveMethods.isPending || methods.isLoading} data-testid="button-save-recipient-settings">{saveMethods.isPending ? 'Saving…' : <>Save recipient settings <ArrowRight /></>}</button>
       </form>}

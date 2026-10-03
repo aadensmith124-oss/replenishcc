@@ -278,6 +278,8 @@ export const getAnnouncementsResponseAnnouncementsItemBodyMax = 2000;
 
 export const getAnnouncementsResponseAnnouncementsItemTelegramUrlMax = 2048;
 
+export const getAnnouncementsResponseAnnouncementsItemTelegramButtonTextMax = 60;
+
 
 
 export const GetAnnouncementsResponse = zod.object({
@@ -289,7 +291,8 @@ export const GetAnnouncementsResponse = zod.object({
   "publishedAt": zod.coerce.date(),
   "archivedAt": zod.coerce.date().nullable(),
   "showAsPopup": zod.boolean(),
-  "telegramUrl": zod.string().url().max(getAnnouncementsResponseAnnouncementsItemTelegramUrlMax).nullable()
+  "telegramUrl": zod.string().url().max(getAnnouncementsResponseAnnouncementsItemTelegramUrlMax).nullable(),
+  "telegramButtonText": zod.string().max(getAnnouncementsResponseAnnouncementsItemTelegramButtonTextMax)
 }))
 })
 
@@ -325,6 +328,8 @@ export const getAdminAnnouncementsResponseAnnouncementsItemBodyMax = 2000;
 
 export const getAdminAnnouncementsResponseAnnouncementsItemTelegramUrlMax = 2048;
 
+export const getAdminAnnouncementsResponseAnnouncementsItemTelegramButtonTextMax = 60;
+
 
 
 export const GetAdminAnnouncementsResponse = zod.object({
@@ -336,7 +341,8 @@ export const GetAdminAnnouncementsResponse = zod.object({
   "publishedAt": zod.coerce.date(),
   "archivedAt": zod.coerce.date().nullable(),
   "showAsPopup": zod.boolean(),
-  "telegramUrl": zod.string().url().max(getAdminAnnouncementsResponseAnnouncementsItemTelegramUrlMax).nullable()
+  "telegramUrl": zod.string().url().max(getAdminAnnouncementsResponseAnnouncementsItemTelegramUrlMax).nullable(),
+  "telegramButtonText": zod.string().max(getAdminAnnouncementsResponseAnnouncementsItemTelegramButtonTextMax)
 }))
 })
 
@@ -351,13 +357,16 @@ export const createAnnouncementBodyBodyMax = 2000;
 export const createAnnouncementBodyShowAsPopupDefault = false;
 export const createAnnouncementBodyTelegramUrlMax = 2048;
 
+export const createAnnouncementBodyTelegramButtonTextMax = 60;
+
 
 
 export const CreateAnnouncementBody = zod.object({
   "title": zod.string().min(1).max(createAnnouncementBodyTitleMax),
   "body": zod.string().min(1).max(createAnnouncementBodyBodyMax),
   "showAsPopup": zod.boolean().default(createAnnouncementBodyShowAsPopupDefault),
-  "telegramUrl": zod.string().url().max(createAnnouncementBodyTelegramUrlMax).nullish()
+  "telegramUrl": zod.string().url().max(createAnnouncementBodyTelegramUrlMax).nullish(),
+  "telegramButtonText": zod.string().max(createAnnouncementBodyTelegramButtonTextMax).nullish()
 })
 
 export const createAnnouncementResponseTitleMax = 120;
@@ -365,6 +374,8 @@ export const createAnnouncementResponseTitleMax = 120;
 export const createAnnouncementResponseBodyMax = 2000;
 
 export const createAnnouncementResponseTelegramUrlMax = 2048;
+
+export const createAnnouncementResponseTelegramButtonTextMax = 60;
 
 
 
@@ -376,7 +387,8 @@ export const CreateAnnouncementResponse = zod.object({
   "publishedAt": zod.coerce.date(),
   "archivedAt": zod.coerce.date().nullable(),
   "showAsPopup": zod.boolean(),
-  "telegramUrl": zod.string().url().max(createAnnouncementResponseTelegramUrlMax).nullable()
+  "telegramUrl": zod.string().url().max(createAnnouncementResponseTelegramUrlMax).nullable(),
+  "telegramButtonText": zod.string().max(createAnnouncementResponseTelegramButtonTextMax)
 })
 
 
@@ -397,6 +409,8 @@ export const updateAnnouncementResponseBodyMax = 2000;
 
 export const updateAnnouncementResponseTelegramUrlMax = 2048;
 
+export const updateAnnouncementResponseTelegramButtonTextMax = 60;
+
 
 
 export const UpdateAnnouncementResponse = zod.object({
@@ -407,7 +421,8 @@ export const UpdateAnnouncementResponse = zod.object({
   "publishedAt": zod.coerce.date(),
   "archivedAt": zod.coerce.date().nullable(),
   "showAsPopup": zod.boolean(),
-  "telegramUrl": zod.string().url().max(updateAnnouncementResponseTelegramUrlMax).nullable()
+  "telegramUrl": zod.string().url().max(updateAnnouncementResponseTelegramUrlMax).nullable(),
+  "telegramButtonText": zod.string().max(updateAnnouncementResponseTelegramButtonTextMax)
 })
 
 
@@ -683,7 +698,7 @@ export const GetMyDepositsResponse = zod.object({
 /**
  * @summary Create a Cash App or Chime deposit request
  */
-export const createManualDepositBodyAmountCentsMin = 1500;
+export const createManualDepositBodyAmountCentsMin = 100;
 export const createManualDepositBodyAmountCentsMax = 1000000;
 
 
@@ -725,7 +740,7 @@ export const GetCryptoCurrenciesResponse = zod.object({
 /**
  * @summary Create a NOWPayments cryptocurrency payment
  */
-export const createCryptoDepositBodyAmountCentsMin = 1500;
+export const createCryptoDepositBodyAmountCentsMin = 100;
 export const createCryptoDepositBodyAmountCentsMax = 1000000;
 
 export const createCryptoDepositBodyPayCurrencyMin = 2;
@@ -853,7 +868,7 @@ export const ReviewDepositResponse = zod.object({
 
 
 /**
- * @summary Get admin payment-recipient settings
+ * @summary Get admin payment-recipient and minimum-deposit settings
  */
 export const GetAdminDepositMethodsResponse = zod.object({
   "cashAppHandle": zod.string().nullable(),
@@ -865,17 +880,21 @@ export const GetAdminDepositMethodsResponse = zod.object({
 
 
 /**
- * @summary Update Cash App and Chime recipient settings
+ * @summary Update payment handles and the minimum deposit threshold
  */
 export const updateAdminDepositMethodsBodyCashAppHandleMax = 100;
 
 export const updateAdminDepositMethodsBodyChimeHandleMax = 100;
 
+export const updateAdminDepositMethodsBodyMinimumAmountCentsMin = 100;
+export const updateAdminDepositMethodsBodyMinimumAmountCentsMax = 1000000;
+
 
 
 export const UpdateAdminDepositMethodsBody = zod.object({
   "cashAppHandle": zod.string().max(updateAdminDepositMethodsBodyCashAppHandleMax).nullable(),
-  "chimeHandle": zod.string().max(updateAdminDepositMethodsBodyChimeHandleMax).nullable()
+  "chimeHandle": zod.string().max(updateAdminDepositMethodsBodyChimeHandleMax).nullable(),
+  "minimumAmountCents": zod.number().int().min(updateAdminDepositMethodsBodyMinimumAmountCentsMin).max(updateAdminDepositMethodsBodyMinimumAmountCentsMax)
 })
 
 export const UpdateAdminDepositMethodsResponse = zod.object({
@@ -931,6 +950,33 @@ export const CreateAdminRedeemCodeResponse = zod.object({
 
 
 /**
+ * @summary Create a batch of one-time balance codes
+ */
+export const createAdminRedeemCodeBatchBodyCountMax = 500;
+
+export const createAdminRedeemCodeBatchBodyAmountCentsMax = 2147483647;
+
+
+
+export const CreateAdminRedeemCodeBatchBody = zod.object({
+  "count": zod.number().int().min(1).max(createAdminRedeemCodeBatchBodyCountMax),
+  "amountCents": zod.number().int().min(1).max(createAdminRedeemCodeBatchBodyAmountCentsMax)
+})
+
+export const CreateAdminRedeemCodeBatchResponse = zod.object({
+  "codes": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "code": zod.string(),
+  "amountCents": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "redeemedAt": zod.coerce.date().nullable(),
+  "redeemedByName": zod.string().nullable(),
+  "redeemedByEmail": zod.string().email().nullable()
+}))
+})
+
+
+/**
  * @summary Redeem a code and credit the signed-in member's balance
  */
 export const redeemCodeBodyCodeMax = 40;
@@ -969,6 +1015,10 @@ export const GetLicenseProductsResponse = zod.object({
 /**
  * @summary List the signed-in user's license-key orders and delivered keys
  */
+export const getMyLicenseOrdersResponseOrdersItemDiscountCentsMin = 0;
+
+
+
 export const GetMyLicenseOrdersResponse = zod.object({
   "orders": zod.array(zod.object({
   "id": zod.string().uuid(),
@@ -978,6 +1028,9 @@ export const GetMyLicenseOrdersResponse = zod.object({
   "quantity": zod.number().int(),
   "unitPriceCents": zod.number().int(),
   "totalCents": zod.number().int(),
+  "couponCode": zod.string().nullable(),
+  "couponPercentOff": zod.number().int().nullable(),
+  "discountCents": zod.number().int().min(getMyLicenseOrdersResponseOrdersItemDiscountCentsMin),
   "deliveredKeys": zod.array(zod.string()),
   "createdAt": zod.coerce.date()
 }))
@@ -989,12 +1042,21 @@ export const GetMyLicenseOrdersResponse = zod.object({
  */
 export const createLicenseOrderBodyQuantityMax = 100;
 
+export const createLicenseOrderBodyCouponCodeMax = 40;
+
+
+export const createLicenseOrderBodyCouponCodeRegExp = new RegExp('^[a-zA-Z0-9-]+$');
 
 
 export const CreateLicenseOrderBody = zod.object({
   "productId": zod.string().uuid(),
-  "quantity": zod.number().int().min(1).max(createLicenseOrderBodyQuantityMax)
+  "quantity": zod.number().int().min(1).max(createLicenseOrderBodyQuantityMax),
+  "couponCode": zod.string().max(createLicenseOrderBodyCouponCodeMax).regex(createLicenseOrderBodyCouponCodeRegExp).optional()
 })
+
+export const createLicenseOrderResponseOrderDiscountCentsMin = 0;
+
+
 
 export const CreateLicenseOrderResponse = zod.object({
   "order": zod.object({
@@ -1005,6 +1067,9 @@ export const CreateLicenseOrderResponse = zod.object({
   "quantity": zod.number().int(),
   "unitPriceCents": zod.number().int(),
   "totalCents": zod.number().int(),
+  "couponCode": zod.string().nullable(),
+  "couponPercentOff": zod.number().int().nullable(),
+  "discountCents": zod.number().int().min(createLicenseOrderResponseOrderDiscountCentsMin),
   "deliveredKeys": zod.array(zod.string()),
   "createdAt": zod.coerce.date()
 }),
@@ -1060,6 +1125,16 @@ export const CreateAdminLicenseProductResponse = zod.object({
 
 
 /**
+ * @summary Delete a product that has no inventory or order history
+ */
+export const DeleteAdminLicenseProductParams = zod.object({
+  "productId": zod.coerce.string().uuid()
+})
+
+export const DeleteAdminLicenseProductResponse = zod.void()
+
+
+/**
  * @summary Add a batch of license keys to a product's available stock
  */
 export const AddAdminLicenseStockParams = zod.object({
@@ -1079,6 +1154,64 @@ export const AddAdminLicenseStockBody = zod.object({
 export const AddAdminLicenseStockResponse = zod.object({
   "addedCount": zod.number().int(),
   "availableCount": zod.number().int()
+})
+
+
+/**
+ * @summary List checkout discount coupons for administrators
+ */
+export const getAdminCouponsResponseCouponsItemPercentOffMax = 100;
+
+
+export const getAdminCouponsResponseCouponsItemRedemptionCountMin = 0;
+
+
+
+export const GetAdminCouponsResponse = zod.object({
+  "coupons": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "code": zod.string(),
+  "percentOff": zod.number().int().min(1).max(getAdminCouponsResponseCouponsItemPercentOffMax),
+  "maxRedemptions": zod.number().int().min(1),
+  "redemptionCount": zod.number().int().min(getAdminCouponsResponseCouponsItemRedemptionCountMin),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Create a percentage-off checkout coupon with a redemption cap
+ */
+export const createAdminCouponBodyCodeMax = 40;
+
+
+export const createAdminCouponBodyCodeRegExp = new RegExp('^[a-zA-Z0-9-]+$');
+export const createAdminCouponBodyPercentOffMax = 100;
+
+export const createAdminCouponBodyMaxRedemptionsMax = 1000000;
+
+
+
+export const CreateAdminCouponBody = zod.object({
+  "code": zod.string().min(1).max(createAdminCouponBodyCodeMax).regex(createAdminCouponBodyCodeRegExp).optional(),
+  "percentOff": zod.number().int().min(1).max(createAdminCouponBodyPercentOffMax),
+  "maxRedemptions": zod.number().int().min(1).max(createAdminCouponBodyMaxRedemptionsMax)
+})
+
+export const createAdminCouponResponsePercentOffMax = 100;
+
+
+export const createAdminCouponResponseRedemptionCountMin = 0;
+
+
+
+export const CreateAdminCouponResponse = zod.object({
+  "id": zod.string().uuid(),
+  "code": zod.string(),
+  "percentOff": zod.number().int().min(1).max(createAdminCouponResponsePercentOffMax),
+  "maxRedemptions": zod.number().int().min(1),
+  "redemptionCount": zod.number().int().min(createAdminCouponResponseRedemptionCountMin),
+  "createdAt": zod.coerce.date()
 })
 
 

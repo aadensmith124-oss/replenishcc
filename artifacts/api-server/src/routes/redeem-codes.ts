@@ -4,6 +4,7 @@ import { Router, type IRouter } from "express";
 import {
   CreateAdminRedeemCodeBody,
   CreateAdminRedeemCodeResponse,
+  CreateAdminRedeemCodeBatchBody,
   GetAdminRedeemCodesResponse,
   RedeemCodeBody,
   RedeemCodeResponse,
@@ -119,6 +120,94 @@ router.post("/admin/redeem-codes", async (req, res): Promise<void> => {
 
   res.status(503).json({ error: "A unique redemption code could not be created. Try again." });
 });
+
+router.post(
+  "/admin/redeem-codes/bulk",
+  async (req, res): Promise<void> => {
+    const user = await getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: "Sign in to create redemption codes." });
+      return;
+    }
+    if (!isDepositAdmin(user)) {
+      res.status(403).json({ error: "Admin access is required." });
+      return;
+    }
+
+    const parsed = CreateAdminRedeemCodeBatchBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Enter a valid batch size and positive amount." });
+      return;
+    }
+
+    const created = await db
+      .transaction(async (tx) => {
+        const rows: Array<{
+          id: string;
+          code: string;
+          amountCents: number;
+          createdAt: Date;
+        }> = [];
+        const batchCodes = new Set<string>();
+
+        for (let attempt = 0; attempt < 6 && rows.length < parsed.data.count; attempt += 1) {
+          const values = [];
+          while (values.length < parsed.data.count - rows.length) {
+            const code = randomBytes(8).toString("hex").toUpperCase();
+            if (batchCodes.has(code)) continue;
+            batchCodes.add(code);
+            values.push({
+              code,
+              amountCents: parsed.data.amountCents,
+              createdByUserId: user.id,
+            });
+          }
+
+          const inserted = await tx
+            .insert(redeemCodesTable)
+            .values(values)
+            .onConflictDoNothing({ target: redeemCodesTable.code })
+            .returning({
+              id: redeemCodesTable.id,
+              code: redeemCodesTable.code,
+              amountCents: redeemCodesTable.amountCents,
+              createdAt: redeemCodesTable.createdAt,
+            });
+          rows.push(...inserted);
+        }
+
+        if (rows.length !== parsed.data.count) {
+          throw new Error("REDEEM_CODE_BATCH_FAILED");
+        }
+        return rows;
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Error && error.message === "REDEEM_CODE_BATCH_FAILED") {
+          return null;
+        }
+        throw error;
+      });
+
+    if (!created) {
+      res.status(503).json({
+        error: "A full batch of unique codes could not be created. Try again.",
+      });
+      return;
+    }
+
+    res.status(201).json(
+      GetAdminRedeemCodesResponse.parse({
+        codes: created.map((item) => ({
+          ...item,
+          createdAt: item.createdAt.toISOString(),
+          redeemedAt: null,
+          redeemedByName: null,
+          redeemedByEmail: null,
+        })),
+      }),
+    );
+  },
+);
 
 router.post(
   "/redeem-codes/redeem",

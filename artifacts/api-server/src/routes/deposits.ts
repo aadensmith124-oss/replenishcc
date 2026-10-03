@@ -37,7 +37,6 @@ import { createRateLimit } from "../middlewares/rate-limit";
 import { getCurrentUser, isDepositAdmin } from "../lib/auth";
 
 const router: IRouter = Router();
-const MINIMUM_AMOUNT_CENTS = 1_500;
 const MAXIMUM_AMOUNT_CENTS = 1_000_000;
 const REFERRAL_MINIMUM_AMOUNT_CENTS = 10_000;
 const REFERRAL_REWARD_PERCENT = 5;
@@ -260,7 +259,7 @@ router.get("/deposits/methods", async (req, res): Promise<void> => {
       cashAppHandle: settings.cashAppHandle,
       chimeHandle: settings.chimeHandle,
       nowPaymentsConfigured: configuredNowPayments(),
-      minimumAmountCents: MINIMUM_AMOUNT_CENTS,
+      minimumAmountCents: settings.minimumAmountCents,
       maximumAmountCents: MAXIMUM_AMOUNT_CENTS,
     }),
   );
@@ -310,6 +309,12 @@ router.post(
     }
 
     const settings = await getDepositSettings();
+    if (parsed.data.amountCents < settings.minimumAmountCents) {
+      res.status(400).json({
+        error: `The minimum deposit is $${(settings.minimumAmountCents / 100).toFixed(2)}.`,
+      });
+      return;
+    }
     const recipient =
       parsed.data.method === "cashapp"
         ? settings.cashAppHandle
@@ -382,6 +387,14 @@ router.post(
     const parsed = CreateCryptoDepositBody.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Enter a valid deposit amount and currency." });
+      return;
+    }
+
+    const settings = await getDepositSettings();
+    if (parsed.data.amountCents < settings.minimumAmountCents) {
+      res.status(400).json({
+        error: `The minimum deposit is $${(settings.minimumAmountCents / 100).toFixed(2)}.`,
+      });
       return;
     }
 
@@ -831,7 +844,7 @@ router.get("/admin/deposit-methods", async (req, res): Promise<void> => {
       cashAppHandle: settings.cashAppHandle,
       chimeHandle: settings.chimeHandle,
       nowPaymentsConfigured: configuredNowPayments(),
-      minimumAmountCents: MINIMUM_AMOUNT_CENTS,
+      minimumAmountCents: settings.minimumAmountCents,
       maximumAmountCents: MAXIMUM_AMOUNT_CENTS,
     }),
   );
@@ -850,18 +863,24 @@ router.put("/admin/deposit-methods", async (req, res): Promise<void> => {
 
   const parsed = UpdateAdminDepositMethodsBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "Enter valid payment handles." });
+    res.status(400).json({ error: "Enter valid payment settings." });
     return;
   }
 
   const cashAppHandle = parsed.data.cashAppHandle?.trim() || null;
   const chimeHandle = parsed.data.chimeHandle?.trim() || null;
+  const minimumAmountCents = parsed.data.minimumAmountCents;
   await db
     .insert(depositSettingsTable)
-    .values({ id: 1, cashAppHandle, chimeHandle })
+    .values({ id: 1, cashAppHandle, chimeHandle, minimumAmountCents })
     .onConflictDoUpdate({
       target: depositSettingsTable.id,
-      set: { cashAppHandle, chimeHandle, updatedAt: new Date() },
+      set: {
+        cashAppHandle,
+        chimeHandle,
+        minimumAmountCents,
+        updatedAt: new Date(),
+      },
     });
   const settings = await getDepositSettings();
   res.json(
@@ -869,7 +888,7 @@ router.put("/admin/deposit-methods", async (req, res): Promise<void> => {
       cashAppHandle: settings.cashAppHandle,
       chimeHandle: settings.chimeHandle,
       nowPaymentsConfigured: configuredNowPayments(),
-      minimumAmountCents: MINIMUM_AMOUNT_CENTS,
+      minimumAmountCents: settings.minimumAmountCents,
       maximumAmountCents: MAXIMUM_AMOUNT_CENTS,
     }),
   );

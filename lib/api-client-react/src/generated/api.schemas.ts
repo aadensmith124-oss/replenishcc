@@ -49,6 +49,8 @@ export interface Announcement {
      * @nullable
      */
   telegramUrl: string | null;
+  /** @maxLength 60 */
+  telegramButtonText: string;
 }
 
 export type SupportTicketCategory = typeof SupportTicketCategory[keyof typeof SupportTicketCategory];
@@ -273,6 +275,11 @@ export interface AnnouncementInput {
      * @nullable
      */
   telegramUrl?: string | null;
+  /**
+     * @maxLength 60
+     * @nullable
+     */
+  telegramButtonText?: string | null;
 }
 
 export type AnnouncementStatusInputAction = typeof AnnouncementStatusInputAction[keyof typeof AnnouncementStatusInputAction];
@@ -583,6 +590,11 @@ export interface DepositMethodsInput {
      * @nullable
      */
   chimeHandle: string | null;
+  /**
+     * @minimum 100
+     * @maximum 1000000
+     */
+  minimumAmountCents: number;
 }
 
 export interface MyDepositsResponse {
@@ -605,7 +617,7 @@ export const ManualDepositInputMethod = {
 export interface ManualDepositInput {
   method: ManualDepositInputMethod;
   /**
-     * @minimum 1500
+     * @minimum 100
      * @maximum 1000000
      */
   amountCents: number;
@@ -613,7 +625,7 @@ export interface ManualDepositInput {
 
 export interface CryptoDepositInput {
   /**
-     * @minimum 1500
+     * @minimum 100
      * @maximum 1000000
      */
   amountCents: number;
@@ -661,6 +673,19 @@ export interface AdminRedeemCodesResponse {
   codes: AdminRedeemCode[];
 }
 
+export interface RedeemCodeBatchInput {
+  /**
+     * @minimum 1
+     * @maximum 500
+     */
+  count: number;
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  amountCents: number;
+}
+
 export interface CreateRedeemCodeInput {
   /**
      * @minLength 1
@@ -673,6 +698,44 @@ export interface CreateRedeemCodeInput {
      * @maximum 2147483647
      */
   amountCents: number;
+}
+
+export interface AdminCoupon {
+  id: string;
+  code: string;
+  /**
+     * @minimum 1
+     * @maximum 100
+     */
+  percentOff: number;
+  /** @minimum 1 */
+  maxRedemptions: number;
+  /** @minimum 0 */
+  redemptionCount: number;
+  createdAt: string;
+}
+
+export interface AdminCouponsResponse {
+  coupons: AdminCoupon[];
+}
+
+export interface CreateCouponInput {
+  /**
+     * @minLength 1
+     * @maxLength 40
+     * @pattern ^[a-zA-Z0-9-]+$
+     */
+  code?: string;
+  /**
+     * @minimum 1
+     * @maximum 100
+     */
+  percentOff: number;
+  /**
+     * @minimum 1
+     * @maximum 1000000
+     */
+  maxRedemptions: number;
 }
 
 export interface RedeemCodeInput {
@@ -766,6 +829,11 @@ export interface CreateLicenseOrderInput {
      * @maximum 100
      */
   quantity: number;
+  /**
+     * @maxLength 40
+     * @pattern ^[a-zA-Z0-9-]+$
+     */
+  couponCode?: string;
 }
 
 export interface LicenseOrder {
@@ -776,6 +844,12 @@ export interface LicenseOrder {
   quantity: number;
   unitPriceCents: number;
   totalCents: number;
+  /** @nullable */
+  couponCode: string | null;
+  /** @nullable */
+  couponPercentOff: number | null;
+  /** @minimum 0 */
+  discountCents: number;
   deliveredKeys: string[];
   createdAt: string;
 }

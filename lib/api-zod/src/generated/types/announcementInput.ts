@@ -23,4 +23,9 @@ export interface AnnouncementInput {
      * @nullable
      */
   telegramUrl?: string | null;
+  /**
+     * @maxLength 60
+     * @nullable
+     */
+  telegramButtonText?: string | null;
 }

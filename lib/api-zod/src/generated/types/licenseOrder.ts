@@ -14,6 +14,12 @@ export interface LicenseOrder {
   quantity: number;
   unitPriceCents: number;
   totalCents: number;
+  /** @nullable */
+  couponCode: string | null;
+  /** @nullable */
+  couponPercentOff: number | null;
+  /** @minimum 0 */
+  discountCents: number;
   deliveredKeys: string[];
   createdAt: Date;
 }

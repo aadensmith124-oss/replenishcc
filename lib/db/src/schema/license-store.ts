@@ -46,6 +46,9 @@ export const licenseOrdersTable = pgTable(
     quantity: integer("quantity").notNull(),
     unitPriceCents: integer("unit_price_cents").notNull(),
     totalCents: integer("total_cents").notNull(),
+    couponCode: varchar("coupon_code", { length: 40 }),
+    couponPercentOff: integer("coupon_percent_off"),
+    discountCents: integer("discount_cents").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
