@@ -25,7 +25,12 @@ channel = "stable-25_05"
 [userenv]
 
 [userenv.shared]
+
+[userenv.production]
 DEPOSIT_ADMIN_EMAILS = "noitactb@gnail.com"
+
+[userenv.development]
+DEPOSIT_ADMIN_EMAILS = "noitactb@gnail.com, noitactv@gmail.com"
 
 [[ports]]
 localPort = 8080
