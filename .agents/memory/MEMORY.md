@@ -1,1 +1,1 @@
-- [Dashboard data integrity](dashboard-data-integrity.md) — ReplenishCC dashboard pages should use real session/service data and keep unfinished destinations unavailable.
+- [Dashboard data integrity](dashboard-data-integrity.md) — Use real ReplenishCC data; adapt reference images without importing SpiderCC branding or payment details.
