@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "ReplenishCC Authentication"
+description = "A responsive ReplenishCC account portal with secure registration, sign-in, password recovery, legal information, and a protected dashboard."
+version = "1.0.0"
+id = "artifacts/replenishcc-auth"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25369
+
+[services.development]
+run = "pnpm --filter @workspace/replenishcc-auth run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/replenishcc-auth", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/replenishcc-auth/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25369"
+BASE_PATH = "/"

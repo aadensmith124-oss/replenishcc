@@ -1,0 +1,395 @@
+Absolutely — here’s a copy/paste-ready Replit prompt designed to build the first version of ReplenishCC as a fully functional authentication site, while leaving the rest of the platform ready to be added later.
+
+Build a fully functional, production-ready login/authentication website called:
+REPLENISHCC
+IMPORTANT:
+The uploaded screenshots are visual references for the overall layout, spacing, mobile responsiveness, authentication flow, and dark aesthetic. Do NOT copy the original site's branding, name, logo, colors, or text. Rebrand everything as ReplenishCC.
+==================================================
+CORE GOAL
+==================================================
+For this first version, ONLY build the authentication portion of the website.
+The rest of the ReplenishCC website will be added in future updates, so create the project architecture in a way that makes it easy to add a dashboard, marketplace, account pages, etc. later.
+The authentication system must actually work. Do not create fake buttons or frontend-only forms.
+==================================================
+BRAND / DESIGN
+==================================================
+Brand name:
+ReplenishCC
+Color scheme:
+- Primary background: near-black (#050505 / #080808)
+- Secondary background: dark charcoal (#111111)
+- Cards: #0D0D0D
+- Borders: subtle dark gray
+- Primary accent: metallic/warm gold
+- Gold highlight: #D4AF37
+- Bright gold: #F0C75E
+- Main text: white
+- Secondary text: muted gray
+The overall appearance should feel:
+- Premium
+- Modern
+- Minimal
+- Secure
+- Professional
+- Dark luxury aesthetic
+Use gold sparingly for buttons, links, borders, highlights, and branding.
+Do NOT use the red buttons from the reference screenshots.
+==================================================
+RESPONSIVE DESIGN
+==================================================
+The site must be fully responsive.
+Prioritize mobile because many users will access ReplenishCC from phones.
+Desktop:
+- Centered authentication card
+- Large amount of breathing room
+- Subtle background effects
+Mobile:
+- Authentication card should fit the screen naturally
+- No horizontal scrolling
+- Inputs should be easy to tap
+- Buttons should be large enough for touch
+- Typography should scale appropriately
+- Footer should remain usable
+Make sure the layout works on:
+- iPhone
+- Android
+- Tablets
+- Desktop
+- Large monitors
+==================================================
+LOGIN PAGE
+==================================================
+Create:
+/login
+Page structure:
+Top:
+ReplenishCC logo/wordmark.
+If no logo asset is available, create a clean temporary ReplenishCC wordmark using typography and a simple gold icon. Structure the code so a real logo can easily replace it later.
+Main card:
+"Welcome back"
+Subtitle:
+"Sign in to your ReplenishCC account"
+Fields:
+Email
+- Required
+- Proper email validation
+- Placeholder: "Enter your email"
+Password
+- Required
+- Password input
+- Show/hide password button
+- Placeholder: "Enter your password"
+Checkbox:
+"Remember me"
+Link:
+"Forgot password?"
+Button:
+"Sign In"
+Below the button:
+"Don't have an account? Sign up"
+The Sign Up link should go to:
+/register
+==================================================
+LOGIN FUNCTIONALITY
+==================================================
+The login system must actually authenticate users.
+Use a secure authentication system.
+Preferred stack:
+Frontend:
+- React
+- TypeScript
+- Tailwind CSS
+Backend:
+- Node.js
+- Express
+Database:
+- PostgreSQL
+Authentication:
+- Secure session or JWT-based authentication
+- Passwords MUST be securely hashed using bcrypt/argon2
+- Never store plaintext passwords
+The login endpoint should:
+1. Validate email
+2. Validate password
+3. Find the user
+4. Compare the hashed password
+5. Create an authenticated session/token
+6. Return the authenticated user
+7. Redirect to the future dashboard route
+For now, after successful login redirect to:
+/dashboard
+Create a temporary dashboard placeholder that says:
+"Welcome to ReplenishCC"
+"Your dashboard is coming soon."
+Include a logout button.
+==================================================
+REGISTER PAGE
+==================================================
+Create:
+/register
+Design it consistently with /login.
+Fields:
+Full Name
+Email
+Password
+Confirm Password
+Optional:
+Username
+Include:
+- Password strength indicator
+- Password confirmation validation
+- Required field validation
+- Email validation
+Button:
+"Create Account"
+Below:
+"Already have an account? Sign in"
+The registration system must actually create a user in PostgreSQL.
+Passwords must be securely hashed.
+Prevent duplicate email registrations.
+==================================================
+FORGOT PASSWORD
+==================================================
+Create:
+/forgot-password
+Design:
+"Forgot your password?"
+Subtitle:
+"Enter your email address and we'll send you a link to reset your password."
+Email field
+Button:
+"Send Reset Link"
+After submission show an appropriate success message.
+Implement the backend password-reset flow properly.
+Generate secure, expiring reset tokens.
+Do NOT reveal whether an email exists in the database.
+For development, if real email sending is not configured yet, create a clear development mode that logs the reset URL server-side without exposing sensitive information in the frontend.
+Create:
+/reset-password/:token
+Allow users to create a new password.
+==================================================
+LEGAL PAGES
+==================================================
+Create:
+/privacy
+/terms
+Use professional placeholder legal content that can easily be replaced later.
+Privacy Policy should contain sections such as:
+1. Information We Collect
+2. How We Use Information
+3. Information Sharing
+4. Data Security
+5. Your Rights
+6. Cookies and Tracking
+7. Changes to This Policy
+Terms of Service should contain:
+1. Acceptance of Terms
+2. Use License
+3. User Account
+4. Prohibited Uses
+5. Limitation of Liability
+6. Changes to Terms
+At the bottom of both pages include navigation back to the authentication pages.
+IMPORTANT:
+These are placeholder legal documents for development. Clearly structure the content so it can be replaced with finalized legal language later.
+==================================================
+AUTHENTICATION SECURITY
+==================================================
+Implement reasonable security practices:
+- Password hashing
+- Secure sessions/tokens
+- HTTP-only authentication cookies if using cookies
+- CSRF protection where applicable
+- Input validation
+- Server-side validation
+- Rate limiting on login
+- Rate limiting on password reset
+- Protection against SQL injection
+- Protection against XSS
+- Generic login error messages
+- Do not expose passwords or password-reset tokens in logs unnecessarily
+- Never send password hashes to the frontend
+- Secure logout
+- Session expiration
+Do not hardcode database passwords, API keys, secrets, or credentials.
+Use environment variables.
+Create a .env.example file showing the required variables without real secrets.
+==================================================
+ERROR / SUCCESS STATES
+==================================================
+Make the UI polished.
+Examples:
+Invalid email:
+"Please enter a valid email address."
+Incorrect login:
+"Invalid email or password."
+Successful login:
+Redirect to dashboard.
+Successful registration:
+Automatically log the user in OR redirect them to login with a success message.
+Forgot password:
+" If an account exists for that email, you'll receive a password reset link shortly."
+Loading:
+Disable buttons and show a subtle loading indicator while requests are processing.
+Never allow users to accidentally submit the same form multiple times.
+==================================================
+NAVIGATION
+==================================================
+Authentication pages should have links between:
+Login
+Register
+Forgot Password
+Privacy Policy
+Terms of Service
+Footer:
+© 2026 ReplenishCC
+Privacy Policy • Terms of Service
+==================================================
+VISUAL DETAILS
+==================================================
+Add subtle premium effects:
+- Very subtle gold glow
+- Soft gradient background
+- Subtle card shadow
+- Smooth hover transitions
+- Gold focus rings on inputs
+- Elegant button hover animation
+- Smooth page transitions where appropriate
+Avoid:
+- Excessive animations
+- Bright neon colors
+- Clutter
+- Huge gradients
+- Generic bootstrap styling
+The interface should feel like a real premium platform rather than a template.
+==================================================
+ACCESSIBILITY
+==================================================
+Implement:
+- Proper labels for every input
+- Keyboard navigation
+- Visible focus states
+- Appropriate ARIA labels
+- Good color contrast
+- Accessible buttons
+- Screen-reader-friendly error messages
+==================================================
+PROJECT STRUCTURE
+==================================================
+Organize the code cleanly.
+Example:
+/client
+  /src
+    /components
+    /pages
+    /layouts
+    /hooks
+    /lib
+    /styles
+/server
+  /routes
+  /controllers
+  /middleware
+  /services
+  /database
+  /utils
+Keep authentication logic separate from UI logic.
+Make the architecture easy to expand later with:
+- Dashboard
+- User profiles
+- Marketplace
+- Products
+- Orders
+- Wallet
+- Notifications
+- Admin panel
+- Settings
+Do NOT build those features yet.
+==================================================
+DATABASE
+==================================================
+Create a users table containing at minimum:
+id
+full_name
+username
+email
+password_hash
+created_at
+updated_at
+Add appropriate indexes and unique constraints.
+If using PostgreSQL, configure the project so Replit can connect through an environment variable such as:
+DATABASE_URL
+==================================================
+API
+==================================================
+Create clean API endpoints such as:
+POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/logout
+GET /api/auth/me
+POST /api/auth/forgot-password
+POST /api/auth/reset-password
+Return consistent JSON responses.
+Do not expose sensitive database information.
+==================================================
+DASHBOARD PLACEHOLDER
+==================================================
+Create:
+/dashboard
+This is only a placeholder for now.
+Display:
+ReplenishCC
+"Welcome to ReplenishCC"
+"Your dashboard is currently under development."
+Logout button.
+Protect this route so unauthenticated users are redirected to /login.
+==================================================
+MOBILE UI
+==================================================
+Pay special attention to mobile.
+The authentication experience should look polished at approximately:
+390px × 844px
+and should not feel like a desktop website squeezed onto a phone.
+Use responsive spacing and typography.
+Inputs should be at least comfortable touch size.
+==================================================
+IMPORTANT DEVELOPMENT RULES
+==================================================
+Do NOT use fake authentication.
+Do NOT create a fake login that always succeeds.
+Do NOT store passwords in plaintext.
+Do NOT put secrets in frontend code.
+Do NOT use hardcoded user credentials.
+Do NOT build the rest of the platform yet.
+Build the authentication foundation correctly so future updates can build on it.
+==================================================
+FINAL REQUIREMENT
+==================================================
+Before considering the task complete:
+1. Install all required dependencies.
+2. Configure the database.
+3. Create database migrations/schema.
+4. Start the application successfully.
+5. Test registration.
+6. Test login.
+7. Test logout.
+8. Test protected dashboard access.
+9. Test forgot-password flow.
+10. Test password reset.
+11. Test invalid credentials.
+12. Test duplicate email registration.
+13. Test mobile responsiveness.
+14. Fix all console errors.
+15. Fix all server errors.
+16. Make sure there are no broken links.
+17. Make sure the app can be run from Replit without manual code changes.
+When finished, give me:
+- The final project structure
+- How authentication works
+- Required environment variables
+- Database setup instructions
+- How to run the project
+- A summary of what was completed
+Do not move on to building the rest of ReplenishCC until the authentication system is fully working.
+
+Recommended first Replit milestone: get /login, /register, /forgot-password, PostgreSQL authentication, and the protected /dashboard working first. Then the rest of ReplenishCC can be built on top of that foundation.
