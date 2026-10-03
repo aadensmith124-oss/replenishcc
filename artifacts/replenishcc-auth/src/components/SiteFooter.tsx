@@ -1,7 +1,7 @@
 import { getHealthCheckQueryKey, useHealthCheck } from '@workspace/api-client-react';
 import { Link } from 'wouter';
 
-export function SiteFooter({ homeHref = '/login' }: { homeHref?: string }) {
+export function SiteFooter() {
   const health = useHealthCheck({
     query: {
       queryKey: getHealthCheckQueryKey(),
@@ -35,10 +35,6 @@ export function SiteFooter({ homeHref = '/login' }: { homeHref?: string }) {
         <a href="/api/healthz" target="_blank" rel="noreferrer" data-testid="link-footer-status">Status</a>
       </nav>
       <small className="site-footer-copyright">© {new Date().getFullYear()} ReplenishCC. All rights reserved.</small>
-      <Link href={homeHref} className="site-footer-home" data-testid="link-footer-home">
-        <span className="site-footer-home-mark" aria-hidden="true">R</span>
-        <span>ReplenishCC</span>
-      </Link>
     </footer>
   );
 }

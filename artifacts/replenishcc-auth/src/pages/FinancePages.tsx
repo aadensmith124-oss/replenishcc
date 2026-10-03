@@ -10,11 +10,11 @@ import {
   getGetMyDepositsQueryKey, getGetMyReferralSummaryQueryKey, useCreateCryptoDeposit,
   useCreateManualDeposit, useGetAdminDepositMethods, useGetAdminDeposits, useGetAuthMe,
   useGetCryptoCurrencies, useGetDepositMethods, useGetMyDeposits, useGetMyReferralSummary,
-  usePostAuthLogout, useReviewDeposit, useUpdateAdminDepositMethods,
+  useReviewDeposit, useUpdateAdminDepositMethods,
   type AdminDeposit, type Deposit,
 } from '@workspace/api-client-react';
-import { Link, useLocation } from 'wouter';
-import { SiteFooter } from '../components/SiteFooter';
+import { Link } from 'wouter';
+import { MemberShell } from '../components/MemberShell';
 
 function errorText(error: unknown): string {
   if (error && typeof error === 'object') {
@@ -57,40 +57,11 @@ function LoadingBlock({ label }: { label: string }) {
 
 function PortalFrame({ title, children }: { title: string; children: ReactNode }) {
   const session = useGetAuthMe();
-  const logout = usePostAuthLogout();
-  const [, setLocation] = useLocation();
-  const [logoutError, setLogoutError] = useState('');
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  if (session.isLoading) return <div className="member-shell"><main className="member-main"><div className="portal-loading-screen"><LoadingBlock label="Loading account" /></div></main></div>;
+  if (session.isLoading) return <MemberShell pageTitle={title} user={null} loading />;
   if (session.isError || !session.data?.authenticated || !session.data.user) {
     return <div className="app-frame"><div className="member-gate"><ShieldCheck /><h1>Sign in required</h1><p>Your account session is needed to open this private area.</p><Link href="/login" className="primary-button">Return to sign in</Link></div></div>;
   }
-  const user = session.data.user;
-  const logoutNow = () => logout.mutate(undefined, {
-    onSuccess: () => { setLocation('/login'); },
-    onError: (error) => setLogoutError(errorText(error)),
-  });
-  return <div className={`member-shell finance-shell${mobileNavOpen ? ' mobile-nav-open' : ''}`}>
-    <aside className="member-sidebar finance-sidebar">
-      <div className="member-brand"><Link href="/dashboard" className="brand"><span className="brand-mark"><span className="brand-glyph">R</span></span><span>REPLENISHCC</span></Link></div>
-      <nav className="member-nav" aria-label="Member navigation">
-        <div className="nav-section-label">Workspace</div>
-        <Link href="/dashboard" className="nav-row" onClick={() => setMobileNavOpen(false)}><WalletCards /><span>Account home</span><ChevronRight /></Link>
-        <div className="nav-section-label">Finance</div>
-        <Link href="/deposits" className={`nav-row${title === 'Deposits' ? ' active' : ''}`} aria-current={title === 'Deposits' ? 'page' : undefined} onClick={() => setMobileNavOpen(false)}><ArrowDownLeft /><span>Deposit funds</span></Link>
-        <Link href="/my-deposits" className={`nav-row${title === 'Deposit history' ? ' active' : ''}`} aria-current={title === 'Deposit history' ? 'page' : undefined} onClick={() => setMobileNavOpen(false)} data-testid="link-finance-deposit-history"><FileText /><span>Deposit history</span></Link>
-        <Link href="/referrals" className={`nav-row${title === 'Referrals' ? ' active' : ''}`} aria-current={title === 'Referrals' ? 'page' : undefined} onClick={() => setMobileNavOpen(false)}><Gift /><span>Referrals</span></Link>
-        {user.isDepositAdmin && <><div className="nav-section-label">Operations</div><Link href="/admin/deposits" className={`nav-row${title === 'Deposit review' ? ' active' : ''}`} aria-current={title === 'Deposit review' ? 'page' : undefined} onClick={() => setMobileNavOpen(false)}><ShieldCheck /><span>Deposit review</span></Link></>}
-      </nav>
-      <div className="finance-sidebar-user"><span className="account-avatar">{user.fullName.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase()}</span><div><strong>{user.fullName}</strong><span>{user.email}</span></div><button type="button" onClick={logoutNow} disabled={logout.isPending} aria-label="Sign out" data-testid="button-finance-logout"><LogOut /></button></div>
-      {logoutError && <div className="account-error" role="alert">{logoutError}</div>}
-    </aside>
-    <main className="member-main">
-      {mobileNavOpen && <button className="member-scrim" type="button" aria-label="Close navigation menu" onClick={() => setMobileNavOpen(false)} data-testid="button-finance-navigation-backdrop" />}
-      <header className="member-topbar"><button type="button" className="mobile-menu-button" onClick={() => setMobileNavOpen(true)} aria-label="Open navigation" aria-expanded={mobileNavOpen} data-testid="button-finance-open-navigation"><Menu /></button><div className="topbar-context">Member account <span>/</span> {title}</div><div className="finance-trust"><LockKeyhole /> Private account area</div></header>
-      <div className="member-content finance-content fade-in">{children}<SiteFooter homeHref="/dashboard" /></div>
-    </main>
-  </div>;
+  return <MemberShell pageTitle={title} user={session.data.user} contentClassName="finance-content">{children}</MemberShell>;
 }
 
 function PageHeading({ eyebrow, title, copy, action }: { eyebrow: string; title: string; copy: string; action?: ReactNode }) {

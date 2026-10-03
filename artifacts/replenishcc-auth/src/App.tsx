@@ -56,6 +56,8 @@ import {
   Router as WouterRouter,
 } from 'wouter';
 import { SiteFooter } from './components/SiteFooter';
+import { Brand } from './components/Brand';
+import { MemberShell } from './components/MemberShell';
 import { AdminDepositsPage, DepositsPage, MyDepositsPage, ReferralsPage } from './pages/FinancePages';
 
 const queryClient = new QueryClient({
@@ -67,20 +69,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-function Brand({ href = '/login', label = 'ReplenishCC sign in' }: { href?: string; label?: string }) {
-  return (
-    <Link href={href} className="brand" aria-label={label}>
-      <span className="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 32 32" fill="none">
-          <path d="M16 2.8 27.4 9.4v13.2L16 29.2 4.6 22.6V9.4L16 2.8Z" stroke="currentColor" strokeWidth="1.15" />
-          <path d="m10.1 18.6 5.9-10 5.9 10M12.6 14.5h6.8M9.7 22.2h12.6" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </span>
-      <span>REPLENISHCC</span>
-    </Link>
-  );
-}
 
 const passwordCharacterGroups = [
   'abcdefghijkmnopqrstuvwxyz',
@@ -614,7 +602,7 @@ function ResetPasswordPage() {
 }
 
 const privacySections = [
-  ['1. Information We Collect', 'This development placeholder describes information you may provide when creating or using a ReplenishCC account, such as your name, username, and email address. Replace this text with approved details about collected information and applicable retention practices.'],
+  ['1. Information We Collect', 'This draft describes information you may provide when creating or using a ReplenishCC account, such as your name, username, and email address. Replace this text with approved details about collected information and applicable retention practices.'],
   ['2. How We Use Information', 'Account information may be used to create and maintain access, support account security, and communicate about account-related requests. Replace this copy with the final, reviewed purposes and lawful bases that apply to the service.'],
   ['3. Information Sharing', 'This placeholder does not describe actual sharing practices. Replace it with accurate information about service providers, disclosures, and any circumstances in which account information may be shared.'],
   ['4. Data Security', 'ReplenishCC is designed to support secure account access. No method of transmission or storage can be guaranteed to be completely secure. Replace this section with an approved description of safeguards and incident response.'],
@@ -623,7 +611,7 @@ const privacySections = [
   ['7. Changes to This Policy', 'ReplenishCC may revise this policy as the service changes. Replace this section with the approved update, notification, and effective-date process.'],
 ];
 const termsSections = [
-  ['1. Acceptance of Terms', 'This development placeholder is not a binding agreement. Replace it with the approved terms that govern access to and use of ReplenishCC.'],
+  ['1. Acceptance of Terms', 'This draft is not a binding agreement. Replace it with the approved terms that govern access to and use of ReplenishCC.'],
   ['2. Use License', 'This section is a placeholder and does not grant a license. Replace it with the final approved rules for access to and use of the service.'],
   ['3. User Account', 'You are responsible for keeping your sign-in credentials confidential and for activity carried out through your account. Replace this summary with the final account requirements and security responsibilities.'],
   ['4. Prohibited Uses', 'Use of the account portal must comply with applicable laws and the final terms. Replace this section with the approved restrictions and prohibited activities.'],
@@ -640,9 +628,9 @@ function LegalPage({ kind }: { kind: 'privacy' | 'terms' }) {
       <article className="legal-layout fade-in">
         <div className="eyebrow">ReplenishCC account portal</div>
         <h1>{isPrivacy ? 'Privacy Policy' : 'Terms of Service'}</h1>
-        <div className="legal-date">Development placeholder · Last updated: To be confirmed</div>
+        <div className="legal-date">Draft policy · Last updated: To be confirmed</div>
         <div className="placeholder-banner" role="note">
-          <strong>Development placeholder — not legal advice.</strong> This page contains draft placeholder copy only. Replace it with text reviewed and approved for ReplenishCC before launch.
+          <strong>Draft placeholder — not legal advice.</strong> This page needs review and approval before it can be used as ReplenishCC’s policy.
         </div>
         {sections.map(([heading, copy]) => (
           <section className="legal-section" key={heading}>

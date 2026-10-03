@@ -292,7 +292,7 @@ export function MemberShell({
         <main className="member-main" aria-label={`Loading ${pageTitle.toLowerCase()}`} aria-busy="true">
           <header className="member-topbar">
             <button ref={mobileMenuButtonRef} type="button" className="mobile-menu-button" onClick={() => setMobileNavOpen(true)} aria-label="Open navigation" aria-expanded={mobileNavOpen} aria-controls="member-navigation" data-testid="button-open-navigation"><Menu /></button>
-            <div className="topbar-brand-tools"><div className="topbar-context">ReplenishCC</div></div>
+            <div className="topbar-brand-tools"><div className="topbar-context">ReplenishCC <span>/</span> {pageTitle}</div></div>
             <div className="topbar-actions">
               <WorkspaceThemeToggle theme={theme} onToggle={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')} />
               <span className="skeleton topbar-balance-skeleton" aria-label="Loading available balance" />
@@ -319,7 +319,7 @@ export function MemberShell({
       <main className="member-main" aria-label={pageTitle}>
         <header className="member-topbar">
           <button ref={mobileMenuButtonRef} type="button" className="mobile-menu-button" onClick={() => { setAccountOpen(false); setMobileNavOpen(true); }} aria-label="Open navigation" aria-expanded={mobileNavOpen} aria-controls="member-navigation" data-testid="button-open-navigation"><Menu /></button>
-          <div className="topbar-brand-tools"><div className="topbar-context">ReplenishCC</div></div>
+          <div className="topbar-brand-tools"><div className="topbar-context">ReplenishCC <span>/</span> {pageTitle}</div></div>
           <div className="topbar-actions">
             <WorkspaceThemeToggle theme={theme} onToggle={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')} />
             <Link
@@ -354,7 +354,7 @@ export function MemberShell({
           </div>
         </header>
         <div className={`member-content fade-in${contentClassName ? ` ${contentClassName}` : ''}`}>{children}</div>
-        <SiteFooter homeHref="/dashboard" />
+        <SiteFooter />
       </main>
     </div>
   );
