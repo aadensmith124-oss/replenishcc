@@ -1629,6 +1629,25 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .topbar-balance-label { color: #aaa58f; font-size: 8px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
 .topbar-balance strong { color: #f0e8cc; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .topbar-balance-unavailable { color: #969e95; font-size: 9px; }
+.topbar-admin-link {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid #514a34;
+  border-radius: 8px;
+  padding: 0 11px;
+  color: #e7e0c7;
+  background: #211f19;
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: border-color .18s ease, background .18s ease;
+}
+.topbar-admin-link:hover { border-color: #9d8848; background: #29261c; }
+.topbar-admin-link svg { width: 15px; height: 15px; flex: 0 0 auto; color: #d3bd71; }
 .topbar-balance-skeleton { width: 96px; height: 40px; border: 1px solid #363e38; border-radius: 8px; }
 .topbar-balance-value-skeleton { width: 53px; height: 12px; }
 .theme-toggle {
@@ -1862,6 +1881,9 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
   .topbar-balance { min-height: 36px; gap: 6px; padding: 0 8px; }
   .topbar-balance-label { font-size: 7px; }
   .topbar-balance strong { font-size: 10px; }
+  .topbar-actions { gap: 8px; }
+  .topbar-admin-link { width: 36px; min-height: 36px; padding: 0; }
+  .topbar-admin-link span { display: none; }
   .topbar-balance-skeleton { width: 82px; height: 36px; }
   .member-content { padding: 48px 23px 30px; }
   .welcome-heading-row { align-items: start; }
@@ -1934,6 +1956,9 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .member-shell[data-theme="light"] .topbar-balance:hover { border-color: #a78d42; background: #ece6cf; }
 .member-shell[data-theme="light"] .topbar-balance-label { color: #727665; }
 .member-shell[data-theme="light"] .topbar-balance strong { color: #3b3b2e; }
+.member-shell[data-theme="light"] .topbar-admin-link { border-color: #d6d2bd; color: #504725; background: #f4f0df; }
+.member-shell[data-theme="light"] .topbar-admin-link:hover { border-color: #a78d42; background: #ece6cf; }
+.member-shell[data-theme="light"] .topbar-admin-link svg { color: #806b2c; }
 .member-shell[data-theme="light"] .topbar-balance-skeleton { border-color: #d5d8cc; background: linear-gradient(90deg, #e3e4dc, #f1f1e9, #e3e4dc); background-size: 200% 100%; }
 .member-shell[data-theme="light"] .sidebar-account-menu { border-color: #d8d9ce; background: #fffefa; box-shadow: 0 16px 36px hsl(0 0% 0% / .16); }
 .member-shell[data-theme="light"] .sidebar-account-skeleton { background: linear-gradient(90deg, #e3e4dc, #f1f1e9, #e3e4dc); background-size: 200% 100%; }

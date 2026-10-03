@@ -347,6 +347,16 @@ export function MemberShell({
                   ? <strong data-testid="text-topbar-balance">{formatBalance(accountBalance.data.balanceCents)}</strong>
                   : <span className="topbar-balance-unavailable" data-testid="text-topbar-balance-unavailable">Unavailable</span>}
             </Link>
+            {user.isDepositAdmin && <Link
+              href="/admin/dashboard"
+              className={`topbar-admin-link${location.startsWith('/admin/') ? ' active' : ''}`}
+              aria-current={location.startsWith('/admin/') ? 'page' : undefined}
+              aria-label="Admin dashboard"
+              title="Open admin dashboard"
+              data-testid="link-topbar-admin-dashboard"
+            >
+              <ShieldCheck aria-hidden="true" /><span>Admin dashboard</span>
+            </Link>}
             <div ref={accountControlRef} className="account-control">
               <button ref={accountTriggerRef} type="button" className="account-trigger" onClick={() => setAccountOpen((open) => !open)} aria-expanded={accountOpen} aria-controls="account-popover" data-testid="button-account-menu">
                 <span className="account-avatar">{initials}</span><span className="account-trigger-name">{user.fullName}</span><ChevronDown aria-hidden="true" />
