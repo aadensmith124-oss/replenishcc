@@ -53,6 +53,7 @@ import {
   useParams,
   Router as WouterRouter,
 } from 'wouter';
+import { AdminDepositsPage, DepositsPage, ReferralsPage } from './pages/FinancePages';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -380,6 +381,10 @@ function RegisterPage() {
   const [generatedPassword, setGeneratedPassword] = useState('');
   const [copyStatus, setCopyStatus] = useState('');
   const [error, setError] = useState('');
+  const [referralCode, setReferralCode] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get('ref')?.slice(0, 16) ?? ''; }
+    catch { return ''; }
+  });
   const [, setLocation] = useLocation();
   const register = usePostAuthRegister();
   useEffect(() => { document.title = 'Create account | ReplenishCC'; }, []);
@@ -430,6 +435,7 @@ function RegisterPage() {
       email: email.trim(),
       password,
       confirmPassword,
+      ...(referralCode.trim() ? { referralCode: referralCode.trim() } : {}),
     };
     register.mutate({ data: input }, {
       onSuccess: (response) => {
@@ -450,6 +456,7 @@ function RegisterPage() {
           {error && <FormMessage>{error}</FormMessage>}
           <form onSubmit={submit} noValidate>
             <Field id="email" label="Email address" type="email" value={email} onChange={setEmail} placeholder="you@example.com" autoComplete="email" maxLength={254} />
+            <Field id="referral-code" label="Referral code" value={referralCode} onChange={setReferralCode} placeholder="Optional" autoComplete="off" required={false} maxLength={16} hint="If you were invited, your referral code is included here." />
             <PasswordInput
               id="password"
               label="Password"
@@ -789,7 +796,7 @@ function DashboardPage() {
       </div>
       <nav className="member-nav" aria-label="Member navigation">
         <div className="nav-section-label">Workspace</div>
-        <Link href="/dashboard" className="nav-row nav-home active" aria-current="page" onClick={() => setMobileNavOpen(false)} data-testid="link-dashboard-home">
+        <Link href="/dashboard" className={`nav-row nav-home${window.location.pathname === '/dashboard' ? ' active' : ''}`} aria-current={window.location.pathname === '/dashboard' ? 'page' : undefined} onClick={() => setMobileNavOpen(false)} data-testid="link-dashboard-home">
           <Home aria-hidden="true" /><span>Home</span><span className="live-mark">Current</span>
         </Link>
 
@@ -798,10 +805,11 @@ function DashboardPage() {
           <WalletCards aria-hidden="true" /><span>Deposit</span><ChevronDown className={`nav-chevron${expanded.financeDeposit ? ' is-open' : ''}`} aria-hidden="true" />
         </button>
         {expanded.financeDeposit && <div className="nav-children">
-          <UnavailableNav icon={<CircleDollarSign />} label="Deposit Money" />
-          <UnavailableNav icon={<FileText />} label="My Deposit" />
+          <Link href="/deposits" className="nav-row" onClick={() => setMobileNavOpen(false)} data-testid="link-deposit-money"><CircleDollarSign aria-hidden="true" /><span>Deposit funds</span></Link>
+          <Link href="/deposits" className="nav-row" onClick={() => setMobileNavOpen(false)} data-testid="link-my-deposits"><FileText aria-hidden="true" /><span>Deposit history</span></Link>
         </div>}
-        <UnavailableNav icon={<Gift />} label="Referral" />
+        <Link href="/referrals" className="nav-row" onClick={() => setMobileNavOpen(false)} data-testid="link-referrals"><Gift aria-hidden="true" /><span>Referrals</span></Link>
+        {user?.isDepositAdmin && <Link href="/admin/deposits" className="nav-row" onClick={() => setMobileNavOpen(false)} data-testid="link-admin-deposits"><ShieldCheck aria-hidden="true" /><span>Deposit review</span></Link>}
         <UnavailableNav icon={<Gift />} label="Redeem Code" />
         <UnavailableNav icon={<Crown />} label="VIP & Free CC" />
         <UnavailableNav icon={<Trophy />} label="Leaderboard" />
@@ -985,6 +993,9 @@ function Router() {
       <Route path="/privacy"><LegalPage kind="privacy" /></Route>
       <Route path="/terms"><LegalPage kind="terms" /></Route>
       <Route path="/dashboard" component={DashboardPage} />
+      <Route path="/deposits" component={DepositsPage} />
+      <Route path="/referrals" component={ReferralsPage} />
+      <Route path="/admin/deposits" component={AdminDepositsPage} />
       <Route>
         <Frame>
           <div className="legal-layout">

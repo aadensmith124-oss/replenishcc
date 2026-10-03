@@ -1,5 +1,6 @@
 import { createInsertSchema } from "drizzle-zod";
 import {
+  AnyPgColumn,
   index,
   pgTable,
   text,
@@ -18,6 +19,11 @@ export const usersTable = pgTable(
     username: varchar("username", { length: 24 }),
     email: varchar("email", { length: 254 }).notNull(),
     passwordHash: text("password_hash").notNull(),
+    referralCode: varchar("referral_code", { length: 16 }),
+    referredById: uuid("referred_by_id").references(
+      (): AnyPgColumn => usersTable.id,
+      { onDelete: "set null" },
+    ),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -29,6 +35,8 @@ export const usersTable = pgTable(
   (table) => [
     uniqueIndex("users_email_unique").on(table.email),
     uniqueIndex("users_username_unique").on(table.username),
+    uniqueIndex("users_referral_code_unique").on(table.referralCode),
+    index("users_referred_by_id_index").on(table.referredById),
   ],
 );
 

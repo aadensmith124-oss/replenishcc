@@ -13,4 +13,5 @@ export interface User {
   username: string | null;
   email: string;
   createdAt: Date;
+  isDepositAdmin: boolean;
 }

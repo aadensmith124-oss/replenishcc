@@ -16,6 +16,7 @@ export interface User {
   username: string | null;
   email: string;
   createdAt: string;
+  isDepositAdmin: boolean;
 }
 
 export interface AuthMeResponse {
@@ -60,6 +61,12 @@ export interface RegisterInput {
      * @maxLength 128
      */
   confirmPassword: string;
+  /**
+     * @minLength 8
+     * @maxLength 16
+     * @pattern ^[a-zA-Z0-9]+$
+     */
+  referralCode?: string;
 }
 
 export interface LoginInput {
@@ -94,4 +101,208 @@ export interface ResetPasswordInput {
      */
   confirmPassword: string;
 }
+
+export type DepositMethod = typeof DepositMethod[keyof typeof DepositMethod];
+
+
+export const DepositMethod = {
+  nowpayments: 'nowpayments',
+  cashapp: 'cashapp',
+  chime: 'chime',
+} as const;
+
+export type DepositStatus = typeof DepositStatus[keyof typeof DepositStatus];
+
+
+export const DepositStatus = {
+  pending: 'pending',
+  confirmed: 'confirmed',
+  rejected: 'rejected',
+  failed: 'failed',
+  expired: 'expired',
+  refunded: 'refunded',
+} as const;
+
+export interface Deposit {
+  id: string;
+  method: DepositMethod;
+  amountCents: number;
+  /** @nullable */
+  transactionId: string | null;
+  status: DepositStatus;
+  /** @nullable */
+  providerStatus: string | null;
+  /** @nullable */
+  paymentAddress: string | null;
+  /** @nullable */
+  payAmount: string | null;
+  /** @nullable */
+  payCurrency: string | null;
+  /** @nullable */
+  payinExtraId: string | null;
+  /** @nullable */
+  paymentUrl: string | null;
+  /** @nullable */
+  recipient: string | null;
+  /** @nullable */
+  referenceCode: string | null;
+  /** @nullable */
+  rejectionReason: string | null;
+  createdAt: string;
+  /** @nullable */
+  confirmedAt: string | null;
+  /** @nullable */
+  expiresAt: string | null;
+}
+
+export type AdminDepositMethod = typeof AdminDepositMethod[keyof typeof AdminDepositMethod];
+
+
+export const AdminDepositMethod = {
+  nowpayments: 'nowpayments',
+  cashapp: 'cashapp',
+  chime: 'chime',
+} as const;
+
+export type AdminDepositStatus = typeof AdminDepositStatus[keyof typeof AdminDepositStatus];
+
+
+export const AdminDepositStatus = {
+  pending: 'pending',
+  confirmed: 'confirmed',
+  rejected: 'rejected',
+  failed: 'failed',
+  expired: 'expired',
+  refunded: 'refunded',
+} as const;
+
+export interface AdminDeposit {
+  id: string;
+  method: AdminDepositMethod;
+  amountCents: number;
+  /** @nullable */
+  transactionId: string | null;
+  status: AdminDepositStatus;
+  /** @nullable */
+  providerStatus: string | null;
+  /** @nullable */
+  paymentAddress: string | null;
+  /** @nullable */
+  payAmount: string | null;
+  /** @nullable */
+  payCurrency: string | null;
+  /** @nullable */
+  payinExtraId: string | null;
+  /** @nullable */
+  recipient: string | null;
+  /** @nullable */
+  referenceCode: string | null;
+  /** @nullable */
+  rejectionReason: string | null;
+  createdAt: string;
+  /** @nullable */
+  confirmedAt: string | null;
+  /** @nullable */
+  expiresAt: string | null;
+  memberName: string;
+  memberEmail: string;
+}
+
+export interface DepositMethodsResponse {
+  /** @nullable */
+  cashAppHandle: string | null;
+  /** @nullable */
+  chimeHandle: string | null;
+  nowPaymentsConfigured: boolean;
+  minimumAmountCents: number;
+  maximumAmountCents: number;
+}
+
+export interface DepositMethodsInput {
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  cashAppHandle: string | null;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  chimeHandle: string | null;
+}
+
+export interface MyDepositsResponse {
+  balanceCents: number;
+  deposits: Deposit[];
+}
+
+export interface CryptoCurrenciesResponse {
+  currencies: string[];
+}
+
+export type ManualDepositInputMethod = typeof ManualDepositInputMethod[keyof typeof ManualDepositInputMethod];
+
+
+export const ManualDepositInputMethod = {
+  cashapp: 'cashapp',
+  chime: 'chime',
+} as const;
+
+export interface ManualDepositInput {
+  method: ManualDepositInputMethod;
+  /**
+     * @minimum 1500
+     * @maximum 1000000
+     */
+  amountCents: number;
+}
+
+export interface CryptoDepositInput {
+  /**
+     * @minimum 1500
+     * @maximum 1000000
+     */
+  amountCents: number;
+  /**
+     * @minLength 2
+     * @maxLength 32
+     * @pattern ^[a-zA-Z0-9]+$
+     */
+  payCurrency: string;
+}
+
+export interface CryptoDepositResponse {
+  deposit: Deposit;
+}
+
+export interface ReferralSummary {
+  referralCode: string;
+  totalReferrals: number;
+  paidReferrals: number;
+  pendingReferrals: number;
+  totalRewardsCents: number;
+  totalDepositsCents: number;
+  minimumDepositCents: number;
+  rewardPercent: number;
+}
+
+export interface AdminDepositsResponse {
+  deposits: AdminDeposit[];
+}
+
+export type DepositReviewInputAction = typeof DepositReviewInputAction[keyof typeof DepositReviewInputAction];
+
+
+export const DepositReviewInputAction = {
+  approve: 'approve',
+  reject: 'reject',
+} as const;
+
+export interface DepositReviewInput {
+  action: DepositReviewInputAction;
+  /** @maxLength 250 */
+  reason?: string;
+}
+
+export interface NowPaymentsWebhookInput { [key: string]: unknown }
 

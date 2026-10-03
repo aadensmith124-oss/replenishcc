@@ -35,6 +35,11 @@ export const postAuthRegisterBodyPasswordMax = 128;
 export const postAuthRegisterBodyConfirmPasswordMin = 10;
 export const postAuthRegisterBodyConfirmPasswordMax = 128;
 
+export const postAuthRegisterBodyReferralCodeMin = 8;
+export const postAuthRegisterBodyReferralCodeMax = 16;
+
+
+export const postAuthRegisterBodyReferralCodeRegExp = new RegExp('^[a-zA-Z0-9]+$');
 
 
 export const PostAuthRegisterBody = zod.object({
@@ -42,7 +47,8 @@ export const PostAuthRegisterBody = zod.object({
   "username": zod.string().min(postAuthRegisterBodyUsernameMin).max(postAuthRegisterBodyUsernameMax).regex(postAuthRegisterBodyUsernameRegExp).optional(),
   "email": zod.string().email().max(postAuthRegisterBodyEmailMax),
   "password": zod.string().min(postAuthRegisterBodyPasswordMin).max(postAuthRegisterBodyPasswordMax),
-  "confirmPassword": zod.string().min(postAuthRegisterBodyConfirmPasswordMin).max(postAuthRegisterBodyConfirmPasswordMax)
+  "confirmPassword": zod.string().min(postAuthRegisterBodyConfirmPasswordMin).max(postAuthRegisterBodyConfirmPasswordMax),
+  "referralCode": zod.string().min(postAuthRegisterBodyReferralCodeMin).max(postAuthRegisterBodyReferralCodeMax).regex(postAuthRegisterBodyReferralCodeRegExp).optional()
 })
 
 export const PostAuthRegisterResponse = zod.object({
@@ -52,7 +58,8 @@ export const PostAuthRegisterResponse = zod.object({
   "fullName": zod.string(),
   "username": zod.string().nullable(),
   "email": zod.string().email(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "isDepositAdmin": zod.boolean()
 })
 })
 
@@ -77,7 +84,8 @@ export const PostAuthLoginResponse = zod.object({
   "fullName": zod.string(),
   "username": zod.string().nullable(),
   "email": zod.string().email(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "isDepositAdmin": zod.boolean()
 })
 })
 
@@ -100,7 +108,8 @@ export const GetAuthMeResponse = zod.object({
   "fullName": zod.string(),
   "username": zod.string().nullable(),
   "email": zod.string().email(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "isDepositAdmin": zod.boolean()
 }),zod.null()])
 })
 
@@ -143,6 +152,252 @@ export const PostAuthResetPasswordBody = zod.object({
 
 export const PostAuthResetPasswordResponse = zod.object({
   "message": zod.string()
+})
+
+
+/**
+ * @summary Get deposit methods and limits
+ */
+export const GetDepositMethodsResponse = zod.object({
+  "cashAppHandle": zod.string().nullable(),
+  "chimeHandle": zod.string().nullable(),
+  "nowPaymentsConfigured": zod.boolean(),
+  "minimumAmountCents": zod.number().int(),
+  "maximumAmountCents": zod.number().int()
+})
+
+
+/**
+ * @summary Get the current user's balance and deposit history
+ */
+export const GetMyDepositsResponse = zod.object({
+  "balanceCents": zod.number().int(),
+  "deposits": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "method": zod.enum(['nowpayments', 'cashapp', 'chime']),
+  "amountCents": zod.number().int(),
+  "transactionId": zod.string().nullable(),
+  "status": zod.enum(['pending', 'confirmed', 'rejected', 'failed', 'expired', 'refunded']),
+  "providerStatus": zod.string().nullable(),
+  "paymentAddress": zod.string().nullable(),
+  "payAmount": zod.string().nullable(),
+  "payCurrency": zod.string().nullable(),
+  "payinExtraId": zod.string().nullable(),
+  "paymentUrl": zod.string().url().nullable(),
+  "recipient": zod.string().nullable(),
+  "referenceCode": zod.string().nullable(),
+  "rejectionReason": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "confirmedAt": zod.coerce.date().nullable(),
+  "expiresAt": zod.coerce.date().nullable()
+}))
+})
+
+
+/**
+ * @summary Create a Cash App or Chime deposit request
+ */
+export const createManualDepositBodyAmountCentsMin = 1500;
+export const createManualDepositBodyAmountCentsMax = 1000000;
+
+
+
+export const CreateManualDepositBody = zod.object({
+  "method": zod.enum(['cashapp', 'chime']),
+  "amountCents": zod.number().int().min(createManualDepositBodyAmountCentsMin).max(createManualDepositBodyAmountCentsMax)
+})
+
+export const CreateManualDepositResponse = zod.object({
+  "id": zod.string().uuid(),
+  "method": zod.enum(['nowpayments', 'cashapp', 'chime']),
+  "amountCents": zod.number().int(),
+  "transactionId": zod.string().nullable(),
+  "status": zod.enum(['pending', 'confirmed', 'rejected', 'failed', 'expired', 'refunded']),
+  "providerStatus": zod.string().nullable(),
+  "paymentAddress": zod.string().nullable(),
+  "payAmount": zod.string().nullable(),
+  "payCurrency": zod.string().nullable(),
+  "payinExtraId": zod.string().nullable(),
+  "paymentUrl": zod.string().url().nullable(),
+  "recipient": zod.string().nullable(),
+  "referenceCode": zod.string().nullable(),
+  "rejectionReason": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "confirmedAt": zod.coerce.date().nullable(),
+  "expiresAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Get currencies available for this NOWPayments account
+ */
+export const GetCryptoCurrenciesResponse = zod.object({
+  "currencies": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Create a NOWPayments cryptocurrency payment
+ */
+export const createCryptoDepositBodyAmountCentsMin = 1500;
+export const createCryptoDepositBodyAmountCentsMax = 1000000;
+
+export const createCryptoDepositBodyPayCurrencyMin = 2;
+export const createCryptoDepositBodyPayCurrencyMax = 32;
+
+
+export const createCryptoDepositBodyPayCurrencyRegExp = new RegExp('^[a-zA-Z0-9]+$');
+
+
+export const CreateCryptoDepositBody = zod.object({
+  "amountCents": zod.number().int().min(createCryptoDepositBodyAmountCentsMin).max(createCryptoDepositBodyAmountCentsMax),
+  "payCurrency": zod.string().min(createCryptoDepositBodyPayCurrencyMin).max(createCryptoDepositBodyPayCurrencyMax).regex(createCryptoDepositBodyPayCurrencyRegExp)
+})
+
+export const CreateCryptoDepositResponse = zod.object({
+  "deposit": zod.object({
+  "id": zod.string().uuid(),
+  "method": zod.enum(['nowpayments', 'cashapp', 'chime']),
+  "amountCents": zod.number().int(),
+  "transactionId": zod.string().nullable(),
+  "status": zod.enum(['pending', 'confirmed', 'rejected', 'failed', 'expired', 'refunded']),
+  "providerStatus": zod.string().nullable(),
+  "paymentAddress": zod.string().nullable(),
+  "payAmount": zod.string().nullable(),
+  "payCurrency": zod.string().nullable(),
+  "payinExtraId": zod.string().nullable(),
+  "paymentUrl": zod.string().url().nullable(),
+  "recipient": zod.string().nullable(),
+  "referenceCode": zod.string().nullable(),
+  "rejectionReason": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "confirmedAt": zod.coerce.date().nullable(),
+  "expiresAt": zod.coerce.date().nullable()
+})
+})
+
+
+/**
+ * @summary Receive a signed NOWPayments payment notification
+ */
+export const PostNowPaymentsWebhookBody = zod.record(zod.string(), zod.unknown())
+
+export const PostNowPaymentsWebhookResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Get the signed-in user's referral code, link, and real earnings
+ */
+export const GetMyReferralSummaryResponse = zod.object({
+  "referralCode": zod.string(),
+  "totalReferrals": zod.number().int(),
+  "paidReferrals": zod.number().int(),
+  "pendingReferrals": zod.number().int(),
+  "totalRewardsCents": zod.number().int(),
+  "totalDepositsCents": zod.number().int(),
+  "minimumDepositCents": zod.number().int(),
+  "rewardPercent": zod.number().int()
+})
+
+
+/**
+ * @summary List deposits for admin review
+ */
+export const GetAdminDepositsResponse = zod.object({
+  "deposits": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "method": zod.enum(['nowpayments', 'cashapp', 'chime']),
+  "amountCents": zod.number().int(),
+  "transactionId": zod.string().nullable(),
+  "status": zod.enum(['pending', 'confirmed', 'rejected', 'failed', 'expired', 'refunded']),
+  "providerStatus": zod.string().nullable(),
+  "paymentAddress": zod.string().nullable(),
+  "payAmount": zod.string().nullable(),
+  "payCurrency": zod.string().nullable(),
+  "payinExtraId": zod.string().nullable(),
+  "recipient": zod.string().nullable(),
+  "referenceCode": zod.string().nullable(),
+  "rejectionReason": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "confirmedAt": zod.coerce.date().nullable(),
+  "expiresAt": zod.coerce.date().nullable(),
+  "memberName": zod.string(),
+  "memberEmail": zod.string().email()
+}))
+})
+
+
+/**
+ * @summary Approve or reject a pending manual deposit
+ */
+export const ReviewDepositParams = zod.object({
+  "depositId": zod.coerce.string().uuid()
+})
+
+export const reviewDepositBodyReasonMax = 250;
+
+
+
+export const ReviewDepositBody = zod.object({
+  "action": zod.enum(['approve', 'reject']),
+  "reason": zod.string().max(reviewDepositBodyReasonMax).optional()
+})
+
+export const ReviewDepositResponse = zod.object({
+  "id": zod.string().uuid(),
+  "method": zod.enum(['nowpayments', 'cashapp', 'chime']),
+  "amountCents": zod.number().int(),
+  "transactionId": zod.string().nullable(),
+  "status": zod.enum(['pending', 'confirmed', 'rejected', 'failed', 'expired', 'refunded']),
+  "providerStatus": zod.string().nullable(),
+  "paymentAddress": zod.string().nullable(),
+  "payAmount": zod.string().nullable(),
+  "payCurrency": zod.string().nullable(),
+  "payinExtraId": zod.string().nullable(),
+  "paymentUrl": zod.string().url().nullable(),
+  "recipient": zod.string().nullable(),
+  "referenceCode": zod.string().nullable(),
+  "rejectionReason": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "confirmedAt": zod.coerce.date().nullable(),
+  "expiresAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Get admin payment-recipient settings
+ */
+export const GetAdminDepositMethodsResponse = zod.object({
+  "cashAppHandle": zod.string().nullable(),
+  "chimeHandle": zod.string().nullable(),
+  "nowPaymentsConfigured": zod.boolean(),
+  "minimumAmountCents": zod.number().int(),
+  "maximumAmountCents": zod.number().int()
+})
+
+
+/**
+ * @summary Update Cash App and Chime recipient settings
+ */
+export const updateAdminDepositMethodsBodyCashAppHandleMax = 100;
+
+export const updateAdminDepositMethodsBodyChimeHandleMax = 100;
+
+
+
+export const UpdateAdminDepositMethodsBody = zod.object({
+  "cashAppHandle": zod.string().max(updateAdminDepositMethodsBodyCashAppHandleMax).nullable(),
+  "chimeHandle": zod.string().max(updateAdminDepositMethodsBodyChimeHandleMax).nullable()
+})
+
+export const UpdateAdminDepositMethodsResponse = zod.object({
+  "cashAppHandle": zod.string().nullable(),
+  "chimeHandle": zod.string().nullable(),
+  "nowPaymentsConfigured": zod.boolean(),
+  "minimumAmountCents": zod.number().int(),
+  "maximumAmountCents": zod.number().int()
 })
 
 

@@ -30,4 +30,10 @@ export interface RegisterInput {
      * @maxLength 128
      */
   confirmPassword: string;
+  /**
+     * @minLength 8
+     * @maxLength 16
+     * @pattern ^[a-zA-Z0-9]+$
+     */
+  referralCode?: string;
 }

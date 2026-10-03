@@ -12,6 +12,14 @@ export const SESSION_COOKIE_NAME = "replenishcc_session";
 const SHORT_SESSION_MS = 12 * 60 * 60 * 1000;
 const REMEMBERED_SESSION_MS = 30 * 24 * 60 * 60 * 1000;
 
+export function isDepositAdmin(user: Pick<UserRecord, "email">): boolean {
+  const allowedEmails = (process.env.DEPOSIT_ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+  return allowedEmails.includes(user.email.toLowerCase());
+}
+
 function getSessionSecret(): string {
   const secret = process.env.SESSION_SECRET;
   if (!secret) {
@@ -31,6 +39,7 @@ export function toAuthUser(user: UserRecord) {
     username: user.username,
     email: user.email,
     createdAt: user.createdAt,
+    isDepositAdmin: isDepositAdmin(user),
   };
 }
 

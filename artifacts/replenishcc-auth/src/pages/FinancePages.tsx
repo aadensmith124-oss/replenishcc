@@ -1,0 +1,351 @@
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  ArrowDownLeft, ArrowRight, Check, CheckCircle2, ChevronRight, CircleAlert, Clipboard, Menu,
+  Clock3, Copy, ExternalLink, FileText, Gift, LockKeyhole, LogOut, RefreshCw, ShieldCheck,
+  WalletCards, XCircle,
+} from 'lucide-react';
+import {
+  getGetAdminDepositMethodsQueryKey, getGetAdminDepositsQueryKey, getGetDepositMethodsQueryKey,
+  getGetMyDepositsQueryKey, getGetMyReferralSummaryQueryKey, useCreateCryptoDeposit,
+  useCreateManualDeposit, useGetAdminDepositMethods, useGetAdminDeposits, useGetAuthMe,
+  useGetCryptoCurrencies, useGetDepositMethods, useGetMyDeposits, useGetMyReferralSummary,
+  usePostAuthLogout, useReviewDeposit, useUpdateAdminDepositMethods,
+  type AdminDeposit, type Deposit,
+} from '@workspace/api-client-react';
+import { Link, useLocation } from 'wouter';
+
+function errorText(error: unknown): string {
+  if (error && typeof error === 'object') {
+    const candidate = error as { message?: unknown; error?: unknown; response?: { data?: { error?: unknown } } };
+    if (typeof candidate.response?.data?.error === 'string') return candidate.response.data.error;
+    if (typeof candidate.error === 'string') return candidate.error;
+    if (typeof candidate.message === 'string') return candidate.message;
+  }
+  return 'We could not complete that request. Please try again.';
+}
+
+function referralLink(referralCode: string): string {
+  const appBase = new URL(import.meta.env.BASE_URL || '/', window.location.origin);
+  appBase.pathname = `${appBase.pathname.replace(/\/+$/, '')}/register`;
+  appBase.searchParams.set('ref', referralCode);
+  return appBase.toString();
+}
+
+function dollars(cents: number): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
+}
+
+function dateTime(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+}
+
+function Status({ value }: { value: Deposit['status'] }) {
+  const Icon = value === 'confirmed' ? CheckCircle2 : value === 'rejected' || value === 'failed' || value === 'refunded' ? XCircle : Clock3;
+  return <span className={`deposit-status status-${value}`}><Icon aria-hidden="true" />{value}</span>;
+}
+
+function Alert({ children, kind = 'error' }: { children: ReactNode; kind?: 'error' | 'success' | 'info' }) {
+  return <div className={`portal-alert portal-alert-${kind}`} role={kind === 'error' ? 'alert' : 'status'}>{children}</div>;
+}
+
+function LoadingBlock({ label }: { label: string }) {
+  return <div className="portal-loading" aria-busy="true" aria-label={label}><span /><span /><span /></div>;
+}
+
+function PortalFrame({ title, children }: { title: string; children: ReactNode }) {
+  const session = useGetAuthMe();
+  const logout = usePostAuthLogout();
+  const [, setLocation] = useLocation();
+  const [logoutError, setLogoutError] = useState('');
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  if (session.isLoading) return <div className="member-shell"><main className="member-main"><div className="portal-loading-screen"><LoadingBlock label="Loading account" /></div></main></div>;
+  if (session.isError || !session.data?.authenticated || !session.data.user) {
+    return <div className="app-frame"><div className="member-gate"><ShieldCheck /><h1>Sign in required</h1><p>Your account session is needed to open this private area.</p><Link href="/login" className="primary-button">Return to sign in</Link></div></div>;
+  }
+  const user = session.data.user;
+  const logoutNow = () => logout.mutate(undefined, {
+    onSuccess: () => { setLocation('/login'); },
+    onError: (error) => setLogoutError(errorText(error)),
+  });
+  return <div className={`member-shell finance-shell${mobileNavOpen ? ' mobile-nav-open' : ''}`}>
+    <aside className="member-sidebar finance-sidebar">
+      <div className="member-brand"><Link href="/dashboard" className="brand"><span className="brand-mark"><span className="brand-glyph">R</span></span><span>REPLENISHCC</span></Link></div>
+      <nav className="member-nav" aria-label="Member navigation">
+        <div className="nav-section-label">Workspace</div>
+        <Link href="/dashboard" className="nav-row" onClick={() => setMobileNavOpen(false)}><WalletCards /><span>Account home</span><ChevronRight /></Link>
+        <div className="nav-section-label">Finance</div>
+        <Link href="/deposits" className={`nav-row${title === 'Deposits' ? ' active' : ''}`} aria-current={title === 'Deposits' ? 'page' : undefined} onClick={() => setMobileNavOpen(false)}><ArrowDownLeft /><span>Deposit funds</span></Link>
+        <Link href="/referrals" className={`nav-row${title === 'Referrals' ? ' active' : ''}`} aria-current={title === 'Referrals' ? 'page' : undefined} onClick={() => setMobileNavOpen(false)}><Gift /><span>Referrals</span></Link>
+        {user.isDepositAdmin && <><div className="nav-section-label">Operations</div><Link href="/admin/deposits" className={`nav-row${title === 'Deposit review' ? ' active' : ''}`} aria-current={title === 'Deposit review' ? 'page' : undefined} onClick={() => setMobileNavOpen(false)}><ShieldCheck /><span>Deposit review</span></Link></>}
+      </nav>
+      <div className="finance-sidebar-user"><span className="account-avatar">{user.fullName.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase()}</span><div><strong>{user.fullName}</strong><span>{user.email}</span></div><button type="button" onClick={logoutNow} disabled={logout.isPending} aria-label="Sign out" data-testid="button-finance-logout"><LogOut /></button></div>
+      {logoutError && <div className="account-error" role="alert">{logoutError}</div>}
+    </aside>
+    <main className="member-main">
+      {mobileNavOpen && <button className="member-scrim" type="button" aria-label="Close navigation menu" onClick={() => setMobileNavOpen(false)} data-testid="button-finance-navigation-backdrop" />}
+      <header className="member-topbar"><button type="button" className="mobile-menu-button" onClick={() => setMobileNavOpen(true)} aria-label="Open navigation" aria-expanded={mobileNavOpen} data-testid="button-finance-open-navigation"><Menu /></button><div className="topbar-context">Member account <span>/</span> {title}</div><div className="finance-trust"><LockKeyhole /> Private account area</div></header>
+      <div className="member-content finance-content fade-in">{children}<footer className="finance-footer">ReplenishCC · Account balances and payment instructions are server-verified.</footer></div>
+    </main>
+  </div>;
+}
+
+function PageHeading({ eyebrow, title, copy, action }: { eyebrow: string; title: string; copy: string; action?: ReactNode }) {
+  return <div className="finance-heading"><div><div className="welcome-eyebrow">{eyebrow}</div><h1>{title}</h1><p>{copy}</p></div>{action}</div>;
+}
+
+function QueryError({ error, retry }: { error: unknown; retry: () => void }) {
+  return <Alert><span>{errorText(error)}</span><button type="button" className="inline-retry" onClick={retry}><RefreshCw /> Retry</button></Alert>;
+}
+
+function History({ deposits }: { deposits: Deposit[] }) {
+  if (!deposits.length) return <div className="finance-empty"><span className="empty-mark"><FileText /></span><h3>No deposit activity yet</h3><p>When you make a deposit request, its server-verified status will appear here.</p></div>;
+  return <div className="deposit-table-wrap"><table className="deposit-table"><thead><tr><th>Request</th><th>Method</th><th>Amount</th><th>Status</th><th>Created</th></tr></thead><tbody>
+    {deposits.map((deposit) => <tr key={deposit.id} data-testid={`row-deposit-${deposit.id}`}>
+      <td><strong>#{deposit.id}</strong>{deposit.referenceCode && <small>Ref. {deposit.referenceCode}</small>}{deposit.rejectionReason && <small className="rejection-note">{deposit.rejectionReason}</small>}</td>
+      <td className="method-cell">{deposit.method === 'nowpayments' ? (deposit.payCurrency ? deposit.payCurrency.toUpperCase() : 'Crypto') : deposit.method === 'cashapp' ? 'Cash App' : 'Chime'}</td>
+      <td>{dollars(deposit.amountCents)}</td><td><Status value={deposit.status} />{deposit.providerStatus && <small className="provider-status">{deposit.providerStatus}</small>}</td><td>{dateTime(deposit.createdAt)}</td>
+    </tr>)}
+  </tbody></table></div>;
+}
+
+export function DepositsPage() {
+  const client = useQueryClient();
+  const methods = useGetDepositMethods();
+  const account = useGetMyDeposits();
+  const currencies = useGetCryptoCurrencies();
+  const manualDeposit = useCreateManualDeposit();
+  const cryptoDeposit = useCreateCryptoDeposit();
+  const [amount, setAmount] = useState('');
+  const [method, setMethod] = useState<'nowpayments' | 'cashapp' | 'chime'>('nowpayments');
+  const [currency, setCurrency] = useState('');
+  const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
+  const [created, setCreated] = useState<Deposit | null>(null);
+  const [copyMessage, setCopyMessage] = useState('');
+  const config = methods.data;
+  const availableCurrencies = currencies.data?.currencies ?? [];
+  useEffect(() => {
+    if (!config || method !== 'nowpayments' || config.nowPaymentsConfigured) return;
+    if (config.cashAppHandle) setMethod('cashapp');
+    else if (config.chimeHandle) setMethod('chime');
+  }, [config, method]);
+  const minimum = config ? Math.max(1500, config.minimumAmountCents) : 1500;
+  const maximum = config ? Math.min(1_000_000, config.maximumAmountCents) : 1_000_000;
+  const methodsError = methods.isError ? <QueryError error={methods.error} retry={() => void methods.refetch()} /> : null;
+  const historyError = account.isError ? <QueryError error={account.error} retry={() => void account.refetch()} /> : null;
+  const usable = config && (method === 'nowpayments' ? config.nowPaymentsConfigured : method === 'cashapp' ? Boolean(config.cashAppHandle) : Boolean(config.chimeHandle));
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setMessage(null); setCreated(null);
+    const amountNumber = Number(amount);
+    if (!Number.isFinite(amountNumber) || amountNumber * 100 < minimum || amountNumber * 100 > maximum) {
+      setMessage({ kind: 'error', text: `Enter an amount between ${dollars(minimum)} and ${dollars(maximum)}.` }); return;
+    }
+    if (!config) { setMessage({ kind: 'error', text: 'Deposit configuration is not available yet. Try again shortly.' }); return; }
+    if (!usable) { setMessage({ kind: 'error', text: 'This deposit method is not currently configured.' }); return; }
+    const amountCents = Math.round(amountNumber * 100);
+    const onSuccess = (deposit: Deposit) => {
+      setCreated(deposit);
+      setMessage({ kind: 'success', text: 'Deposit request created. Follow the payment details below; your balance changes only after server confirmation.' });
+      void client.invalidateQueries({ queryKey: getGetMyDepositsQueryKey() });
+      void client.invalidateQueries({ queryKey: getGetMyReferralSummaryQueryKey() });
+    };
+    const onError = (error: unknown) => setMessage({ kind: 'error', text: errorText(error) });
+    if (method === 'nowpayments') {
+      if (!availableCurrencies.includes(currency)) { setMessage({ kind: 'error', text: 'Choose a currency returned by the live payment service.' }); return; }
+      cryptoDeposit.mutate({ data: { amountCents, payCurrency: currency } }, {
+        onSuccess: (response) => onSuccess(response.deposit), onError,
+      });
+    } else {
+      manualDeposit.mutate({ data: { method, amountCents } }, { onSuccess, onError });
+    }
+  };
+  const pending = manualDeposit.isPending || cryptoDeposit.isPending;
+  const copy = async (value: string, label: string) => {
+    try { await navigator.clipboard.writeText(value); setCopyMessage(`${label} copied.`); }
+    catch { setCopyMessage('Clipboard unavailable. Select and copy the value manually.'); }
+  };
+  return <PortalFrame title="Deposits">
+    <PageHeading eyebrow="Account funding" title="Deposits" copy="Add funds using a configured payment method. Your available balance updates only when the payment is verified." />
+    <div className="balance-strip">
+      <div className="balance-icon"><WalletCards /></div><div className="balance-copy"><span>Available balance</span>{account.isLoading ? <div className="skeleton balance-skeleton" /> : account.data ? <strong data-testid="text-account-balance">{dollars(account.data.balanceCents)}</strong> : <strong className="balance-unavailable">Unavailable</strong>}</div>
+      <div className="balance-security"><ShieldCheck /><span>Verified account<br />balance</span></div>
+    </div>
+    {historyError}
+    <div className="deposit-layout">
+      <section className="finance-panel deposit-form-panel" aria-labelledby="deposit-form-title">
+        <div className="panel-overline">01 / New request</div><h2 id="deposit-form-title">Choose how to fund</h2>
+        {methods.isLoading ? <LoadingBlock label="Loading configured payment methods" /> : methodsError ? null : config && <form onSubmit={submit}>
+          <fieldset className="method-picker"><legend>Payment method</legend>
+            {([
+              ['nowpayments', 'Crypto', 'NOWPayments'],
+              ['cashapp', 'Cash App', config.cashAppHandle ? 'Manual transfer' : 'Not configured'],
+              ['chime', 'Chime', config.chimeHandle ? 'Manual transfer' : 'Not configured'],
+            ] as const).map(([id, label, note]) => {
+              const configured = id === 'nowpayments' ? config.nowPaymentsConfigured : id === 'cashapp' ? Boolean(config.cashAppHandle) : Boolean(config.chimeHandle);
+              return <button key={id} type="button" className={`method-option${method === id ? ' selected' : ''}`} onClick={() => { setMethod(id); setCreated(null); setMessage(null); }} aria-pressed={method === id} disabled={!configured} data-testid={`button-method-${id}`}>
+                <span className="method-radio" /><span><strong>{label}</strong><small>{note}</small></span>{id === 'nowpayments' && configured && <span className="method-live">Live</span>}
+              </button>;
+            })}
+          </fieldset>
+          <label className="finance-label" htmlFor="deposit-amount">Amount in USD</label>
+          <div className="amount-input-wrap"><span>$</span><input id="deposit-amount" type="number" min={dollars(minimum)} max={dollars(maximum)} step="0.01" inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Enter an amount" required data-testid="input-deposit-amount" /></div>
+          <div className="field-assist">Limits: {dollars(minimum)} – {dollars(maximum)} per request</div>
+          {method === 'nowpayments' && <div className="currency-field"><label className="finance-label" htmlFor="deposit-currency">Receive payment in</label>
+            {currencies.isLoading ? <LoadingBlock label="Loading live crypto currencies" /> : currencies.isError ? <QueryError error={currencies.error} retry={() => void currencies.refetch()} /> : availableCurrencies.length ? <select id="deposit-currency" value={currency} onChange={(event) => setCurrency(event.target.value)} required data-testid="select-crypto-currency"><option value="">Choose a currency</option>{availableCurrencies.map((item) => <option key={item} value={item}>{item.toUpperCase()}</option>)}</select> : <Alert kind="info">No payment currencies are currently offered by the live payment service.</Alert>}
+          </div>}
+          {method !== 'nowpayments' && <div className="manual-note"><CircleAlert /><span>After submitting, use the exact reference code shown below with your Cash App or Chime transfer. Requests are reviewed before your balance is credited.</span></div>}
+          {message && <Alert kind={message.kind}>{message.text}</Alert>}
+          <button className="primary-button finance-submit" type="submit" disabled={pending || methods.isLoading || (method === 'nowpayments' && (currencies.isLoading || !availableCurrencies.length))} data-testid="button-create-deposit">{pending ? 'Creating request…' : <>Continue to payment <ArrowRight /></>}</button>
+        </form>}
+        {!methods.isLoading && !methods.isError && config && !config.nowPaymentsConfigured && !config.cashAppHandle && !config.chimeHandle && <Alert kind="info">No deposit methods are configured at this time. Please check back later.</Alert>}
+        {created && <div className="payment-instructions" aria-live="polite">
+          <div className="instruction-title"><CheckCircle2 /><div><strong>Request #{created.id}</strong><span>{created.method === 'nowpayments' ? 'Payment instructions from the provider' : 'Manual transfer request'}</span></div></div>
+          {created.method === 'nowpayments' ? <>
+            {created.paymentUrl && <a className="provider-payment-link" href={created.paymentUrl} target="_blank" rel="noreferrer">Open secure payment page <ExternalLink /></a>}
+            <div className="instruction-grid">
+              {created.payAmount && <Instruction label={`Send amount${created.payCurrency ? ` (${created.payCurrency.toUpperCase()})` : ''}`} value={created.payAmount} onCopy={() => void copy(created.payAmount!, 'Payment amount')} />}
+              {created.paymentAddress && <Instruction label="Payment address" value={created.paymentAddress} onCopy={() => void copy(created.paymentAddress!, 'Payment address')} />}
+              {created.payinExtraId && <Instruction label="Payment memo / ID" value={created.payinExtraId} onCopy={() => void copy(created.payinExtraId!, 'Payment ID')} />}
+              {created.expiresAt && <div className="instruction-field"><span>Payment expires</span><strong>{dateTime(created.expiresAt)}</strong></div>}
+            </div>
+            {!created.paymentUrl && !created.payAmount && !created.paymentAddress && <Alert kind="info">Provider instructions are not available on this response. Check your deposit history for updates.</Alert>}
+          </> : <>
+            <p className="manual-transfer-copy">Send <strong>{dollars(created.amountCents)}</strong> to the recipient below and include the request code exactly as shown. Keep this page for your records.</p>
+            {created.recipient && <Instruction label="Send to" value={created.recipient} onCopy={() => void copy(created.recipient!, 'Recipient')} />}
+            {created.referenceCode && <Instruction label="Required transfer note / code" value={created.referenceCode} onCopy={() => void copy(created.referenceCode!, 'Reference code')} />}
+            {!created.recipient && !created.referenceCode && <Alert kind="info">Recipient details are not included in the response. Use the request ID in your account history and contact support before sending.</Alert>}
+          </>}
+          {copyMessage && <div className="copy-feedback" role="status">{copyMessage}</div>}
+        </div>}
+      </section>
+      <aside className="deposit-aside">
+        <div className="finance-panel assurance-panel"><span className="assurance-icon"><ShieldCheck /></span><div className="panel-overline">Account assurance</div><h3>Only verified funds count.</h3><p>Requests remain pending until payment confirmation or a manual review. The displayed balance comes from your account record, not from pending requests.</p></div>
+        <div className="finance-panel method-guide"><div className="panel-overline">Before you send</div><h3>Check the details twice.</h3><ul><li>Use the exact amount and currency shown.</li><li>Manual transfers require their unique note code.</li><li>Do not send funds to unlisted recipients.</li></ul></div>
+      </aside>
+    </div>
+    <section className="finance-panel history-panel" aria-labelledby="history-title">
+      <div className="history-heading"><div><div className="panel-overline">Account record</div><h2 id="history-title">Deposit history</h2></div><button type="button" className="quiet-button" onClick={() => void account.refetch()} disabled={account.isFetching} data-testid="button-refresh-deposits"><RefreshCw className={account.isFetching ? 'spin' : ''} /> Refresh</button></div>
+      {account.isLoading ? <LoadingBlock label="Loading deposit history" /> : account.isError ? null : <History deposits={account.data?.deposits ?? []} />}
+    </section>
+  </PortalFrame>;
+}
+
+function Instruction({ label, value, onCopy }: { label: string; value: string; onCopy: () => void }) {
+  return <div className="instruction-field"><span>{label}</span><div><strong>{value}</strong><button type="button" aria-label={`Copy ${label}`} onClick={onCopy} data-testid={`button-copy-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}><Copy /></button></div></div>;
+}
+
+export function ReferralsPage() {
+  const summary = useGetMyReferralSummary();
+  const [copied, setCopied] = useState('');
+  const copy = async (value: string, label: string) => {
+    try { await navigator.clipboard.writeText(value); setCopied(`${label} copied.`); }
+    catch { setCopied('Clipboard unavailable. Select and copy the value manually.'); }
+  };
+  const invitationLink = summary.data
+    ? referralLink(summary.data.referralCode)
+    : '';
+  return <PortalFrame title="Referrals">
+    <PageHeading eyebrow="Share & earn" title="Your referral circle" copy="Invite someone to ReplenishCC. Referral activity and rewards shown here come directly from your account record." />
+    {summary.isLoading ? <div className="referral-skeleton"><LoadingBlock label="Loading referral summary" /></div> : summary.isError ? <QueryError error={summary.error} retry={() => void summary.refetch()} /> : summary.data && <>
+      <section className="referral-hero">
+        <div className="referral-mark"><Gift /></div><div className="referral-hero-copy"><div className="panel-overline">Your personal referral link</div><h2>Good things travel.</h2><p>Share your code. Rewards are earned after a referred member makes a qualifying deposit.</p></div>
+        <div className="referral-reward"><strong>{summary.data.rewardPercent}%</strong><span>reward on each<br />qualifying deposit</span></div>
+      </section>
+      <section className="referral-link-panel finance-panel">
+        <div className="referral-code-group"><label htmlFor="referral-code">Referral code</label><div><input id="referral-code" readOnly value={summary.data.referralCode} data-testid="text-referral-code" /><button type="button" className="quiet-button" onClick={() => void copy(summary.data!.referralCode, 'Referral code')} data-testid="button-copy-referral-code"><Copy /> Copy code</button></div></div>
+        <div className="referral-code-group"><label htmlFor="referral-url">Invitation link</label><div><input id="referral-url" readOnly value={invitationLink} data-testid="text-referral-url" /><button type="button" className="quiet-button" onClick={() => void copy(invitationLink, 'Referral link')} data-testid="button-copy-referral-link"><Clipboard /> Copy link</button></div></div>
+        {copied && <div className="copy-feedback" role="status">{copied}</div>}
+      </section>
+      <section className="referral-stats" aria-label="Referral results">
+        <Metric label="Total referrals" value={summary.data.totalReferrals} detail="Accounts attributed to your code" />
+        <Metric label="Paid referrals" value={summary.data.paidReferrals} detail="Have made a qualifying deposit" />
+        <Metric label="Pending referrals" value={summary.data.pendingReferrals} detail="Not yet qualified" />
+        <Metric label="Rewards earned" value={dollars(summary.data.totalRewardsCents)} detail="Recorded referral credits" emphasis />
+      </section>
+      <section className="finance-panel referral-terms">
+        <div className="referral-terms-symbol"><ArrowDownLeft /></div><div><div className="panel-overline">How rewards are earned</div><h2>5% after a qualifying deposit</h2><p>When a referred member makes a confirmed deposit of at least {dollars(summary.data.minimumDepositCents)}, you earn {summary.data.rewardPercent}% of that deposit. Pending or unconfirmed payments do not qualify.</p></div>
+        <div className="referral-totals"><div><span>Qualifying referred deposits</span><strong>{dollars(summary.data.totalDepositsCents)}</strong></div><div><span>Referral rewards recorded</span><strong>{dollars(summary.data.totalRewardsCents)}</strong></div></div>
+      </section>
+    </>}
+  </PortalFrame>;
+}
+
+function Metric({ label, value, detail, emphasis = false }: { label: string; value: string | number; detail: string; emphasis?: boolean }) {
+  return <article className={`referral-metric${emphasis ? ' metric-emphasis' : ''}`}><span>{label}</span><strong data-testid={`text-referral-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}>{value}</strong><small>{detail}</small></article>;
+}
+
+export function AdminDepositsPage() {
+  const session = useGetAuthMe();
+  const isAdmin = Boolean(session.data?.authenticated && session.data.user?.isDepositAdmin);
+  const queue = useGetAdminDeposits({ query: { enabled: isAdmin, queryKey: getGetAdminDepositsQueryKey() } });
+  const methods = useGetAdminDepositMethods({ query: { enabled: isAdmin, queryKey: getGetAdminDepositMethodsQueryKey() } });
+  const review = useReviewDeposit();
+  const saveMethods = useUpdateAdminDepositMethods();
+  const client = useQueryClient();
+  const [cashAppHandle, setCashAppHandle] = useState('');
+  const [chimeHandle, setChimeHandle] = useState('');
+  const [initialized, setInitialized] = useState(false);
+  const [settingsMessage, setSettingsMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
+  const [reviewMessage, setReviewMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
+  const [rejecting, setRejecting] = useState<string | null>(null);
+  const [reason, setReason] = useState('');
+  const [decidedIds, setDecidedIds] = useState<Set<string>>(() => new Set());
+  useEffect(() => {
+    if (!methods.data || initialized) return;
+    setCashAppHandle(methods.data.cashAppHandle ?? '');
+    setChimeHandle(methods.data.chimeHandle ?? '');
+    setInitialized(true);
+  }, [methods.data, initialized]);
+  if (session.isLoading) return <PortalFrame title="Deposit review"><LoadingBlock label="Checking administrator access" /></PortalFrame>;
+  if (session.isError || !session.data?.authenticated || !session.data.user?.isDepositAdmin) {
+    return <PortalFrame title="Deposit review"><div className="member-gate inline-gate"><ShieldCheck /><h1>Administrator access required</h1><p>This review area is limited to authorized deposit administrators.</p></div></PortalFrame>;
+  }
+  const save = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault(); setSettingsMessage(null);
+    saveMethods.mutate({ data: { cashAppHandle: cashAppHandle.trim() || null, chimeHandle: chimeHandle.trim() || null } }, {
+      onSuccess: () => { setSettingsMessage({ kind: 'success', text: 'Recipient settings saved.' }); void client.invalidateQueries({ queryKey: getGetDepositMethodsQueryKey() }); void client.invalidateQueries({ queryKey: getGetAdminDepositMethodsQueryKey() }); },
+      onError: (error) => setSettingsMessage({ kind: 'error', text: errorText(error) }),
+    });
+  };
+  const decide = (deposit: AdminDeposit, action: 'approve' | 'reject') => {
+    if (action === 'reject' && rejecting !== deposit.id) { setRejecting(deposit.id); setReason(''); return; }
+    if (action === 'reject' && !reason.trim()) { setReviewMessage({ kind: 'error', text: 'Add a reason before rejecting this request.' }); return; }
+    setReviewMessage(null);
+    review.mutate({ depositId: deposit.id, data: action === 'reject' ? { action, reason: reason.trim() } : { action } }, {
+      onSuccess: () => {
+        setReviewMessage({ kind: 'success', text: `Request #${deposit.id} ${action === 'approve' ? 'approved' : 'rejected'}.` });
+        setDecidedIds((previous) => new Set(previous).add(deposit.id));
+        setRejecting(null); setReason('');
+        void client.invalidateQueries({ queryKey: getGetAdminDepositsQueryKey() });
+        void client.invalidateQueries({ queryKey: getGetMyDepositsQueryKey() });
+        void client.invalidateQueries({ queryKey: getGetMyReferralSummaryQueryKey() });
+      },
+      onError: (error) => setReviewMessage({ kind: 'error', text: errorText(error) }),
+    });
+  };
+  const pendingDeposits = queue.data?.deposits.filter((deposit) => deposit.status === 'pending' && (deposit.method === 'cashapp' || deposit.method === 'chime') && !decidedIds.has(deposit.id)) ?? [];
+  return <PortalFrame title="Deposit review">
+    <PageHeading eyebrow="Operations / authorized" title="Deposit review" copy="Review manual Cash App and Chime requests. Each decision is recorded once by the server." />
+    {reviewMessage && <Alert kind={reviewMessage.kind}>{reviewMessage.text}</Alert>}
+    <section className="finance-panel admin-queue" aria-labelledby="queue-heading">
+      <div className="history-heading"><div><div className="panel-overline">Manual transfers</div><h2 id="queue-heading">Pending requests</h2></div><button type="button" className="quiet-button" onClick={() => void queue.refetch()} disabled={queue.isFetching} data-testid="button-refresh-admin-deposits"><RefreshCw className={queue.isFetching ? 'spin' : ''} /> Refresh</button></div>
+      {queue.isLoading ? <LoadingBlock label="Loading pending deposit requests" /> : queue.isError ? <QueryError error={queue.error} retry={() => void queue.refetch()} /> : pendingDeposits.length === 0 ? <div className="finance-empty compact-empty"><span className="empty-mark"><CheckCircle2 /></span><h3>Queue is clear</h3><p>There are no pending manual deposit requests to review.</p></div> : <div className="admin-request-list">{pendingDeposits.map((deposit) => <article className="admin-request" key={deposit.id} data-testid={`admin-deposit-${deposit.id}`}>
+        <div className="admin-request-head"><div><span className="request-type">{deposit.method === 'cashapp' ? 'Cash App' : 'Chime'} · #{deposit.id}</span><h3>{deposit.memberName}</h3><a href={`mailto:${deposit.memberEmail}`}>{deposit.memberEmail}</a></div><div className="admin-request-amount">{dollars(deposit.amountCents)}<small>{dateTime(deposit.createdAt)}</small></div></div>
+        <div className="admin-request-details"><div><span>Recipient</span><strong>{deposit.recipient || 'Not provided'}</strong></div><div><span>Reference code</span><strong>{deposit.referenceCode || 'Not provided'}</strong></div></div>
+        {rejecting === deposit.id && <div className="reject-reason"><label htmlFor={`reject-reason-${deposit.id}`}>Reason for rejection</label><textarea id={`reject-reason-${deposit.id}`} value={reason} maxLength={250} onChange={(event) => setReason(event.target.value)} placeholder="Explain why this request cannot be approved" data-testid={`input-rejection-reason-${deposit.id}`} /><div className="reason-actions"><button type="button" className="quiet-button" onClick={() => setRejecting(null)}>Cancel</button><button type="button" className="admin-action reject-action" onClick={() => decide(deposit, 'reject')} disabled={review.isPending} data-testid={`button-confirm-reject-${deposit.id}`}>{review.isPending ? 'Saving…' : 'Confirm rejection'}</button></div></div>}
+        {rejecting !== deposit.id && <div className="admin-request-actions"><button type="button" className="admin-action approve-action" onClick={() => decide(deposit, 'approve')} disabled={review.isPending} data-testid={`button-approve-deposit-${deposit.id}`}><Check /> Approve request</button><button type="button" className="admin-action reject-action" onClick={() => decide(deposit, 'reject')} disabled={review.isPending} data-testid={`button-reject-deposit-${deposit.id}`}>Reject</button></div>}
+      </article>)}</div>}
+    </section>
+    <section className="finance-panel settings-panel" aria-labelledby="recipient-settings-title">
+      <div className="panel-overline">Payment routing</div><h2 id="recipient-settings-title">Recipient settings</h2><p>These handles are shown to members when they create a manual request. Leave blank to make that method unavailable.</p>
+      {methods.isLoading ? <LoadingBlock label="Loading recipient settings" /> : methods.isError ? <QueryError error={methods.error} retry={() => void methods.refetch()} /> : <form onSubmit={save} className="recipient-settings-form">
+        <div><label className="finance-label" htmlFor="admin-cashapp">Cash App handle</label><input id="admin-cashapp" className="field-input" value={cashAppHandle} onChange={(event) => setCashAppHandle(event.target.value)} maxLength={100} placeholder="Leave empty to disable" data-testid="input-admin-cashapp-handle" /></div>
+        <div><label className="finance-label" htmlFor="admin-chime">Chime handle</label><input id="admin-chime" className="field-input" value={chimeHandle} onChange={(event) => setChimeHandle(event.target.value)} maxLength={100} placeholder="Leave empty to disable" data-testid="input-admin-chime-handle" /></div>
+        {settingsMessage && <Alert kind={settingsMessage.kind}>{settingsMessage.text}</Alert>}
+        <button className="primary-button settings-save" type="submit" disabled={saveMethods.isPending || methods.isLoading} data-testid="button-save-recipient-settings">{saveMethods.isPending ? 'Saving…' : <>Save recipient settings <ArrowRight /></>}</button>
+      </form>}
+    </section>
+  </PortalFrame>;
+}

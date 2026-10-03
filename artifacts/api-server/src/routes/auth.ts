@@ -89,12 +89,38 @@ router.post(
       return;
     }
 
+    let referredById: string | null = null;
+    if (input.referralCode) {
+      const [referrer] = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(
+          eq(
+            usersTable.referralCode,
+            input.referralCode.trim().toUpperCase(),
+          ),
+        )
+        .limit(1);
+      if (!referrer) {
+        res.status(400).json({ error: "That referral code is not valid." });
+        return;
+      }
+      referredById = referrer.id;
+    }
+
     const passwordHash = await hash(input.password, 12);
 
     try {
       const [user] = await db
         .insert(usersTable)
-        .values({ fullName, username, email, passwordHash })
+        .values({
+          fullName,
+          username,
+          email,
+          passwordHash,
+          referralCode: randomBytes(8).toString("hex").toUpperCase(),
+          referredById,
+        })
         .returning();
 
       if (!user) {

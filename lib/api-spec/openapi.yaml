@@ -12,6 +12,10 @@ tags:
     description: Health operations
   - name: auth
     description: Account registration, sessions, and password recovery
+  - name: deposits
+    description: Member deposits, balances, and referral rewards
+  - name: depositAdmin
+    description: Admin-only manual deposit approvals and payment settings
 paths:
   /healthz:
     get:
@@ -146,6 +150,220 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /deposits/methods:
+    get:
+      operationId: getDepositMethods
+      tags: [deposits]
+      summary: Get deposit methods and limits
+      responses:
+        "200":
+          description: Current payment methods and configured recipients
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DepositMethodsResponse"
+        "401":
+          description: Sign-in required
+  /deposits/me:
+    get:
+      operationId: getMyDeposits
+      tags: [deposits]
+      summary: Get the current user's balance and deposit history
+      responses:
+        "200":
+          description: Real balance and deposits for the signed-in user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyDepositsResponse"
+        "401":
+          description: Sign-in required
+  /deposits/manual:
+    post:
+      operationId: createManualDeposit
+      tags: [deposits]
+      summary: Create a Cash App or Chime deposit request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualDepositInput"
+      responses:
+        "201":
+          description: Pending request with a unique payment note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deposit"
+        "400":
+          description: Invalid amount or payment method is not configured
+        "401":
+          description: Sign-in required
+  /deposits/crypto/currencies:
+    get:
+      operationId: getCryptoCurrencies
+      tags: [deposits]
+      summary: Get currencies available for this NOWPayments account
+      responses:
+        "200":
+          description: Live currencies returned by NOWPayments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CryptoCurrenciesResponse"
+        "401":
+          description: Sign-in required
+        "503":
+          description: NOWPayments is not configured or unavailable
+  /deposits/crypto:
+    post:
+      operationId: createCryptoDeposit
+      tags: [deposits]
+      summary: Create a NOWPayments cryptocurrency payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CryptoDepositInput"
+      responses:
+        "201":
+          description: Deposit address and payment instructions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CryptoDepositResponse"
+        "400":
+          description: Invalid amount or unsupported currency
+        "401":
+          description: Sign-in required
+        "503":
+          description: NOWPayments is not configured or unavailable
+  /deposits/nowpayments/webhook:
+    post:
+      operationId: postNowPaymentsWebhook
+      tags: [deposits]
+      summary: Receive a signed NOWPayments payment notification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NowPaymentsWebhookInput"
+      responses:
+        "200":
+          description: Notification accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401":
+          description: Invalid webhook signature
+        "503":
+          description: Webhook signature verification is not configured
+  /referrals/me:
+    get:
+      operationId: getMyReferralSummary
+      tags: [deposits]
+      summary: Get the signed-in user's referral code, link, and real earnings
+      responses:
+        "200":
+          description: Referral totals calculated from registered users and ledger entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferralSummary"
+        "401":
+          description: Sign-in required
+  /admin/deposits:
+    get:
+      operationId: getAdminDeposits
+      tags: [depositAdmin]
+      summary: List deposits for admin review
+      responses:
+        "200":
+          description: Real deposit requests and member details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDepositsResponse"
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+  /admin/deposits/{depositId}:
+    patch:
+      operationId: reviewDeposit
+      tags: [depositAdmin]
+      summary: Approve or reject a pending manual deposit
+      parameters:
+        - name: depositId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepositReviewInput"
+      responses:
+        "200":
+          description: Reviewed deposit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deposit"
+        "400":
+          description: Deposit is not awaiting review
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+        "404":
+          description: Deposit not found
+  /admin/deposit-methods:
+    get:
+      operationId: getAdminDepositMethods
+      tags: [depositAdmin]
+      summary: Get admin payment-recipient settings
+      responses:
+        "200":
+          description: Current Cash App and Chime recipient settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DepositMethodsResponse"
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+    put:
+      operationId: updateAdminDepositMethods
+      tags: [depositAdmin]
+      summary: Update Cash App and Chime recipient settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepositMethodsInput"
+      responses:
+        "200":
+          description: Saved payment-recipient settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DepositMethodsResponse"
+        "400":
+          description: Invalid payment-recipient details
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
 components:
   schemas:
     HealthStatus:
@@ -171,7 +389,9 @@ components:
         createdAt:
           type: string
           format: date-time
-      required: [id, fullName, username, email, createdAt]
+        isDepositAdmin:
+          type: boolean
+      required: [id, fullName, username, email, createdAt, isDepositAdmin]
     AuthMeResponse:
       type: object
       properties:
@@ -226,6 +446,11 @@ components:
           type: string
           minLength: 10
           maxLength: 128
+        referralCode:
+          type: string
+          minLength: 8
+          maxLength: 16
+          pattern: "^[a-zA-Z0-9]+$"
       required: [fullName, email, password, confirmPassword]
     LoginInput:
       type: object
@@ -264,4 +489,122 @@ components:
           minLength: 10
           maxLength: 128
       required: [token, password, confirmPassword]
+    Deposit:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        method: { type: string, enum: [nowpayments, cashapp, chime] }
+        amountCents: { type: integer }
+        transactionId: { type: ["string", "null"] }
+        status: { type: string, enum: [pending, confirmed, rejected, failed, expired, refunded] }
+        providerStatus: { type: ["string", "null"] }
+        paymentAddress: { type: ["string", "null"] }
+        payAmount: { type: ["string", "null"] }
+        payCurrency: { type: ["string", "null"] }
+        payinExtraId: { type: ["string", "null"] }
+        paymentUrl: { type: ["string", "null"], format: uri }
+        recipient: { type: ["string", "null"] }
+        referenceCode: { type: ["string", "null"] }
+        rejectionReason: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+        confirmedAt: { type: ["string", "null"], format: date-time }
+        expiresAt: { type: ["string", "null"], format: date-time }
+      required: [id, method, amountCents, transactionId, status, providerStatus, paymentAddress, payAmount, payCurrency, payinExtraId, paymentUrl, recipient, referenceCode, rejectionReason, createdAt, confirmedAt, expiresAt]
+    AdminDeposit:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        method: { type: string, enum: [nowpayments, cashapp, chime] }
+        amountCents: { type: integer }
+        transactionId: { type: ["string", "null"] }
+        status: { type: string, enum: [pending, confirmed, rejected, failed, expired, refunded] }
+        providerStatus: { type: ["string", "null"] }
+        paymentAddress: { type: ["string", "null"] }
+        payAmount: { type: ["string", "null"] }
+        payCurrency: { type: ["string", "null"] }
+        payinExtraId: { type: ["string", "null"] }
+        recipient: { type: ["string", "null"] }
+        referenceCode: { type: ["string", "null"] }
+        rejectionReason: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+        confirmedAt: { type: ["string", "null"], format: date-time }
+        expiresAt: { type: ["string", "null"], format: date-time }
+        memberName: { type: string }
+        memberEmail: { type: string, format: email }
+      required: [id, method, amountCents, transactionId, status, providerStatus, paymentAddress, payAmount, payCurrency, payinExtraId, recipient, referenceCode, rejectionReason, createdAt, confirmedAt, expiresAt, memberName, memberEmail]
+    DepositMethodsResponse:
+      type: object
+      properties:
+        cashAppHandle: { type: ["string", "null"] }
+        chimeHandle: { type: ["string", "null"] }
+        nowPaymentsConfigured: { type: boolean }
+        minimumAmountCents: { type: integer }
+        maximumAmountCents: { type: integer }
+      required: [cashAppHandle, chimeHandle, nowPaymentsConfigured, minimumAmountCents, maximumAmountCents]
+    DepositMethodsInput:
+      type: object
+      properties:
+        cashAppHandle: { type: ["string", "null"], maxLength: 100 }
+        chimeHandle: { type: ["string", "null"], maxLength: 100 }
+      required: [cashAppHandle, chimeHandle]
+    MyDepositsResponse:
+      type: object
+      properties:
+        balanceCents: { type: integer }
+        deposits:
+          type: array
+          items: { $ref: "#/components/schemas/Deposit" }
+      required: [balanceCents, deposits]
+    CryptoCurrenciesResponse:
+      type: object
+      properties:
+        currencies:
+          type: array
+          items: { type: string }
+      required: [currencies]
+    ManualDepositInput:
+      type: object
+      properties:
+        method: { type: string, enum: [cashapp, chime] }
+        amountCents: { type: integer, minimum: 1500, maximum: 1000000 }
+      required: [method, amountCents]
+    CryptoDepositInput:
+      type: object
+      properties:
+        amountCents: { type: integer, minimum: 1500, maximum: 1000000 }
+        payCurrency: { type: string, minLength: 2, maxLength: 32, pattern: "^[a-zA-Z0-9]+$" }
+      required: [amountCents, payCurrency]
+    CryptoDepositResponse:
+      type: object
+      properties:
+        deposit: { $ref: "#/components/schemas/Deposit" }
+      required: [deposit]
+    ReferralSummary:
+      type: object
+      properties:
+        referralCode: { type: string }
+        totalReferrals: { type: integer }
+        paidReferrals: { type: integer }
+        pendingReferrals: { type: integer }
+        totalRewardsCents: { type: integer }
+        totalDepositsCents: { type: integer }
+        minimumDepositCents: { type: integer }
+        rewardPercent: { type: integer }
+      required: [referralCode, totalReferrals, paidReferrals, pendingReferrals, totalRewardsCents, totalDepositsCents, minimumDepositCents, rewardPercent]
+    AdminDepositsResponse:
+      type: object
+      properties:
+        deposits:
+          type: array
+          items: { $ref: "#/components/schemas/AdminDeposit" }
+      required: [deposits]
+    DepositReviewInput:
+      type: object
+      properties:
+        action: { type: string, enum: [approve, reject] }
+        reason: { type: string, maxLength: 250 }
+      required: [action]
+    NowPaymentsWebhookInput:
+      type: object
+      additionalProperties: true
 

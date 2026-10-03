@@ -6,13 +6,32 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './adminDeposit';
+export * from './adminDepositMethod';
+export * from './adminDepositsResponse';
+export * from './adminDepositStatus';
 export * from './authMeResponse';
 export * from './authResponse';
+export * from './cryptoCurrenciesResponse';
+export * from './cryptoDepositInput';
+export * from './cryptoDepositResponse';
+export * from './deposit';
+export * from './depositMethod';
+export * from './depositMethodsInput';
+export * from './depositMethodsResponse';
+export * from './depositReviewInput';
+export * from './depositReviewInputAction';
+export * from './depositStatus';
 export * from './errorMessage';
 export * from './forgotPasswordInput';
 export * from './healthStatus';
 export * from './loginInput';
+export * from './manualDepositInput';
+export * from './manualDepositInputMethod';
 export * from './messageResponse';
+export * from './myDepositsResponse';
+export * from './nowPaymentsWebhookInput';
+export * from './referralSummary';
 export * from './registerInput';
 export * from './resetPasswordInput';
 export * from './user';
