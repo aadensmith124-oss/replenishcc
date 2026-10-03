@@ -117,6 +117,26 @@ function generateSignupPassword(length = 20): string {
   return characters.join('');
 }
 
+type WorkspaceTheme = 'dark' | 'light';
+
+function WorkspaceThemeToggle({ theme, onToggle }: { theme: WorkspaceTheme; onToggle: () => void }) {
+  const nextTheme = theme === 'dark' ? 'light' : 'dark';
+  return (
+    <button
+      type="button"
+      className="theme-toggle"
+      onClick={onToggle}
+      aria-label={`Switch to ${nextTheme} theme`}
+      aria-pressed={theme === 'light'}
+      title={`Switch to ${nextTheme} theme`}
+      data-testid="button-toggle-theme"
+    >
+      {theme === 'dark' ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
+      <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
+    </button>
+  );
+}
+
 function Frame({ children }: { children: ReactNode }) {
   return (
     <main className="app-frame">
@@ -438,7 +458,7 @@ function RegisterPage() {
               onChange={(value) => { setPassword(value); setGeneratedPassword(''); setCopyStatus(''); }}
               autoComplete="new-password"
               labelAction={
-                <button className="password-generator-button" type="button" onClick={generatePassword} data-testid="button-generate-password">
+                <button className="password-generator-button" type="button" onClick={generatePassword} disabled={register.isPending} data-testid="button-generate-password">
                   <Sparkles aria-hidden="true" /> Generate
                 </button>
               }
@@ -446,7 +466,7 @@ function RegisterPage() {
             {generatedPassword && (
               <div className="generated-password-status" role="status" data-testid="status-generated-password">
                 <span>{copyStatus || 'Strong password generated and filled in both fields.'}</span>
-                <button className="generated-password-copy" type="button" onClick={copyGeneratedPassword} data-testid="button-copy-generated-password">
+                <button className="generated-password-copy" type="button" onClick={copyGeneratedPassword} disabled={register.isPending} data-testid="button-copy-generated-password">
                   {copyStatus.startsWith('Generated password copied') ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
                   {copyStatus.startsWith('Generated password copied') ? 'Copied' : 'Copy'}
                 </button>
@@ -632,14 +652,24 @@ function LegalPage({ kind }: { kind: 'privacy' | 'terms' }) {
 function DashboardPage() {
   const session = useGetAuthMe();
   const logout = usePostAuthLogout();
+  const [theme, setTheme] = useState<WorkspaceTheme>(() => {
+    try {
+      return window.localStorage.getItem('replenishcc-dashboard-theme') === 'light' ? 'light' : 'dark';
+    } catch {
+      return 'dark';
+    }
+  });
   const [logoutError, setLogoutError] = useState('');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [sidebarAccountOpen, setSidebarAccountOpen] = useState(false);
   const mobileSidebarRef = useRef<HTMLElement>(null);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileCloseButtonRef = useRef<HTMLButtonElement>(null);
   const accountControlRef = useRef<HTMLDivElement>(null);
   const accountTriggerRef = useRef<HTMLButtonElement>(null);
+  const sidebarAccountRef = useRef<HTMLDivElement>(null);
+  const sidebarAccountTriggerRef = useRef<HTMLButtonElement>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     financeDeposit: true,
     shop: true,
@@ -651,6 +681,13 @@ function DashboardPage() {
   const user = session.data?.authenticated ? session.data.user : null;
 
   useEffect(() => { document.title = 'Your account | ReplenishCC'; }, []);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('replenishcc-dashboard-theme', theme);
+    } catch {
+      // Keep the selected theme for this page even when storage is unavailable.
+    }
+  }, [theme]);
   useEffect(() => {
     if (!session.isLoading && (!session.data?.authenticated || session.isError)) setLocation('/login');
   }, [session.isLoading, session.data?.authenticated, session.isError, setLocation]);
@@ -708,6 +745,27 @@ function DashboardPage() {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [accountOpen]);
+  useEffect(() => {
+    if (!sidebarAccountOpen) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!sidebarAccountRef.current?.contains(event.target as Node)) setSidebarAccountOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSidebarAccountOpen(false);
+        if (!mobileNavOpen) sidebarAccountTriggerRef.current?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [sidebarAccountOpen, mobileNavOpen]);
+  useEffect(() => {
+    if (!mobileNavOpen) setSidebarAccountOpen(false);
+  }, [mobileNavOpen]);
 
   const signOut = () => {
     if (logout.isPending) return;
@@ -790,22 +848,52 @@ function DashboardPage() {
         <UnavailableNav icon={<Settings2 />} label="Account Management" />
       </nav>
       <div className="sidebar-foot">
-        <ShieldCheck aria-hidden="true" />
-        <span><strong>Private member space</strong><small>Your account, kept secure.</small></span>
+        {user ? (
+          <div ref={sidebarAccountRef} className="sidebar-account-control">
+            {sidebarAccountOpen && <div id="sidebar-account-options" className="sidebar-account-menu" role="region" aria-label="Sidebar account options">
+              {logoutError && <div className="account-error" role="alert">{logoutError}</div>}
+              <button type="button" className="account-logout" onClick={signOut} disabled={logout.isPending} data-testid="button-sidebar-logout">
+                {logout.isPending ? <LoaderCircle className="spin" aria-hidden="true" /> : <LogOut aria-hidden="true" />}
+                {logout.isPending ? 'Signing out…' : 'Sign out'}
+              </button>
+            </div>}
+            <button
+              ref={sidebarAccountTriggerRef}
+              type="button"
+              className="sidebar-account-trigger"
+              onClick={() => { setAccountOpen(false); setSidebarAccountOpen((open) => !open); }}
+              aria-expanded={sidebarAccountOpen}
+              aria-controls="sidebar-account-options"
+              aria-label={`Account options for ${user.email}`}
+              data-testid="button-sidebar-account"
+            >
+              <span className="account-avatar sidebar-account-avatar">{initials}</span>
+              <span className="sidebar-account-email" data-testid="text-sidebar-email">{user.email}</span>
+              <ChevronDown aria-hidden="true" />
+            </button>
+          </div>
+        ) : (
+          <div className="skeleton sidebar-account-skeleton" aria-hidden="true" />
+        )}
       </div>
     </>
   );
 
   if (session.isLoading || (!session.data && !session.isError)) {
     return (
-      <div className={`member-shell${mobileNavOpen ? ' mobile-nav-open' : ''}`}>
+      <div className={`member-shell${mobileNavOpen ? ' mobile-nav-open' : ''}`} data-theme={theme}>
         <aside ref={mobileSidebarRef} id="member-navigation" className="member-sidebar">{memberSidebar}</aside>
         {mobileNavOpen && <button className="member-scrim" type="button" aria-label="Close navigation menu" onClick={() => setMobileNavOpen(false)} data-testid="button-navigation-backdrop" />}
         <main className="member-main" aria-label="Loading your account" aria-busy="true">
           <header className="member-topbar">
             <button ref={mobileMenuButtonRef} type="button" className="mobile-menu-button" onClick={() => setMobileNavOpen(true)} aria-label="Open navigation" aria-expanded={mobileNavOpen} aria-controls="member-navigation" data-testid="button-open-navigation"><Menu /></button>
-            <div className="topbar-context">Member workspace</div>
-            <div className="skeleton" style={{ width: 40, height: 40, borderRadius: '50%' }} />
+            <div className="topbar-brand-tools">
+              <div className="topbar-context">ReplenishCC</div>
+            </div>
+            <div className="topbar-actions">
+              <WorkspaceThemeToggle theme={theme} onToggle={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')} />
+              <div className="skeleton" style={{ width: 40, height: 40, borderRadius: '50%' }} />
+            </div>
           </header>
           <div className="member-content"><div className="skeleton" style={{ width: 110, marginBottom: 22 }} /><div className="skeleton" style={{ width: '54%', height: 46, marginBottom: 16 }} /><div className="skeleton" style={{ width: '65%' }} /></div>
         </main>
@@ -817,7 +905,7 @@ function DashboardPage() {
   }
 
   return (
-    <div className={`member-shell${mobileNavOpen ? ' mobile-nav-open' : ''}`}>
+    <div className={`member-shell${mobileNavOpen ? ' mobile-nav-open' : ''}`} data-theme={theme}>
       <aside
         ref={mobileSidebarRef}
         id="member-navigation"
@@ -830,21 +918,26 @@ function DashboardPage() {
       <main className="member-main">
         <header className="member-topbar">
           <button ref={mobileMenuButtonRef} type="button" className="mobile-menu-button" onClick={() => { setAccountOpen(false); setMobileNavOpen(true); }} aria-label="Open navigation" aria-expanded={mobileNavOpen} aria-controls="member-navigation" data-testid="button-open-navigation"><Menu /></button>
-          <div className="topbar-context"><span className="context-dot" /> Member workspace <span className="context-divider">/</span> Home</div>
-          <div ref={accountControlRef} className="account-control">
-            <button ref={accountTriggerRef} type="button" className="account-trigger" onClick={() => setAccountOpen((open) => !open)} aria-expanded={accountOpen} aria-controls="account-popover" data-testid="button-account-menu">
-              <span className="account-avatar">{initials}</span><span className="account-trigger-name">{user.fullName}</span><ChevronDown aria-hidden="true" />
-            </button>
-            {accountOpen && <div id="account-popover" className="account-popover" role="region" aria-label="Account options">
-              <div className="account-popover-head"><div className="account-avatar large">{initials}</div><div><strong data-testid="text-account-name">{user.fullName}</strong><span data-testid="text-account-email">{user.email}</span></div></div>
-              {user.username && <div className="account-username" data-testid="text-account-username">Username <strong>@{user.username}</strong></div>}
-              <div className="account-menu-note"><LockKeyhole aria-hidden="true" /> Account management is not available yet</div>
-              {logoutError && <div className="account-error" role="alert">{logoutError}</div>}
-              <button type="button" className="account-logout" onClick={signOut} disabled={logout.isPending} data-testid="button-logout">
-                {logout.isPending ? <LoaderCircle className="spin" aria-hidden="true" /> : <LogOut aria-hidden="true" />}
-                {logout.isPending ? 'Signing out…' : 'Log out'}
+          <div className="topbar-brand-tools">
+            <div className="topbar-context">ReplenishCC</div>
+          </div>
+          <div className="topbar-actions">
+            <WorkspaceThemeToggle theme={theme} onToggle={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')} />
+            <div ref={accountControlRef} className="account-control">
+              <button ref={accountTriggerRef} type="button" className="account-trigger" onClick={() => setAccountOpen((open) => !open)} aria-expanded={accountOpen} aria-controls="account-popover" data-testid="button-account-menu">
+                <span className="account-avatar">{initials}</span><span className="account-trigger-name">{user.fullName}</span><ChevronDown aria-hidden="true" />
               </button>
-            </div>}
+              {accountOpen && <div id="account-popover" className="account-popover" role="region" aria-label="Account options">
+                <div className="account-popover-head"><div className="account-avatar large">{initials}</div><div><strong data-testid="text-account-name">{user.fullName}</strong><span data-testid="text-account-email">{user.email}</span></div></div>
+                {user.username && <div className="account-username" data-testid="text-account-username">Username <strong>@{user.username}</strong></div>}
+                <div className="account-menu-note"><LockKeyhole aria-hidden="true" /> Account management is not available yet</div>
+                {logoutError && <div className="account-error" role="alert">{logoutError}</div>}
+                <button type="button" className="account-logout" onClick={signOut} disabled={logout.isPending} data-testid="button-logout">
+                  {logout.isPending ? <LoaderCircle className="spin" aria-hidden="true" /> : <LogOut aria-hidden="true" />}
+                  {logout.isPending ? 'Signing out…' : 'Log out'}
+                </button>
+              </div>}
+            </div>
           </div>
         </header>
         <section className="member-content fade-in" aria-labelledby="member-welcome">
