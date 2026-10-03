@@ -37,8 +37,10 @@ import {
   LoginInput,
   RegisterInput,
   ResetPasswordInput,
+  getGetMyDepositsQueryKey,
   getGetAuthMeQueryKey,
   useGetAuthMe,
+  useGetMyDeposits,
   usePostAuthForgotPassword,
   usePostAuthLogin,
   usePostAuthLogout,
@@ -53,7 +55,8 @@ import {
   useParams,
   Router as WouterRouter,
 } from 'wouter';
-import { AdminDepositsPage, DepositsPage, ReferralsPage } from './pages/FinancePages';
+import { SiteFooter } from './components/SiteFooter';
+import { AdminDepositsPage, DepositsPage, MyDepositsPage, ReferralsPage } from './pages/FinancePages';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -137,18 +140,16 @@ function WorkspaceThemeToggle({ theme, onToggle }: { theme: WorkspaceTheme; onTo
   );
 }
 
+function formatBalance(cents: number): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
+}
+
 function Frame({ children }: { children: ReactNode }) {
   return (
     <main className="app-frame">
       <div className="page-shell">
         {children}
-        <footer className="site-footer">
-          <span>© {new Date().getFullYear()} ReplenishCC</span>
-          <nav className="footer-links" aria-label="Legal">
-            <Link href="/privacy" data-testid="link-privacy">Privacy Policy</Link>
-            <Link href="/terms" data-testid="link-terms">Terms of Service</Link>
-          </nav>
-        </footer>
+        <SiteFooter />
       </div>
     </main>
   );
@@ -684,6 +685,13 @@ function DashboardPage() {
   });
   const [, setLocation] = useLocation();
   const user = session.data?.authenticated ? session.data.user : null;
+  const accountBalance = useGetMyDeposits({
+    query: {
+      queryKey: getGetMyDepositsQueryKey(),
+      enabled: Boolean(user),
+      refetchOnWindowFocus: true,
+    },
+  });
 
   useEffect(() => { document.title = 'Your account | ReplenishCC'; }, []);
   useEffect(() => {
@@ -806,7 +814,7 @@ function DashboardPage() {
         </button>
         {expanded.financeDeposit && <div className="nav-children">
           <Link href="/deposits" className="nav-row" onClick={() => setMobileNavOpen(false)} data-testid="link-deposit-money"><CircleDollarSign aria-hidden="true" /><span>Deposit funds</span></Link>
-          <Link href="/deposits" className="nav-row" onClick={() => setMobileNavOpen(false)} data-testid="link-my-deposits"><FileText aria-hidden="true" /><span>Deposit history</span></Link>
+          <Link href="/my-deposits" className="nav-row" onClick={() => setMobileNavOpen(false)} data-testid="link-my-deposits"><FileText aria-hidden="true" /><span>Deposit history</span></Link>
         </div>}
         <Link href="/referrals" className="nav-row" onClick={() => setMobileNavOpen(false)} data-testid="link-referrals"><Gift aria-hidden="true" /><span>Referrals</span></Link>
         {user?.isDepositAdmin && <Link href="/admin/deposits" className="nav-row" onClick={() => setMobileNavOpen(false)} data-testid="link-admin-deposits"><ShieldCheck aria-hidden="true" /><span>Deposit review</span></Link>}
@@ -889,6 +897,7 @@ function DashboardPage() {
             </div>
             <div className="topbar-actions">
               <WorkspaceThemeToggle theme={theme} onToggle={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')} />
+              <span className="skeleton topbar-balance-skeleton" aria-label="Loading available balance" />
               <div className="skeleton" style={{ width: 40, height: 40, borderRadius: '50%' }} />
             </div>
           </header>
@@ -920,6 +929,20 @@ function DashboardPage() {
           </div>
           <div className="topbar-actions">
             <WorkspaceThemeToggle theme={theme} onToggle={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')} />
+            <Link
+              href="/my-deposits"
+              className="topbar-balance"
+              aria-label={accountBalance.data ? `Available balance ${formatBalance(accountBalance.data.balanceCents)}. View deposit history.` : 'Balance unavailable. View deposit history.'}
+              title="View deposit history"
+              data-testid="link-topbar-balance"
+            >
+              <span className="topbar-balance-label">Balance</span>
+              {accountBalance.isLoading
+                ? <span className="skeleton topbar-balance-value-skeleton" aria-label="Loading available balance" />
+                : accountBalance.data
+                  ? <strong data-testid="text-topbar-balance">{formatBalance(accountBalance.data.balanceCents)}</strong>
+                  : <span className="topbar-balance-unavailable" data-testid="text-topbar-balance-unavailable">Unavailable</span>}
+            </Link>
             <div ref={accountControlRef} className="account-control">
               <button ref={accountTriggerRef} type="button" className="account-trigger" onClick={() => setAccountOpen((open) => !open)} aria-expanded={accountOpen} aria-controls="account-popover" data-testid="button-account-menu">
                 <span className="account-avatar">{initials}</span><span className="account-trigger-name">{user.fullName}</span><ChevronDown aria-hidden="true" />
@@ -965,6 +988,7 @@ function DashboardPage() {
           </div>
           <div className="home-footnote"><ShieldCheck aria-hidden="true" /> ReplenishCC keeps this workspace tied to your authenticated session.</div>
         </section>
+        <SiteFooter homeHref="/dashboard" />
       </main>
     </div>
   );
@@ -994,6 +1018,7 @@ function Router() {
       <Route path="/terms"><LegalPage kind="terms" /></Route>
       <Route path="/dashboard" component={DashboardPage} />
       <Route path="/deposits" component={DepositsPage} />
+      <Route path="/my-deposits" component={MyDepositsPage} />
       <Route path="/referrals" component={ReferralsPage} />
       <Route path="/admin/deposits" component={AdminDepositsPage} />
       <Route>

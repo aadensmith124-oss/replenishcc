@@ -1,9 +1,9 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowDownLeft, ArrowRight, Check, CheckCircle2, ChevronRight, CircleAlert, Clipboard, Menu,
-  Clock3, Copy, ExternalLink, FileText, Gift, LockKeyhole, LogOut, RefreshCw, ShieldCheck,
-  WalletCards, XCircle,
+  ArrowDownLeft, ArrowRight, Check, CheckCircle2, ChevronRight, ChevronLeft, CircleAlert, Clipboard, Menu,
+  Clock3, Copy, ExternalLink, FileText, Gift, LockKeyhole, LogOut, RefreshCw, Search, ShieldCheck,
+  WalletCards, XCircle, Columns3,
 } from 'lucide-react';
 import {
   getGetAdminDepositMethodsQueryKey, getGetAdminDepositsQueryKey, getGetDepositMethodsQueryKey,
@@ -14,6 +14,7 @@ import {
   type AdminDeposit, type Deposit,
 } from '@workspace/api-client-react';
 import { Link, useLocation } from 'wouter';
+import { SiteFooter } from '../components/SiteFooter';
 
 function errorText(error: unknown): string {
   if (error && typeof error === 'object') {
@@ -41,9 +42,9 @@ function dateTime(value: string): string {
   return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 }
 
-function Status({ value }: { value: Deposit['status'] }) {
+function Status({ value, testId }: { value: Deposit['status']; testId?: string }) {
   const Icon = value === 'confirmed' ? CheckCircle2 : value === 'rejected' || value === 'failed' || value === 'refunded' ? XCircle : Clock3;
-  return <span className={`deposit-status status-${value}`}><Icon aria-hidden="true" />{value}</span>;
+  return <span className={`deposit-status status-${value}`} data-testid={testId}><Icon aria-hidden="true" />{value}</span>;
 }
 
 function Alert({ children, kind = 'error' }: { children: ReactNode; kind?: 'error' | 'success' | 'info' }) {
@@ -77,6 +78,7 @@ function PortalFrame({ title, children }: { title: string; children: ReactNode }
         <Link href="/dashboard" className="nav-row" onClick={() => setMobileNavOpen(false)}><WalletCards /><span>Account home</span><ChevronRight /></Link>
         <div className="nav-section-label">Finance</div>
         <Link href="/deposits" className={`nav-row${title === 'Deposits' ? ' active' : ''}`} aria-current={title === 'Deposits' ? 'page' : undefined} onClick={() => setMobileNavOpen(false)}><ArrowDownLeft /><span>Deposit funds</span></Link>
+        <Link href="/my-deposits" className={`nav-row${title === 'Deposit history' ? ' active' : ''}`} aria-current={title === 'Deposit history' ? 'page' : undefined} onClick={() => setMobileNavOpen(false)} data-testid="link-finance-deposit-history"><FileText /><span>Deposit history</span></Link>
         <Link href="/referrals" className={`nav-row${title === 'Referrals' ? ' active' : ''}`} aria-current={title === 'Referrals' ? 'page' : undefined} onClick={() => setMobileNavOpen(false)}><Gift /><span>Referrals</span></Link>
         {user.isDepositAdmin && <><div className="nav-section-label">Operations</div><Link href="/admin/deposits" className={`nav-row${title === 'Deposit review' ? ' active' : ''}`} aria-current={title === 'Deposit review' ? 'page' : undefined} onClick={() => setMobileNavOpen(false)}><ShieldCheck /><span>Deposit review</span></Link></>}
       </nav>
@@ -86,7 +88,7 @@ function PortalFrame({ title, children }: { title: string; children: ReactNode }
     <main className="member-main">
       {mobileNavOpen && <button className="member-scrim" type="button" aria-label="Close navigation menu" onClick={() => setMobileNavOpen(false)} data-testid="button-finance-navigation-backdrop" />}
       <header className="member-topbar"><button type="button" className="mobile-menu-button" onClick={() => setMobileNavOpen(true)} aria-label="Open navigation" aria-expanded={mobileNavOpen} data-testid="button-finance-open-navigation"><Menu /></button><div className="topbar-context">Member account <span>/</span> {title}</div><div className="finance-trust"><LockKeyhole /> Private account area</div></header>
-      <div className="member-content finance-content fade-in">{children}<footer className="finance-footer">ReplenishCC · Account balances and payment instructions are server-verified.</footer></div>
+      <div className="member-content finance-content fade-in">{children}<SiteFooter homeHref="/dashboard" /></div>
     </main>
   </div>;
 }
@@ -228,6 +230,103 @@ export function DepositsPage() {
     <section className="finance-panel history-panel" aria-labelledby="history-title">
       <div className="history-heading"><div><div className="panel-overline">Account record</div><h2 id="history-title">Deposit history</h2></div><button type="button" className="quiet-button" onClick={() => void account.refetch()} disabled={account.isFetching} data-testid="button-refresh-deposits"><RefreshCw className={account.isFetching ? 'spin' : ''} /> Refresh</button></div>
       {account.isLoading ? <LoadingBlock label="Loading deposit history" /> : account.isError ? null : <History deposits={account.data?.deposits ?? []} />}
+    </section>
+  </PortalFrame>;
+}
+
+type HistoryColumn = 'id' | 'amount' | 'status' | 'transaction' | 'created';
+const historyColumns: { id: HistoryColumn; label: string }[] = [
+  { id: 'id', label: 'Deposit ID' },
+  { id: 'amount', label: 'Amount' },
+  { id: 'status', label: 'Status' },
+  { id: 'transaction', label: 'Transaction ID' },
+  { id: 'created', label: 'Created' },
+];
+const depositStatuses: Deposit['status'][] = ['pending', 'confirmed', 'rejected', 'failed', 'expired', 'refunded'];
+
+export function MyDepositsPage() {
+  const account = useGetMyDeposits();
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState<'all' | Deposit['status']>('all');
+  const [page, setPage] = useState(1);
+  const [visible, setVisible] = useState<HistoryColumn[]>(historyColumns.map((column) => column.id));
+  const normalizedSearch = search.trim().toLowerCase();
+  const allDeposits = account.data?.deposits ?? [];
+  const filtered = allDeposits.filter((deposit) => {
+    const matchesId = deposit.id.toLowerCase().includes(normalizedSearch);
+    return matchesId && (status === 'all' || deposit.status === status);
+  });
+  const pageCount = Math.max(1, Math.ceil(filtered.length / 10));
+  const currentPage = Math.min(page, pageCount);
+  const rows = filtered.slice((currentPage - 1) * 10, currentPage * 10);
+  const toggleColumn = (column: HistoryColumn) => {
+    setVisible((current) => current.includes(column)
+      ? current.length > 1 ? current.filter((item) => item !== column) : current
+      : [...current, column]);
+  };
+  const resetFilters = () => { setSearch(''); setStatus('all'); setPage(1); };
+  useEffect(() => { setPage(1); }, [normalizedSearch, status]);
+  useEffect(() => { document.title = 'My deposits | ReplenishCC'; }, []);
+  return <PortalFrame title="Deposit history">
+    <PageHeading eyebrow="Account record" title="My deposits" copy="A clear record of every deposit request associated with your account." action={<Link href="/deposits" className="quiet-button deposit-history-fund" data-testid="link-fund-account"><ArrowDownLeft /> Fund account</Link>} />
+    {account.data && <div className="history-balance-strip" data-testid="text-history-balance">
+      <span><ShieldCheck /> Verified available balance</span>
+      <strong>{dollars(account.data.balanceCents)}</strong>
+      <small>Pending requests are not included in this balance.</small>
+    </div>}
+    <section className="finance-panel my-deposits-panel" aria-labelledby="my-deposits-title">
+      <div className="history-heading my-deposits-heading">
+        <div><div className="panel-overline">Verified account activity</div><h2 id="my-deposits-title">Deposit history</h2></div>
+        <button type="button" className="quiet-button" onClick={() => void account.refetch()} disabled={account.isFetching} data-testid="button-refresh-my-deposits"><RefreshCw className={account.isFetching ? 'spin' : ''} /> Refresh</button>
+      </div>
+      <div className="deposit-history-controls">
+        <details className="column-chooser">
+          <summary className="quiet-button" data-testid="button-choose-deposit-columns"><Columns3 /> Columns <ChevronRight className="chooser-chevron" /></summary>
+          <div className="column-chooser-menu" role="group" aria-label="Choose visible columns">
+            {historyColumns.map((column) => <label key={column.id} className="column-choice">
+              <input type="checkbox" checked={visible.includes(column.id)} disabled={visible.length === 1 && visible.includes(column.id)} onChange={() => toggleColumn(column.id)} data-testid={`checkbox-column-${column.id}`} />
+              <span>{column.label}</span>
+            </label>)}
+          </div>
+        </details>
+        <label className="history-search-field">
+          <span>Search by deposit ID</span>
+          <span className="history-search-input"><Search aria-hidden="true" /><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by order ID…" aria-label="Search by deposit ID" data-testid="input-deposit-id-search" /></span>
+        </label>
+        <label className="history-status-field">
+          <span>Status filter</span>
+          <select value={status} onChange={(event) => setStatus(event.target.value as typeof status)} data-testid="select-deposit-status">
+            <option value="all">All statuses</option>
+            {depositStatuses.map((item) => <option key={item} value={item}>{item[0].toUpperCase() + item.slice(1)}</option>)}
+          </select>
+        </label>
+      </div>
+      {account.isLoading ? <div className="deposit-history-loading" data-testid="loading-my-deposits"><LoadingBlock label="Loading your deposit history" /></div>
+        : account.isError ? <QueryError error={account.error} retry={() => void account.refetch()} />
+        : allDeposits.length === 0 ? <div className="finance-empty deposit-history-empty" data-testid="empty-my-deposits"><span className="empty-mark"><FileText /></span><h3>No deposit activity yet</h3><p>Once you create a deposit request, its verified details and decision status will appear here.</p><Link href="/deposits" className="quiet-button" data-testid="link-empty-fund-account">Create a deposit request <ArrowRight /></Link></div>
+        : filtered.length === 0 ? <div className="finance-empty deposit-history-empty no-results" data-testid="empty-deposit-search"><span className="empty-mark"><Search /></span><h3>No matching deposits</h3><p>Try a different deposit ID or status filter.</p><button type="button" className="quiet-button" onClick={resetFilters} data-testid="button-clear-deposit-filters">Clear filters</button></div>
+        : <>
+          <div className="deposit-history-table-scroll" role="region" aria-label="Deposit records" tabIndex={0} data-testid="region-deposit-table">
+            <table className="deposit-table my-deposits-table">
+              <thead><tr>{historyColumns.filter((column) => visible.includes(column.id)).map((column) => <th key={column.id} scope="col">{column.label}</th>)}</tr></thead>
+              <tbody>{rows.map((deposit) => <tr key={deposit.id} data-testid={`row-my-deposit-${deposit.id}`}>
+                {visible.includes('id') && <td data-label="Deposit ID"><strong className="history-deposit-id" data-testid={`text-deposit-id-${deposit.id}`}>{deposit.id}</strong></td>}
+                {visible.includes('amount') && <td data-label="Amount"><strong className="history-amount" data-testid={`text-deposit-amount-${deposit.id}`}>{dollars(deposit.amountCents)}</strong></td>}
+                {visible.includes('status') && <td data-label="Status"><Status value={deposit.status} testId={`status-my-deposit-${deposit.id}`} /></td>}
+                {visible.includes('transaction') && <td data-label="Transaction ID"><span className="history-transaction" data-testid={`text-transaction-id-${deposit.id}`}>{deposit.transactionId || '—'}</span></td>}
+                {visible.includes('created') && <td data-label="Created"><time dateTime={deposit.createdAt} data-testid={`text-deposit-created-${deposit.id}`}>{dateTime(deposit.createdAt)}</time></td>}
+              </tr>)}</tbody>
+            </table>
+          </div>
+          <div className="deposit-history-pagination">
+            <span className="history-result-count" data-testid="text-deposit-result-count">Showing {(currentPage - 1) * 10 + 1}–{Math.min(currentPage * 10, filtered.length)} of {filtered.length} deposits</span>
+            <div className="history-page-actions">
+              <span className="history-page-number" aria-live="polite" data-testid="text-deposit-page">Page {currentPage} of {pageCount}</span>
+              <button type="button" className="quiet-button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={currentPage <= 1} aria-label="Previous page" data-testid="button-deposit-previous"><ChevronLeft /> Previous</button>
+              <button type="button" className="quiet-button" onClick={() => setPage((value) => Math.min(pageCount, value + 1))} disabled={currentPage >= pageCount} aria-label="Next page" data-testid="button-deposit-next">Next <ChevronRight /></button>
+            </div>
+          </div>
+        </>}
     </section>
   </PortalFrame>;
 }
