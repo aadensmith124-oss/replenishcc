@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   ChevronDown, ChevronRight, CircleDollarSign, ClipboardList, CreditCard, Crown, FileText,
   Gift, Headphones, Home, LoaderCircle, LockKeyhole, LogOut, Menu, MessageSquare, Moon, Megaphone,
-  Package, Settings2, ShieldCheck, ShoppingBag, Sparkles, Sun, Trophy, WalletCards, X,
+  Package, Settings2, ShieldCheck, ShoppingBag, Sparkles, Sun, Trophy, WalletCards, X, KeyRound,
 } from 'lucide-react';
 import {
   getGetAuthMeQueryKey, getGetMyDepositsQueryKey, useGetMyDeposits, usePostAuthLogout,
@@ -236,6 +236,7 @@ export function MemberShell({
           <ShoppingBag aria-hidden="true" /><span>Shop</span><ChevronDown className={`nav-chevron${expanded.shop ? ' is-open' : ''}`} aria-hidden="true" />
         </button>
         {expanded.shop && <div className="nav-children">
+          <Link href="/license-products" className={`nav-row${location === '/license-products' ? ' active' : ''}`} aria-current={location === '/license-products' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-license-products"><KeyRound aria-hidden="true" /><span>License keys</span></Link>
           <UnavailableNav icon={<CreditCard />} label="Buy Cards" />
           <UnavailableNav icon={<Package />} label="Bulk Cards" />
           <UnavailableNav icon={<ClipboardList />} label="Buy Logs" />
@@ -244,10 +245,12 @@ export function MemberShell({
           <Package aria-hidden="true" /><span>My Orders</span><ChevronDown className={`nav-chevron${expanded.orders ? ' is-open' : ''}`} aria-hidden="true" />
         </button>
         {expanded.orders && <div className="nav-children">
+          <Link href="/orders/license-keys" className={`nav-row${location === '/orders/license-keys' ? ' active' : ''}`} aria-current={location === '/orders/license-keys' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-license-orders"><KeyRound aria-hidden="true" /><span>License orders</span></Link>
           <UnavailableNav icon={<CreditCard />} label="My Card Orders" />
           <UnavailableNav icon={<ClipboardList />} label="My Log Orders" />
           <UnavailableNav icon={<Package />} label="My Bulk Card Purchases" />
         </div>}
+        {user?.isDepositAdmin && <Link href="/admin/license-products" className={`nav-row${location === '/admin/license-products' ? ' active' : ''}`} aria-current={location === '/admin/license-products' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-admin-license-products"><ShieldCheck aria-hidden="true" /><span>License inventory</span></Link>}
         <div className="nav-section-label">Support</div>
         <button className={`nav-row nav-group${isSupportPage ? ' active' : ''}`} type="button" onClick={() => toggleGroup('support')} aria-expanded={expanded.support} data-testid="button-toggle-support">
           <Headphones aria-hidden="true" /><span>Support</span><ChevronDown className={`nav-chevron${expanded.support ? ' is-open' : ''}`} aria-hidden="true" />

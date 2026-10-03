@@ -569,6 +569,130 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
 
+/* License storefront: the existing evergreen and brass ledger language, tuned for quick, accountable checkout. */
+.license-page { gap: 20px; }
+.license-heading { align-items: flex-start; }
+.license-balance { min-width: 220px; display: grid; grid-template-columns: 24px 1fr; align-items: center; gap: 2px 10px; border: 1px solid #3a443b; border-radius: 9px; padding: 13px 15px; background: #1b211d; }
+.license-balance > svg { grid-row: 1 / span 2; width: 19px; color: #cfba66; }
+.license-balance span { color: #929b90; font-size: 9px; }
+.license-balance strong { color: #e9eade; font: 600 17px/1.15 var(--app-font-serif); font-variant-numeric: tabular-nums; }
+.license-balance a { grid-column: 2; display: inline-flex; align-items: center; gap: 5px; margin-top: 5px; color: #d6c16d; text-decoration: none; font-size: 9px; }
+.license-balance a svg,.license-trust-strip svg { width: 12px; height: 12px; }
+.license-trust-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 25px; border: 1px solid #303a32; border-radius: 8px; padding: 12px 15px; background: #171d19; color: #aab3a9; font-size: 10px; }
+.license-trust-strip span,.license-trust-strip a { display: inline-flex; align-items: center; gap: 7px; }
+.license-trust-strip svg { color: #c0ad61; }
+.license-trust-strip a { margin-left: auto; color: #d4bf68; text-decoration: none; font-weight: 600; }
+.license-notice { display: flex; align-items: center; gap: 9px; border: 1px solid #3b5944; border-radius: 7px; padding: 12px 14px; color: #bdd0b8; background: #1b2820; font-size: 11px; line-height: 1.5; }
+.license-notice.error { border-color: #59463c; color: #dbb8a2; background: #28211e; }
+.license-notice > svg { width: 16px; flex: 0 0 auto; }
+.license-notice a { margin-left: auto; color: #d9c56f; white-space: nowrap; }
+.license-catalog-top { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin-top: 7px; }
+.license-catalog-top h2,.license-create-panel h2,.license-stock-panel h2 { margin: 7px 0 4px; color: #e8ebe4; font: 600 21px/1.15 var(--app-font-serif); letter-spacing: -.025em; }
+.license-catalog-top p,.license-create-panel > p,.license-stock-panel-heading p { margin: 0; color: #8d988e; font-size: 10px; line-height: 1.6; }
+.license-category { display: grid; gap: 5px; color: #929b91; font-size: 9px; }
+.license-category select { min-width: 160px; height: 35px; border: 1px solid #354139; border-radius: 6px; padding: 0 10px; color: #d5dbd1; background: #141a16; font-size: 10px; }
+.license-product-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 13px; }
+.license-card { min-width: 0; display: flex; flex-direction: column; border: 1px solid #354037; border-radius: 9px; padding: 17px; background: linear-gradient(145deg,#1d241f,#181e1a 78%); box-shadow: inset 0 1px 0 hsl(0 0% 100% / .02); animation: rise-in .38s ease both; }
+.license-card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.license-category-tag { display: inline-flex; border: 1px solid #4b4a35; border-radius: 20px; padding: 5px 8px; color: #d3c373; background: #29291f; font-size: 8px; font-weight: 600; letter-spacing: .04em; }
+.license-stock { display: inline-flex; align-items: center; gap: 5px; color: #95b295; font-size: 8px; white-space: nowrap; }
+.license-stock i { width: 6px; height: 6px; border-radius: 50%; background: #88ad8b; }
+.license-stock.empty { color: #c0957f; }.license-stock.empty i { background: #c0957f; }
+.license-card h3 { margin: 18px 0 8px; color: #e9ece4; font: 600 17px/1.2 var(--app-font-serif); letter-spacing: -.02em; }
+.license-description { min-height: 39px; margin: 0; color: #9aa39a; font-size: 10px; line-height: 1.65; }
+.license-card-price { display: flex; align-items: baseline; gap: 7px; margin-top: 18px; border-top: 1px solid #303931; padding-top: 13px; }
+.license-card-price strong { color: #f0eedf; font: 600 23px/1 var(--app-font-serif); font-variant-numeric: tabular-nums; }
+.license-card-price span { color: #849087; font-size: 9px; }
+.license-buy-row { display: grid; grid-template-columns: auto 58px 1fr; align-items: center; gap: 8px; margin-top: 15px; }
+.license-buy-row label { color: #a8b0a6; font-size: 9px; }
+.license-buy-row input { min-width: 0; width: 58px; height: 34px; border: 1px solid #3b463d; border-radius: 5px; padding: 0 6px; color: #e5e9df; background: #121814; font-size: 10px; }
+.license-buy-row .workspace-primary-button { min-height: 35px; padding: 0 9px; font-size: 9px; }
+.license-buy-row .workspace-primary-button svg { width: 12px; }
+.license-total { display: flex; justify-content: space-between; margin-top: 9px; color: #818c82; font-size: 9px; }
+.license-total strong { color: #d6ddce; font-variant-numeric: tabular-nums; }
+.license-bottom-note { display: flex; align-items: center; gap: 9px; border-top: 1px solid #2b342d; padding: 13px 2px 0; color: #818d83; font-size: 9px; line-height: 1.6; }
+.license-bottom-note svg { width: 15px; flex: 0 0 auto; color: #a69a5a; }
+.license-empty { min-height: 280px; display: grid; justify-items: center; align-content: center; border: 1px dashed #465145; border-radius: 10px; padding: 30px; text-align: center; background: radial-gradient(ellipse at 50% 0%,hsl(44 24% 24% / .1),transparent 58%),#191f1b; }
+.license-empty.compact { min-height: 170px; }
+.license-empty-icon { width: 44px; height: 44px; display: grid; place-items: center; margin-bottom: 12px; border: 1px solid #514b34; border-radius: 50%; color: #d1b85e; background: #29281e; }
+.license-empty-icon svg { width: 19px; }
+.license-empty h2 { margin: 3px 0 7px; color: #e8ebe4; font: 600 20px var(--app-font-serif); }
+.license-empty p { max-width: 400px; margin: 0 0 16px; color: #929c92; font-size: 10px; line-height: 1.7; }
+.license-empty .workspace-primary-button { text-decoration: none; }
+.license-query-error { min-height: 130px; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; border: 1px solid #514039; border-radius: 8px; padding: 20px; color: #d4b49e; background: #241f1c; font-size: 11px; }
+.license-query-error svg { width: 17px; }
+.license-query-error button { min-height: 32px; border: 1px solid #625044; border-radius: 5px; padding: 0 10px; color: #e1c9ae; background: #30251f; font-size: 9px; cursor: pointer; }
+.license-card-skeleton { min-height: 250px; gap: 14px; }
+.license-card-skeleton i,.license-order-skeleton i { display: block; height: 12px; border-radius: 5px; background: linear-gradient(90deg,#252c27,#303832,#252c27); background-size: 200% 100%; animation: shimmer 1.7s ease-in-out infinite; }
+.license-card-skeleton i:first-child { width: 38%; }.license-card-skeleton i:nth-child(2) { width: 70%; height: 20px; margin-top: 12px; }.license-card-skeleton i:nth-child(3) { width: 100%; height: 40px; }.license-card-skeleton i:last-child { width: 100%; height: 38px; margin-top: auto; }
+.license-security-note { display: flex; align-items: center; gap: 12px; border: 1px solid #39483b; border-radius: 8px; padding: 13px 15px; background: #19221b; }
+.license-security-note > svg { width: 19px; flex: 0 0 auto; color: #b9aa60; }
+.license-security-note div { display: grid; gap: 4px; }
+.license-security-note strong { color: #d9dfd3; font-size: 10px; }
+.license-security-note span { color: #8d998e; font-size: 9px; line-height: 1.55; }
+.license-orders-list { display: grid; gap: 13px; }
+.license-order-card { border: 1px solid #354037; border-radius: 9px; padding: 19px; background: linear-gradient(145deg,#1c231e,#171d19); }
+.license-order-head { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; }
+.license-order-label { color: #a99d61; font-size: 8px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.license-order-head h2 { margin: 6px 0 0; color: #e8ebe4; font: 600 19px var(--app-font-serif); }
+.license-order-total { color: #e0d38d; font: 600 19px var(--app-font-serif); font-variant-numeric: tabular-nums; }
+.license-order-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 11px; color: #8e998f; font-size: 9px; }
+.license-order-meta span { display: inline-flex; align-items: center; gap: 5px; }.license-order-meta svg { width: 12px; height: 12px; }
+.license-order-description { color: #a0a99f; font-size: 10px; line-height: 1.6; }
+.license-keys-heading { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; border-top: 1px solid #303931; padding-top: 13px; }
+.license-keys-heading strong { color: #dce2d8; font-size: 10px; }.license-keys-heading span { color: #8c998d; font-size: 9px; }
+.license-keys { display: grid; gap: 7px; margin-top: 9px; }
+.license-key-row { min-width: 0; display: grid; grid-template-columns: 26px minmax(0,1fr) auto; align-items: center; gap: 9px; border: 1px solid #303b33; border-radius: 6px; padding: 8px 9px; background: #121814; }
+.license-key-index { color: #918858; font: 10px var(--app-font-mono); }
+.license-key-row code { overflow-wrap: anywhere; color: #dae3d7; font: 11px/1.5 var(--app-font-mono); user-select: all; }
+.license-key-row button { min-height: 30px; display: inline-flex; align-items: center; gap: 5px; border: 1px solid #414a3b; border-radius: 5px; padding: 0 8px; color: #d1c16d; background: #20261e; font-size: 9px; cursor: pointer; }
+.license-key-row button svg { width: 12px; height: 12px; }
+.license-key-pending { margin-top: 9px; border-radius: 5px; padding: 10px; color: #c4a987; background: #28231d; font-size: 9px; }
+.license-copy-error { margin: 8px 0 0; color: #d4b49e; font-size: 9px; }
+.license-orders-loading { display: grid; gap: 12px; }.license-order-skeleton { display: grid; gap: 13px; border: 1px solid #343e36; border-radius: 8px; padding: 18px; background: #1a201c; }.license-order-skeleton i:first-child { width: 35%; height: 18px; }.license-order-skeleton i:nth-child(2) { width: 55%; }.license-order-skeleton i:last-child { width: 100%; height: 42px; }
+.license-admin-badge { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #4a4935; border-radius: 20px; padding: 8px 11px; color: #d6c472; background: #25251e; font-size: 9px; white-space: nowrap; }.license-admin-badge svg { width: 14px; }
+.license-admin-layout { display: grid; grid-template-columns: minmax(265px,.78fr) minmax(0,1.5fr); align-items: start; gap: 14px; }
+.license-create-panel,.license-stock-panel { padding: 20px; }
+.license-create-panel h2,.license-stock-panel h2 { margin-top: 7px; }
+.license-admin-form { display: grid; gap: 8px; margin-top: 18px; }
+.license-admin-form label,.license-admin-product > label { margin-top: 7px; color: #b4bcb2; font-size: 9px; font-weight: 600; }
+.license-admin-form input,.license-admin-form textarea,.license-admin-product textarea { width: 100%; border: 1px solid #354139; border-radius: 6px; padding: 10px; color: #e0e6dc; background: #121814; font-size: 10px; resize: vertical; }
+.license-admin-form input { height: 39px; }.license-admin-form textarea { min-height: 85px; line-height: 1.55; }
+.license-admin-form input::placeholder,.license-admin-form textarea::placeholder,.license-admin-product textarea::placeholder { color: #606b62; }
+.license-form-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }.license-form-pair > div { display: grid; gap: 8px; }
+.license-submit { width: 100%; margin-top: 8px; }
+.license-stock-panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.license-admin-products { display: grid; gap: 10px; margin-top: 17px; }
+.license-admin-product { border: 1px solid #344037; border-radius: 8px; padding: 14px; background: #171e19; }
+.license-admin-product-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.license-admin-product h3 { margin: 8px 0 0; color: #e4e9df; font: 600 15px var(--app-font-serif); }
+.license-admin-product > p { margin: 8px 0; color: #919c91; font-size: 9px; line-height: 1.6; }
+.admin-product-stock { display: grid; justify-items: end; gap: 2px; }.admin-product-stock strong { color: #d9d28b; font: 600 20px var(--app-font-serif); }.admin-product-stock span { color: #8d998e; font-size: 8px; }
+.admin-product-price { color: #dbe2d5; font: 600 12px var(--app-font-serif); }.admin-product-price span { color: #879287; font: 9px var(--app-font-sans); }
+.license-admin-product > label { display: flex; justify-content: space-between; gap: 8px; margin-top: 14px; }.license-admin-product > label span { color: #879287; font-weight: 400; }
+.license-admin-product textarea { min-height: 82px; margin-top: 7px; font: 10px/1.6 var(--app-font-mono); }
+.license-stock-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 8px; }.license-stock-foot > span { color: #7f8b81; font-size: 8px; }.license-stock-foot .workspace-secondary-button { min-height: 32px; font-size: 9px; }.license-stock-foot svg { width: 12px; }
+@media (max-width: 900px) {
+  .license-product-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .license-admin-layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 650px) {
+  .license-heading,.license-catalog-top { display: grid; align-items: start; }
+  .license-balance { width: 100%; }
+  .license-trust-strip { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .license-trust-strip a { margin-left: 0; }
+  .license-category { width: 100%; }.license-category select { width: 100%; }
+  .license-product-grid { grid-template-columns: 1fr; }
+  .license-card { padding: 16px; }
+  .license-buy-row { grid-template-columns: auto 62px 1fr; }
+  .license-order-card { padding: 15px; }
+  .license-key-row { grid-template-columns: 20px minmax(0,1fr); }
+  .license-key-row button { grid-column: 2; justify-self: start; }
+  .license-admin-badge { width: max-content; }
+  .license-form-pair { grid-template-columns: 1fr; gap: 0; }
+  .license-stock-foot { align-items: flex-start; flex-direction: column; }
+}
+
 /* ReplenishCC member ledger — dark evergreen, brushed brass and quiet sage. */
 .member-dashboard-content { width: min(100% - 48px, 1320px); padding-top: 38px; }
 .workspace-page { display: grid; gap: 18px; padding-bottom: 38px; color: #e8ebe5; }

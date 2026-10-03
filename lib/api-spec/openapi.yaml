@@ -887,7 +887,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreateLicenseOrderResponse"
+                $ref: "#/components/schemas/LicenseOrderPurchaseResult"
         "400":
           description: Invalid product or quantity
         "401":
@@ -1543,7 +1543,7 @@ components:
           type: array
           items: { $ref: "#/components/schemas/LicenseOrder" }
       required: [orders]
-    CreateLicenseOrderResponse:
+    LicenseOrderPurchaseResult:
       type: object
       properties:
         order: { $ref: "#/components/schemas/LicenseOrder" }

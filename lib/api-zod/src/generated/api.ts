@@ -950,3 +950,135 @@ export const RedeemCodeResponse = zod.object({
 })
 
 
+/**
+ * @summary List available license products
+ */
+export const GetLicenseProductsResponse = zod.object({
+  "products": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "category": zod.string(),
+  "priceCents": zod.number().int(),
+  "availableCount": zod.number().int(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary List the signed-in user's license-key orders and delivered keys
+ */
+export const GetMyLicenseOrdersResponse = zod.object({
+  "orders": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "productId": zod.string().uuid(),
+  "productName": zod.string(),
+  "description": zod.string(),
+  "quantity": zod.number().int(),
+  "unitPriceCents": zod.number().int(),
+  "totalCents": zod.number().int(),
+  "deliveredKeys": zod.array(zod.string()),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Purchase a product using the signed-in user's account balance
+ */
+export const createLicenseOrderBodyQuantityMax = 100;
+
+
+
+export const CreateLicenseOrderBody = zod.object({
+  "productId": zod.string().uuid(),
+  "quantity": zod.number().int().min(1).max(createLicenseOrderBodyQuantityMax)
+})
+
+export const CreateLicenseOrderResponse = zod.object({
+  "order": zod.object({
+  "id": zod.string().uuid(),
+  "productId": zod.string().uuid(),
+  "productName": zod.string(),
+  "description": zod.string(),
+  "quantity": zod.number().int(),
+  "unitPriceCents": zod.number().int(),
+  "totalCents": zod.number().int(),
+  "deliveredKeys": zod.array(zod.string()),
+  "createdAt": zod.coerce.date()
+}),
+  "balanceCents": zod.number().int()
+})
+
+
+/**
+ * @summary List all license products and inventory counts for an administrator
+ */
+export const GetAdminLicenseProductsResponse = zod.object({
+  "products": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "category": zod.string(),
+  "priceCents": zod.number().int(),
+  "availableCount": zod.number().int(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Create a license product
+ */
+export const createAdminLicenseProductBodyNameMax = 100;
+
+export const createAdminLicenseProductBodyDescriptionMax = 1000;
+
+export const createAdminLicenseProductBodyCategoryMax = 40;
+
+export const createAdminLicenseProductBodyPriceCentsMax = 1000000;
+
+
+
+export const CreateAdminLicenseProductBody = zod.object({
+  "name": zod.string().min(1).max(createAdminLicenseProductBodyNameMax),
+  "description": zod.string().max(createAdminLicenseProductBodyDescriptionMax),
+  "category": zod.string().min(1).max(createAdminLicenseProductBodyCategoryMax),
+  "priceCents": zod.number().int().min(1).max(createAdminLicenseProductBodyPriceCentsMax)
+})
+
+export const CreateAdminLicenseProductResponse = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "category": zod.string(),
+  "priceCents": zod.number().int(),
+  "availableCount": zod.number().int(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Add a batch of license keys to a product's available stock
+ */
+export const AddAdminLicenseStockParams = zod.object({
+  "productId": zod.coerce.string().uuid()
+})
+
+export const addAdminLicenseStockBodyKeysItemMax = 500;
+
+export const addAdminLicenseStockBodyKeysMax = 1000;
+
+
+
+export const AddAdminLicenseStockBody = zod.object({
+  "keys": zod.array(zod.string().min(1).max(addAdminLicenseStockBodyKeysItemMax)).min(1).max(addAdminLicenseStockBodyKeysMax)
+})
+
+export const AddAdminLicenseStockResponse = zod.object({
+  "addedCount": zod.number().int(),
+  "availableCount": zod.number().int()
+})
+
+

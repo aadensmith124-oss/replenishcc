@@ -22,8 +22,11 @@ import type {
 import type {
   AccountDeletionRequestInput,
   AccountDeletionReviewResult,
+  AddLicenseStockInput,
+  AddLicenseStockResponse,
   AdminAccountDeletionRequestsResponse,
   AdminDepositsResponse,
+  AdminLicenseProductsResponse,
   AdminRedeemCode,
   AdminRedeemCodesResponse,
   AdminSupportTicketListResponse,
@@ -34,6 +37,8 @@ import type {
   AuthMeResponse,
   AuthResponse,
   ChangePasswordInput,
+  CreateLicenseOrderInput,
+  CreateLicenseProductInput,
   CreateRedeemCodeInput,
   CryptoCurrenciesResponse,
   CryptoDepositInput,
@@ -45,11 +50,15 @@ import type {
   ErrorMessage,
   ForgotPasswordInput,
   HealthStatus,
+  LicenseOrderPurchaseResult,
+  LicenseProduct,
+  LicenseProductsResponse,
   LoginInput,
   ManualDepositInput,
   MessageResponse,
   MyAccountDeletionRequestResponse,
   MyDepositsResponse,
+  MyLicenseOrdersResponse,
   NowPaymentsWebhookInput,
   RedeemCodeInput,
   RedeemCodeResult,
@@ -3317,5 +3326,501 @@ export const useRedeemCode = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getRedeemCodeMutationOptions(options));
+    }
+
+export const getGetLicenseProductsUrl = () => {
+
+
+
+
+  return `/api/license-products`
+}
+
+/**
+ * @summary List available license products
+ */
+export const getLicenseProducts = async ( options?: Parameters<typeof customFetch>[1]): Promise<LicenseProductsResponse> => {
+
+  return customFetch<LicenseProductsResponse>(getGetLicenseProductsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLicenseProductsQueryKey = () => {
+    return [
+    `/api/license-products`
+    ] as const;
+    }
+
+
+export const getGetLicenseProductsQueryOptions = <TData = Awaited<ReturnType<typeof getLicenseProducts>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLicenseProducts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLicenseProductsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLicenseProducts>>> = ({ signal }) => getLicenseProducts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLicenseProducts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetLicenseProductsQueryResult = NonNullable<Awaited<ReturnType<typeof getLicenseProducts>>>
+export type GetLicenseProductsQueryError = ErrorType<void>
+
+
+/**
+ * @summary List available license products
+ */
+
+export function useGetLicenseProducts<TData = Awaited<ReturnType<typeof getLicenseProducts>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLicenseProducts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetLicenseProductsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetMyLicenseOrdersUrl = () => {
+
+
+
+
+  return `/api/orders/license-keys`
+}
+
+/**
+ * @summary List the signed-in user's license-key orders and delivered keys
+ */
+export const getMyLicenseOrders = async ( options?: Parameters<typeof customFetch>[1]): Promise<MyLicenseOrdersResponse> => {
+
+  return customFetch<MyLicenseOrdersResponse>(getGetMyLicenseOrdersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyLicenseOrdersQueryKey = () => {
+    return [
+    `/api/orders/license-keys`
+    ] as const;
+    }
+
+
+export const getGetMyLicenseOrdersQueryOptions = <TData = Awaited<ReturnType<typeof getMyLicenseOrders>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyLicenseOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyLicenseOrdersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyLicenseOrders>>> = ({ signal }) => getMyLicenseOrders({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyLicenseOrders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMyLicenseOrdersQueryResult = NonNullable<Awaited<ReturnType<typeof getMyLicenseOrders>>>
+export type GetMyLicenseOrdersQueryError = ErrorType<void>
+
+
+/**
+ * @summary List the signed-in user's license-key orders and delivered keys
+ */
+
+export function useGetMyLicenseOrders<TData = Awaited<ReturnType<typeof getMyLicenseOrders>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyLicenseOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMyLicenseOrdersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateLicenseOrderUrl = () => {
+
+
+
+
+  return `/api/orders/license-keys`
+}
+
+/**
+ * @summary Purchase a product using the signed-in user's account balance
+ */
+export const createLicenseOrder = async (createLicenseOrderInput: CreateLicenseOrderInput, options?: Parameters<typeof customFetch>[1]): Promise<LicenseOrderPurchaseResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<LicenseOrderPurchaseResult>(getCreateLicenseOrderUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createLicenseOrderInput)
+  }
+);}
+
+
+
+
+
+export const getCreateLicenseOrderMutationKey = () => ['createLicenseOrder'] as const;
+
+export const getCreateLicenseOrderMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLicenseOrder>>, TError,CreateLicenseOrderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createLicenseOrder>>, TError,CreateLicenseOrderMutationVariables, TContext> => {
+
+const mutationKey = getCreateLicenseOrderMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createLicenseOrder>>, CreateLicenseOrderMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createLicenseOrder(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateLicenseOrderMutationResult = NonNullable<Awaited<ReturnType<typeof createLicenseOrder>>>
+    export type CreateLicenseOrderMutationBody = BodyType<CreateLicenseOrderInput>
+    export type CreateLicenseOrderMutationError = ErrorType<void>
+    export type CreateLicenseOrderMutationVariables = {data: BodyType<CreateLicenseOrderInput>}
+
+    /**
+ * @summary Purchase a product using the signed-in user's account balance
+ */
+export const useCreateLicenseOrder = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLicenseOrder>>, TError,CreateLicenseOrderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createLicenseOrder>>,
+        TError,
+        CreateLicenseOrderMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateLicenseOrderMutationOptions(options));
+    }
+
+export const getGetAdminLicenseProductsUrl = () => {
+
+
+
+
+  return `/api/admin/license-products`
+}
+
+/**
+ * @summary List all license products and inventory counts for an administrator
+ */
+export const getAdminLicenseProducts = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminLicenseProductsResponse> => {
+
+  return customFetch<AdminLicenseProductsResponse>(getGetAdminLicenseProductsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminLicenseProductsQueryKey = () => {
+    return [
+    `/api/admin/license-products`
+    ] as const;
+    }
+
+
+export const getGetAdminLicenseProductsQueryOptions = <TData = Awaited<ReturnType<typeof getAdminLicenseProducts>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminLicenseProducts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminLicenseProductsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminLicenseProducts>>> = ({ signal }) => getAdminLicenseProducts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminLicenseProducts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminLicenseProductsQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminLicenseProducts>>>
+export type GetAdminLicenseProductsQueryError = ErrorType<void>
+
+
+/**
+ * @summary List all license products and inventory counts for an administrator
+ */
+
+export function useGetAdminLicenseProducts<TData = Awaited<ReturnType<typeof getAdminLicenseProducts>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminLicenseProducts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminLicenseProductsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateAdminLicenseProductUrl = () => {
+
+
+
+
+  return `/api/admin/license-products`
+}
+
+/**
+ * @summary Create a license product
+ */
+export const createAdminLicenseProduct = async (createLicenseProductInput: CreateLicenseProductInput, options?: Parameters<typeof customFetch>[1]): Promise<LicenseProduct> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<LicenseProduct>(getCreateAdminLicenseProductUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createLicenseProductInput)
+  }
+);}
+
+
+
+
+
+export const getCreateAdminLicenseProductMutationKey = () => ['createAdminLicenseProduct'] as const;
+
+export const getCreateAdminLicenseProductMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminLicenseProduct>>, TError,CreateAdminLicenseProductMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAdminLicenseProduct>>, TError,CreateAdminLicenseProductMutationVariables, TContext> => {
+
+const mutationKey = getCreateAdminLicenseProductMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminLicenseProduct>>, CreateAdminLicenseProductMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAdminLicenseProduct(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAdminLicenseProductMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminLicenseProduct>>>
+    export type CreateAdminLicenseProductMutationBody = BodyType<CreateLicenseProductInput>
+    export type CreateAdminLicenseProductMutationError = ErrorType<void>
+    export type CreateAdminLicenseProductMutationVariables = {data: BodyType<CreateLicenseProductInput>}
+
+    /**
+ * @summary Create a license product
+ */
+export const useCreateAdminLicenseProduct = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminLicenseProduct>>, TError,CreateAdminLicenseProductMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAdminLicenseProduct>>,
+        TError,
+        CreateAdminLicenseProductMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateAdminLicenseProductMutationOptions(options));
+    }
+
+export const getAddAdminLicenseStockUrl = (productId: string,) => {
+
+
+
+
+  return `/api/admin/license-products/${productId}/stock`
+}
+
+/**
+ * @summary Add a batch of license keys to a product's available stock
+ */
+export const addAdminLicenseStock = async (productId: string,
+    addLicenseStockInput: AddLicenseStockInput, options?: Parameters<typeof customFetch>[1]): Promise<AddLicenseStockResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AddLicenseStockResponse>(getAddAdminLicenseStockUrl(productId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(addLicenseStockInput)
+  }
+);}
+
+
+
+
+
+export const getAddAdminLicenseStockMutationKey = () => ['addAdminLicenseStock'] as const;
+
+export const getAddAdminLicenseStockMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addAdminLicenseStock>>, TError,AddAdminLicenseStockMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addAdminLicenseStock>>, TError,AddAdminLicenseStockMutationVariables, TContext> => {
+
+const mutationKey = getAddAdminLicenseStockMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addAdminLicenseStock>>, AddAdminLicenseStockMutationVariables> = (props) => {
+          const {productId,data} = props ?? {};
+
+          return  addAdminLicenseStock(productId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddAdminLicenseStockMutationResult = NonNullable<Awaited<ReturnType<typeof addAdminLicenseStock>>>
+    export type AddAdminLicenseStockMutationBody = BodyType<AddLicenseStockInput>
+    export type AddAdminLicenseStockMutationError = ErrorType<void>
+    export type AddAdminLicenseStockMutationVariables = {productId: string;data: BodyType<AddLicenseStockInput>}
+
+    /**
+ * @summary Add a batch of license keys to a product's available stock
+ */
+export const useAddAdminLicenseStock = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addAdminLicenseStock>>, TError,AddAdminLicenseStockMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addAdminLicenseStock>>,
+        TError,
+        AddAdminLicenseStockMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAddAdminLicenseStockMutationOptions(options));
     }
 

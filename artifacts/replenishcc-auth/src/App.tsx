@@ -64,6 +64,7 @@ import { AccountManagementPage, AdminAccountDeletionRequestsPage } from './pages
 import { DashboardWorkspacePage } from './pages/DashboardWorkspacePage';
 import { WeeklyLeaderboardPage } from './pages/WeeklyLeaderboardPage';
 import { AdminAnnouncementsPage } from './pages/AdminAnnouncementsPage';
+import { AdminLicenseProductsPage, LicenseOrdersPage, LicenseProductsPage } from './pages/LicensePages';
 import {
   AdminSupportTicketsPage,
   CreateSupportTicketPage,
@@ -967,6 +968,9 @@ function Router() {
       <Route path="/dashboard" component={DashboardWorkspacePage} />
       <Route path="/leaderboard" component={WeeklyLeaderboardPage} />
       <Route path="/admin/announcements" component={AdminAnnouncementsPage} />
+      <Route path="/license-products" component={LicenseProductsPage} />
+      <Route path="/orders/license-keys" component={LicenseOrdersPage} />
+      <Route path="/admin/license-products" component={AdminLicenseProductsPage} />
       <Route path="/support/create" component={CreateSupportTicketPage} />
       <Route path="/support/tickets" component={MySupportTicketsPage} />
       <Route path="/support/tickets/:ticketId" component={SupportTicketDetailPage} />

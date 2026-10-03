@@ -706,3 +706,86 @@ export interface DepositReviewInput {
 
 export interface NowPaymentsWebhookInput { [key: string]: unknown }
 
+export interface LicenseProduct {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  priceCents: number;
+  availableCount: number;
+  createdAt: string;
+}
+
+export interface LicenseProductsResponse {
+  products: LicenseProduct[];
+}
+
+export interface AdminLicenseProductsResponse {
+  products: LicenseProduct[];
+}
+
+export interface CreateLicenseProductInput {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  name: string;
+  /** @maxLength 1000 */
+  description: string;
+  /**
+     * @minLength 1
+     * @maxLength 40
+     */
+  category: string;
+  /**
+     * @minimum 1
+     * @maximum 1000000
+     */
+  priceCents: number;
+}
+
+export interface AddLicenseStockInput {
+  /**
+     * @minItems 1
+     * @maxItems 1000
+     * @items.minLength 1
+     * @items.maxLength 500
+     */
+  keys: string[];
+}
+
+export interface AddLicenseStockResponse {
+  addedCount: number;
+  availableCount: number;
+}
+
+export interface CreateLicenseOrderInput {
+  productId: string;
+  /**
+     * @minimum 1
+     * @maximum 100
+     */
+  quantity: number;
+}
+
+export interface LicenseOrder {
+  id: string;
+  productId: string;
+  productName: string;
+  description: string;
+  quantity: number;
+  unitPriceCents: number;
+  totalCents: number;
+  deliveredKeys: string[];
+  createdAt: string;
+}
+
+export interface MyLicenseOrdersResponse {
+  orders: LicenseOrder[];
+}
+
+export interface LicenseOrderPurchaseResult {
+  order: LicenseOrder;
+  balanceCents: number;
+}
+

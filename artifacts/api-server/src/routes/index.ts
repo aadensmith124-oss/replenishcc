@@ -7,6 +7,7 @@ import accountManagementRouter from "./account-management";
 import announcementsRouter from "./announcements";
 import leaderboardRouter from "./leaderboard";
 import supportRouter from "./support";
+import licenseStoreRouter from "./license-store";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(accountManagementRouter);
 router.use(announcementsRouter);
 router.use(leaderboardRouter);
 router.use(supportRouter);
+router.use(licenseStoreRouter);
 
 export default router;
