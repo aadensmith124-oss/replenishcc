@@ -6,9 +6,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
 import { ArrowRight, Check, ChevronRight, Clipboard, Columns3, CreditCard, Info, LockKeyhole, RefreshCw, RotateCcw, Search, ShieldCheck, SlidersHorizontal, Trash2 } from 'lucide-react';
 import {
-  getGetAdminGiftCardProductsQueryKey, getGetGiftCardProductsQueryKey, getGetMyGiftCardOrdersQueryKey,
+  getGetAdminGiftCardProductsQueryKey, getGetGiftCardProductsQueryKey, getGetMyGiftCardOrdersQueryKey, getGetMyDepositsQueryKey,
   useAddAdminGiftCardStock, useCreateAdminGiftCardProduct, useDeleteAdminGiftCardProduct,
-  useGetAdminGiftCardProducts, useGetAuthMe, useGetGiftCardProducts, useGetMyGiftCardOrders,
+  useGetAdminGiftCardProducts, useGetAuthMe, useGetGiftCardProducts, useGetMyGiftCardOrders, usePurchaseGiftCard,
   type AuthMeResponse,
   type GiftCardCredential,
 } from '@workspace/api-client-react';
@@ -63,9 +63,12 @@ function MemberGuard({ children, title }: { children: (user: NonNullable<AuthMeR
 }
 
 export function BuyCardsPage() {
+  const queryClient = useQueryClient();
   const productsQuery = useGetGiftCardProducts({ query: { queryKey: getGetGiftCardProductsQueryKey() } });
+  const purchase = usePurchaseGiftCard();
   const products = useMemo(() => productsQuery.data?.products ?? [], [productsQuery.data?.products]);
   const [infoProductId, setInfoProductId] = useState<string | null>(null);
+  const [notice, setNotice] = useState('');
   const [baseId, setBaseId] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [faceValueFilter, setFaceValueFilter] = useState('all');
@@ -73,6 +76,18 @@ export function BuyCardsPage() {
   const [priceFilter, setPriceFilter] = useState<CatalogPriceFilter>('all');
   const [visibleColumns, setVisibleColumns] = useState<CatalogColumn[]>(readCatalogColumns);
   const infoProduct = products.find((product) => product.id === infoProductId) ?? null;
+  const purchaseOne = (productId: string) => {
+    setNotice('');
+    purchase.mutate({ data: { productId, quantity: 1 } }, {
+      onSuccess: (result) => {
+        setNotice(`${result.order.quantity} ${result.order.productName} card purchased for ${money(result.order.totalCents)}.`);
+        void queryClient.invalidateQueries({ queryKey: getGetGiftCardProductsQueryKey() });
+        void queryClient.invalidateQueries({ queryKey: getGetMyGiftCardOrdersQueryKey() });
+        void queryClient.invalidateQueries({ queryKey: getGetMyDepositsQueryKey() });
+      },
+      onError: () => setNotice('Purchase could not be completed. Check your balance and available inventory, then try again.'),
+    });
+  };
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const faceValues = useMemo(
     () => [...new Set(products.map((product) => product.faceValueCents))].sort((left, right) => left - right),
@@ -114,6 +129,7 @@ export function BuyCardsPage() {
       <div><div className="gift-eyebrow"><span className="gift-live-dot" /> Authorized inventory</div><h1>Cards</h1><p>Browse listings by denomination, availability, and member price.</p></div>
       <Link className="gift-orders-link" href="/my-card-orders" data-testid="link-card-order-history"><Clipboard /> My card orders <ArrowRight /></Link>
     </header>
+    {notice && <div className="gift-notice" role="status" data-testid="status-card-purchase">{notice}<Link href="/my-card-orders">View order history</Link><button aria-label="Dismiss purchase notice" onClick={() => setNotice('')} data-testid="button-dismiss-purchase-notice">×</button></div>}
     {productsQuery.isLoading ? <div className="gift-grid" aria-label="Loading card listings" data-testid="loading-card-products">{[1,2,3].map((i) => <div className="gift-product-skeleton" key={i}><i/><i/><i/><i/></div>)}</div>
       : productsQuery.isError ? <div className="gift-query-error" role="alert" data-testid="error-card-products">Catalog couldn’t be loaded. <button onClick={() => void productsQuery.refetch()} data-testid="button-retry-card-products"><RefreshCw /> Try again</button></div>
       : products.length === 0 ? <div className="gift-empty" data-testid="empty-card-catalog"><CreditCard /><h2>No cards are available right now</h2><p>Inventory is checked live. Please return later to see the next verified listing.</p></div>
@@ -171,14 +187,17 @@ export function BuyCardsPage() {
           : <>
             <div className="gift-catalog-table-wrap" role="region" aria-label="Available card listings" tabIndex={0}>
               <table className="gift-catalog-table">
-                <thead><tr><th scope="col">Card / listing</th>{visibleColumns.map((column) => <th scope="col" key={column}>{catalogColumns.find((item) => item.id === column)?.label}</th>)}<th scope="col"><span className="sr-only">Details</span></th></tr></thead>
+                <thead><tr><th scope="col">Card / listing</th>{visibleColumns.map((column) => <th scope="col" key={column}>{catalogColumns.find((item) => item.id === column)?.label}</th>)}<th scope="col">Actions</th></tr></thead>
                 <tbody>{filteredProducts.map((product) => <tr key={product.id} data-testid={`row-gift-product-${product.id}`}>
                   <td><div className="gift-catalog-product"><span className="gift-product-mark"><CreditCard /></span><div><strong data-testid={`text-gift-product-name-${product.id}`}>{product.name}</strong></div></div></td>
                   {visibleColumns.includes('description') && <td className="gift-catalog-description">{product.description || 'Authorized card listing'}</td>}
                   {visibleColumns.includes('faceValue') && <td className="gift-catalog-face" data-testid={`text-gift-face-value-${product.id}`}>{money(product.faceValueCents)}</td>}
                   {visibleColumns.includes('availability') && <td><span className={`gift-stock${product.availableCount <= 5 ? ' is-low' : ''}`}><i />{product.availableCount} available</span></td>}
                   {visibleColumns.includes('price') && <td className="gift-catalog-price" data-testid={`text-gift-member-price-${product.id}`}>{money(product.priceCents)}</td>}
-                  <td><button className="gift-info-button" type="button" onClick={() => setInfoProductId(product.id)} data-testid={`button-info-card-${product.id}`}><Info /> Info</button></td>
+                  <td><div className="gift-catalog-actions">
+                    <button className="gift-info-button" type="button" onClick={() => setInfoProductId(product.id)} data-testid={`button-info-card-${product.id}`}><Info /> Info</button>
+                    <button className="gift-purchase-button" type="button" disabled={purchase.isPending || product.availableCount < 1} onClick={() => purchaseOne(product.id)} aria-label={`Buy one ${product.name}`} data-testid={`button-purchase-card-${product.id}`}>{purchase.isPending ? 'Working…' : 'Buy 1'} <ArrowRight /></button>
+                  </div></td>
                 </tr>)}</tbody>
               </table>
             </div>
@@ -190,7 +209,10 @@ export function BuyCardsPage() {
                 {visibleColumns.includes('availability') && <span>Available <strong className={product.availableCount <= 5 ? 'is-low' : ''}>{product.availableCount}</strong></span>}
                 {visibleColumns.includes('price') && <span>Member price <strong className="gift-mobile-price">{money(product.priceCents)}</strong></span>}
               </div>
-              <button className="gift-info-button" type="button" onClick={() => setInfoProductId(product.id)} data-testid={`button-info-card-mobile-${product.id}`}><Info /> Info</button>
+              <div className="gift-mobile-actions">
+                <button className="gift-info-button" type="button" onClick={() => setInfoProductId(product.id)} data-testid={`button-info-card-mobile-${product.id}`}><Info /> Info</button>
+                <button className="gift-purchase-button" type="button" disabled={purchase.isPending || product.availableCount < 1} onClick={() => purchaseOne(product.id)} aria-label={`Buy one ${product.name}`} data-testid={`button-purchase-card-mobile-${product.id}`}>{purchase.isPending ? 'Working…' : 'Buy 1'} <ArrowRight /></button>
+              </div>
             </article>)}</div>
           </>}
       </>}

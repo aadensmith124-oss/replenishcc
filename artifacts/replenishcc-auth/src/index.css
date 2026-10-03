@@ -748,9 +748,14 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .gift-catalog-description { min-width:160px; max-width:360px; color:#969e94 !important; font-size:9px !important; line-height:1.5; }
 .gift-catalog-face { color:#e6e6dc !important; font:600 15px var(--app-font-serif); font-variant-numeric:tabular-nums; white-space:nowrap; }
 .gift-catalog-price { color:#dfcf7d !important; font:600 15px var(--app-font-serif); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.gift-catalog-actions,.gift-mobile-actions { display:flex; align-items:center; gap:7px; }
 .gift-info-button { min-height:32px; display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid #484b43; border-radius:5px; padding:0 10px; color:#d8dbd1; background:#20231f; font-size:9px; font-weight:600; cursor:pointer; white-space:nowrap; }
 .gift-info-button:hover { border-color:#81754c; color:#e5d789; background:#292a22; }
 .gift-info-button svg { width:13px; height:13px; }
+.gift-purchase-button { min-height:32px; display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid #c9b253; border-radius:5px; padding:0 10px; color:#211f16; background:linear-gradient(110deg,#d5c16a,#b9a451); font-size:9px; font-weight:700; cursor:pointer; white-space:nowrap; }
+.gift-purchase-button:hover:not(:disabled) { filter:brightness(1.06); }
+.gift-purchase-button:disabled { cursor:wait; opacity:.58; }
+.gift-purchase-button svg { width:12px; height:12px; }
 .gift-catalog-mobile { display:none; }
 .gift-mobile-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px 12px; margin-top:11px; border-top:1px solid #323831; padding-top:10px; color:#899387; font-size:8px; }
 .gift-mobile-fields > span { display:grid; gap:4px; }
@@ -758,7 +763,7 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .gift-mobile-fields strong.is-low { color:#d9b47c; }
 .gift-mobile-fields .gift-mobile-price { color:#ddcd79; font:600 13px var(--app-font-serif); }
 .gift-mobile-description { grid-column:1/-1; margin:0; color:#969e94; font-size:9px; line-height:1.55; }
-.gift-mobile-row > .gift-info-button { margin-top:11px; }
+.gift-mobile-actions { margin-top:11px; flex-wrap:wrap; }
 .gift-info-dialog { border-color:#42443a !important; border-radius:9px !important; padding:23px !important; color:#e8e9df !important; background:linear-gradient(145deg,#1c201d,#151816) !important; box-shadow:0 25px 80px #0009 !important; }
 .gift-info-dialog-head { display:flex !important; flex-direction:row !important; align-items:center; gap:12px; padding-right:24px; text-align:left !important; }
 .gift-info-dialog-head .gift-product-mark { width:40px;height:40px;flex:0 0 auto; }

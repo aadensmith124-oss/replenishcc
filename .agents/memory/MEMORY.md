@@ -4,4 +4,4 @@
 - [Support ticket business rules](support-ticket-business-rules.md) — Orders are planned for later; current support refunds credit account balance and replacements are unavailable.
 - [License-key store scope](license-key-store-scope.md) — Members buy admin-listed license keys with account balance; admins create products and add stock.
 - [Coupon and deposit rules](coupon-and-deposit-rules.md) — Coupons discount balance-funded log orders; deposit minimums apply to manual and crypto deposits, not referrals.
-- [Vanilla gift-card store](vanilla-gift-card-store.md) — Admins stock authorized unused cards; buyers purchase them and view credentials only in their own orders.
+- [Vanilla gift-card store](vanilla-gift-card-store.md) — Removing bulk controls must still leave a single-card purchase path; credentials stay private to buyers.
