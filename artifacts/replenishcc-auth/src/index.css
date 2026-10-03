@@ -985,7 +985,7 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .admin-action-button:disabled { opacity: .55; cursor: wait; }
 .admin-action-button svg { width: 12px; height: 12px; }
 .announcement-query-error { flex-wrap: wrap; margin-top: 15px; }
-.telegram-popup-dialog { width: min(520px, calc(100vw - 32px)); max-width: 520px; max-height: min(82vh, 720px); overflow-y: auto; border: 1px solid #474838; border-radius: 13px; padding: 25px; color: #e8ece3; background: linear-gradient(145deg, #202720, #171d19 78%); box-shadow: 0 26px 90px hsl(0 0% 0% / .55); }
+.telegram-popup-dialog { position: fixed; inset: 50% auto auto 50%; transform: translate(-50%, -50%); margin: 0; width: min(520px, calc(100vw - 32px)); max-width: 520px; max-height: min(82vh, 720px); overflow-y: auto; border: 1px solid #474838; border-radius: 13px; padding: 25px; color: #e8ece3; background: linear-gradient(145deg, #202720, #171d19 78%); box-shadow: 0 26px 90px hsl(0 0% 0% / .55); }
 .telegram-popup-dialog::backdrop { background: hsl(150 10% 4% / .76); backdrop-filter: blur(3px); }
 .telegram-popup-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .telegram-popup-label { display: inline-flex; align-items: center; gap: 8px; color: #d8c56f; font-size: 10px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
