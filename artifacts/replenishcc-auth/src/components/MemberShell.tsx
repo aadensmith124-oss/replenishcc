@@ -228,7 +228,7 @@ export function MemberShell({
         {user?.isDepositAdmin && <Link href="/admin/account-deletion-requests" className={`nav-row${location === '/admin/account-deletion-requests' ? ' active' : ''}`} aria-current={location === '/admin/account-deletion-requests' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-admin-account-deletion"><ShieldCheck aria-hidden="true" /><span>Account deletion review</span></Link>}
         <Link href="/redeem-code" className={`nav-row${location === '/redeem-code' ? ' active' : ''}`} aria-current={location === '/redeem-code' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-redeem-code"><Gift aria-hidden="true" /><span>Redeem Code</span></Link>
         <UnavailableNav icon={<Crown />} label="VIP & Free CC" />
-        <UnavailableNav icon={<Trophy />} label="Leaderboard" />
+        <Link href="/leaderboard" className={`nav-row${location === '/leaderboard' ? ' active' : ''}`} aria-current={location === '/leaderboard' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-leaderboard"><Trophy aria-hidden="true" /><span>Leaderboard</span></Link>
         <div className="nav-section-label">Shopping</div>
         <button className="nav-row nav-group" type="button" onClick={() => toggleGroup('shop')} aria-expanded={expanded.shop} data-testid="button-toggle-shop">
           <ShoppingBag aria-hidden="true" /><span>Shop</span><ChevronDown className={`nav-chevron${expanded.shop ? ' is-open' : ''}`} aria-hidden="true" />
