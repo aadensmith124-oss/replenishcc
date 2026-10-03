@@ -307,36 +307,59 @@ function Instruction({ label, value, onCopy }: { label: string; value: string; o
 }
 
 export function ReferralsPage() {
-  const summary = useGetMyReferralSummary();
+  const summary = useGetMyReferralSummary({
+    query: {
+      queryKey: getGetMyReferralSummaryQueryKey(),
+      refetchOnWindowFocus: true,
+      refetchInterval: 120_000,
+    },
+  });
   const [copied, setCopied] = useState('');
+  useEffect(() => { document.title = 'Referrals | ReplenishCC'; }, []);
   const copy = async (value: string, label: string) => {
-    try { await navigator.clipboard.writeText(value); setCopied(`${label} copied.`); }
-    catch { setCopied('Clipboard unavailable. Select and copy the value manually.'); }
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard access is unavailable.');
+      await navigator.clipboard.writeText(value);
+      setCopied(`${label} copied.`);
+    } catch {
+      setCopied('Copy failed. Select the value and copy it manually.');
+    }
   };
   const invitationLink = summary.data
     ? referralLink(summary.data.referralCode)
     : '';
+  const formattedRewardPercent = summary.data ? String(summary.data.rewardPercent) : '';
   return <PortalFrame title="Referrals">
-    <PageHeading eyebrow="Share & earn" title="Your referral circle" copy="Invite someone to ReplenishCC. Referral activity and rewards shown here come directly from your account record." />
-    {summary.isLoading ? <div className="referral-skeleton"><LoadingBlock label="Loading referral summary" /></div> : summary.isError ? <QueryError error={summary.error} retry={() => void summary.refetch()} /> : summary.data && <>
-      <section className="referral-hero">
-        <div className="referral-mark"><Gift /></div><div className="referral-hero-copy"><div className="panel-overline">Your personal referral link</div><h2>Good things travel.</h2><p>Share your code. Rewards are earned after a referred member makes a qualifying deposit.</p></div>
-        <div className="referral-reward"><strong>{summary.data.rewardPercent}%</strong><span>reward on each<br />qualifying deposit</span></div>
+    <PageHeading eyebrow="Member referrals" title="Invite with clarity." copy="Share your personal code and follow verified referral results. Every figure below comes from your account summary." />
+    {summary.isLoading ? <div className="referral-skeleton"><LoadingBlock label="Loading referral summary" /><div className="referral-loading-cards" aria-hidden="true"><span /><span /><span /><span /></div></div> : summary.isError ? <QueryError error={summary.error} retry={() => void summary.refetch()} /> : summary.data && <>
+      <section className="referral-hero" aria-labelledby="referral-hero-title">
+        <div className="referral-mark"><Gift aria-hidden="true" /></div><div className="referral-hero-copy"><div className="panel-overline">A good reason to share</div><h2 id="referral-hero-title">Bring someone into the circle.</h2><p>When a referred member’s qualifying deposit is confirmed, the reward is credited to your account automatically.</p></div>
+        <div className="referral-reward"><strong>{formattedRewardPercent}%</strong><span>reward rate<br />on qualifying deposits</span></div>
       </section>
-      <section className="referral-link-panel finance-panel">
-        <div className="referral-code-group"><label htmlFor="referral-code">Referral code</label><div><input id="referral-code" readOnly value={summary.data.referralCode} data-testid="text-referral-code" /><button type="button" className="quiet-button" onClick={() => void copy(summary.data!.referralCode, 'Referral code')} data-testid="button-copy-referral-code"><Copy /> Copy code</button></div></div>
-        <div className="referral-code-group"><label htmlFor="referral-url">Invitation link</label><div><input id="referral-url" readOnly value={invitationLink} data-testid="text-referral-url" /><button type="button" className="quiet-button" onClick={() => void copy(invitationLink, 'Referral link')} data-testid="button-copy-referral-link"><Clipboard /> Copy link</button></div></div>
-        {copied && <div className="copy-feedback" role="status">{copied}</div>}
+      <section className="referral-link-panel finance-panel" aria-label="Your share details">
+        <div className="referral-share-intro"><span className="panel-overline">Make an introduction</span><h2>One link. Yours to share.</h2><p>Send your link directly. The referral code is also ready to copy on its own.</p></div>
+        <div className="referral-share-fields">
+          <div className="referral-code-group"><label htmlFor="referral-code">Referral code</label><div><input id="referral-code" readOnly value={summary.data.referralCode} aria-label="Your referral code" data-testid="text-referral-code" /><button type="button" className="quiet-button" onClick={() => void copy(summary.data.referralCode, 'Referral code')} data-testid="button-copy-referral-code"><Copy aria-hidden="true" /> Copy code</button></div></div>
+          <div className="referral-code-group"><label htmlFor="referral-url">Invitation link</label><div><input id="referral-url" readOnly value={invitationLink} aria-label="Your invitation link" data-testid="text-referral-url" /><button type="button" className="quiet-button referral-copy-link" onClick={() => void copy(invitationLink, 'Referral link')} data-testid="button-copy-referral-link"><Clipboard aria-hidden="true" /> Copy link</button></div></div>
+          {copied && <div className={`copy-feedback referral-copy-feedback${copied.startsWith('Copy failed') ? ' copy-failed' : ''}`} role={copied.startsWith('Copy failed') ? 'alert' : 'status'} aria-live="polite">{copied}</div>}
+        </div>
       </section>
-      <section className="referral-stats" aria-label="Referral results">
-        <Metric label="Total referrals" value={summary.data.totalReferrals} detail="Accounts attributed to your code" />
-        <Metric label="Paid referrals" value={summary.data.paidReferrals} detail="Have made a qualifying deposit" />
-        <Metric label="Pending referrals" value={summary.data.pendingReferrals} detail="Not yet qualified" />
-        <Metric label="Rewards earned" value={dollars(summary.data.totalRewardsCents)} detail="Recorded referral credits" emphasis />
+      <section className="referral-results-section" aria-labelledby="referral-results-title">
+        <div className="referral-section-heading"><div><div className="panel-overline">Your account record</div><h2 id="referral-results-title">Referral results</h2></div><button type="button" className="quiet-button referral-refresh" onClick={() => void summary.refetch()} disabled={summary.isFetching} aria-label="Refresh referral results" data-testid="button-refresh-referrals"><RefreshCw className={summary.isFetching ? 'spin' : ''} aria-hidden="true" /> Refresh</button></div>
+        <section className="referral-stats" aria-label="Verified referral results" aria-busy={summary.isFetching}>
+          <Metric label="Total referrals" value={summary.data.totalReferrals} detail="Accounts linked to your code" />
+          <Metric label="Paid referrals" value={summary.data.paidReferrals} detail="Have a confirmed qualifying deposit" />
+          <Metric label="Pending referrals" value={summary.data.pendingReferrals} detail="Have not qualified yet" />
+          <Metric label="Rewards earned" value={dollars(summary.data.totalRewardsCents)} detail="Referral credits recorded" emphasis />
+        </section>
       </section>
-      <section className="finance-panel referral-terms">
-        <div className="referral-terms-symbol"><ArrowDownLeft /></div><div><div className="panel-overline">How rewards are earned</div><h2>5% after a qualifying deposit</h2><p>When a referred member makes a confirmed deposit of at least {dollars(summary.data.minimumDepositCents)}, you earn {summary.data.rewardPercent}% of that deposit. Pending or unconfirmed payments do not qualify.</p></div>
-        <div className="referral-totals"><div><span>Qualifying referred deposits</span><strong>{dollars(summary.data.totalDepositsCents)}</strong></div><div><span>Referral rewards recorded</span><strong>{dollars(summary.data.totalRewardsCents)}</strong></div></div>
+      <section className="finance-panel referral-terms" aria-labelledby="referral-terms-title">
+        <div className="referral-terms-symbol"><ShieldCheck aria-hidden="true" /></div>
+        <div className="referral-terms-copy"><div className="panel-overline">The reward rules</div><h2 id="referral-terms-title">{formattedRewardPercent}% when a deposit qualifies.</h2><p>A referred member’s deposit must be at least {dollars(summary.data.minimumDepositCents)} and confirmed before it qualifies. Your reward is added to your account balance automatically after confirmation. Processing and account updates may take time.</p></div>
+        <div className="referral-totals">
+          <div><span>Confirmed referred deposits</span><strong>{dollars(summary.data.totalDepositsCents)}</strong><small>Includes all confirmed deposits from referred members, whether or not each meets the reward threshold.</small></div>
+          <div><span>Referral rewards recorded</span><strong>{dollars(summary.data.totalRewardsCents)}</strong></div>
+        </div>
       </section>
     </>}
   </PortalFrame>;
