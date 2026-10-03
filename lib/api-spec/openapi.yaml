@@ -30,6 +30,8 @@ tags:
     description: Admin ticket review and balance refunds
   - name: redeemCodes
     description: One-time balance redemption codes
+  - name: licenseStore
+    description: Member catalog, secure license delivery, and admin inventory management
 paths:
   /healthz:
     get:
@@ -841,6 +843,131 @@ paths:
           description: Sign-in required
         "429":
           description: Too many redemption attempts
+  /license-products:
+    get:
+      operationId: getLicenseProducts
+      tags: [licenseStore]
+      summary: List available license products
+      responses:
+        "200":
+          description: Active products with currently available stock
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LicenseProductsResponse"
+        "401":
+          description: Sign-in required
+  /orders/license-keys:
+    get:
+      operationId: getMyLicenseOrders
+      tags: [licenseStore]
+      summary: List the signed-in user's license-key orders and delivered keys
+      responses:
+        "200":
+          description: Orders belonging to the signed-in user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyLicenseOrdersResponse"
+        "401":
+          description: Sign-in required
+    post:
+      operationId: createLicenseOrder
+      tags: [licenseStore]
+      summary: Purchase a product using the signed-in user's account balance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLicenseOrderInput"
+      responses:
+        "201":
+          description: Purchase completed and license keys delivered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateLicenseOrderResponse"
+        "400":
+          description: Invalid product or quantity
+        "401":
+          description: Sign-in required
+        "404":
+          description: Product not found or no longer available
+        "409":
+          description: Insufficient balance or stock
+  /admin/license-products:
+    get:
+      operationId: getAdminLicenseProducts
+      tags: [licenseStore]
+      summary: List all license products and inventory counts for an administrator
+      responses:
+        "200":
+          description: All products, including products with no stock
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminLicenseProductsResponse"
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+    post:
+      operationId: createAdminLicenseProduct
+      tags: [licenseStore]
+      summary: Create a license product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLicenseProductInput"
+      responses:
+        "201":
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LicenseProduct"
+        "400":
+          description: Invalid product details
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+  /admin/license-products/{productId}/stock:
+    post:
+      operationId: addAdminLicenseStock
+      tags: [licenseStore]
+      summary: Add a batch of license keys to a product's available stock
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddLicenseStockInput"
+      responses:
+        "200":
+          description: Stock added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddLicenseStockResponse"
+        "400":
+          description: Invalid key batch
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+        "404":
+          description: Product not found
+        "409":
+          description: One or more keys already exist
 components:
   schemas:
     HealthStatus:
@@ -1340,4 +1467,86 @@ components:
     NowPaymentsWebhookInput:
       type: object
       additionalProperties: true
+    LicenseProduct:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        category: { type: string }
+        priceCents: { type: integer }
+        availableCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+      required: [id, name, description, category, priceCents, availableCount, createdAt]
+    LicenseProductsResponse:
+      type: object
+      properties:
+        products:
+          type: array
+          items: { $ref: "#/components/schemas/LicenseProduct" }
+      required: [products]
+    AdminLicenseProductsResponse:
+      type: object
+      properties:
+        products:
+          type: array
+          items: { $ref: "#/components/schemas/LicenseProduct" }
+      required: [products]
+    CreateLicenseProductInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        description: { type: string, maxLength: 1000 }
+        category: { type: string, minLength: 1, maxLength: 40 }
+        priceCents: { type: integer, minimum: 1, maximum: 1000000 }
+      required: [name, description, category, priceCents]
+    AddLicenseStockInput:
+      type: object
+      properties:
+        keys:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items: { type: string, minLength: 1, maxLength: 500 }
+      required: [keys]
+    AddLicenseStockResponse:
+      type: object
+      properties:
+        addedCount: { type: integer }
+        availableCount: { type: integer }
+      required: [addedCount, availableCount]
+    CreateLicenseOrderInput:
+      type: object
+      properties:
+        productId: { type: string, format: uuid }
+        quantity: { type: integer, minimum: 1, maximum: 100 }
+      required: [productId, quantity]
+    LicenseOrder:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        productId: { type: string, format: uuid }
+        productName: { type: string }
+        description: { type: string }
+        quantity: { type: integer }
+        unitPriceCents: { type: integer }
+        totalCents: { type: integer }
+        deliveredKeys:
+          type: array
+          items: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, productId, productName, description, quantity, unitPriceCents, totalCents, deliveredKeys, createdAt]
+    MyLicenseOrdersResponse:
+      type: object
+      properties:
+        orders:
+          type: array
+          items: { $ref: "#/components/schemas/LicenseOrder" }
+      required: [orders]
+    CreateLicenseOrderResponse:
+      type: object
+      properties:
+        order: { $ref: "#/components/schemas/LicenseOrder" }
+        balanceCents: { type: integer }
+      required: [order, balanceCents]
 
