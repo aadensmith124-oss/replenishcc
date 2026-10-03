@@ -832,7 +832,7 @@ function DashboardPage() {
       <nav className="member-nav" aria-label="Member navigation">
         <div className="nav-section-label">Workspace</div>
         <Link href="/dashboard" className={`nav-row nav-home${window.location.pathname === '/dashboard' ? ' active' : ''}`} aria-current={window.location.pathname === '/dashboard' ? 'page' : undefined} onClick={() => setMobileNavOpen(false)} data-testid="link-dashboard-home">
-          <Home aria-hidden="true" /><span>Home</span><span className="live-mark">Current</span>
+          <Home aria-hidden="true" /><span>Home</span>
         </Link>
 
         <div className="nav-section-label">Finance</div>

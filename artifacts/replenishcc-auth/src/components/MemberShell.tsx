@@ -222,7 +222,7 @@ export function MemberShell({
       <nav className="member-nav" aria-label="Member navigation">
         <div className="nav-section-label">Workspace</div>
         <Link href="/dashboard" className={`nav-row nav-home${location === '/dashboard' ? ' active' : ''}`} aria-current={location === '/dashboard' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-dashboard-home">
-          <Home aria-hidden="true" /><span>Home</span><span className="live-mark">Current</span>
+          <Home aria-hidden="true" /><span>Home</span>
         </Link>
         <div className="nav-section-label">Finance</div>
         <button className={`nav-row nav-group${isDepositPage ? ' active' : ''}`} type="button" onClick={() => toggleGroup('financeDeposit')} aria-expanded={expanded.financeDeposit} data-testid="button-toggle-deposit">
