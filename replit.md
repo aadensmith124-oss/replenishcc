@@ -1,15 +1,28 @@
-# [Project name]
+# ReplenishCC Authentication
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A mobile-first account portal for ReplenishCC with working registration, sign-in, password recovery, legal placeholders, and a protected dashboard.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — run the shared API server
+- `pnpm --filter @workspace/replenishcc-auth run dev` — run the ReplenishCC web app
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Required environment: `DATABASE_URL` (provided by the project's PostgreSQL database) and `SESSION_SECRET` (a private random value of at least 32 characters)
+
+For local development, copy `.env.example` to a private `.env` file and provide the variables. Never commit real secrets. Replit provisions `DATABASE_URL`; the project already has a `SESSION_SECRET` secret configured.
+
+## Database setup
+
+The users, sessions, and password-reset-token tables are defined in `lib/db/src/schema/auth.ts`. Apply development schema changes with:
+
+```sh
+pnpm --filter @workspace/db run push
+```
+
+The database enforces unique email and username values. Password hashes, session digests, and reset-token digests are stored; plaintext passwords and raw session tokens are not.
 
 ## Stack
 
@@ -18,27 +31,39 @@ _Replace the heading above with the project's name, and this line with one sente
 - DB: PostgreSQL + Drizzle ORM
 - Validation: Zod (`zod/v4`), `drizzle-zod`
 - API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Password hashing: bcrypt
+- Build: esbuild
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/replenishcc-auth` — ReplenishCC React/Vite frontend and account pages
+- `artifacts/api-server/src/routes/auth.ts` — authentication API routes
+- `lib/db/src/schema/auth.ts` — PostgreSQL auth schema
+- `lib/api-spec/openapi.yaml` — API contract; generated client and validation live in `lib/api-client-react` and `lib/api-zod`
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Opaque, signed, HTTP-only cookies reference server-side sessions; the database stores only a keyed digest of the session token.
+- Password reset tokens are single-use, expire after one hour, and are stored as keyed digests.
+- Same-origin checks and `SameSite=Lax` cookies protect session-changing requests against cross-site requests.
+- Login, registration, reset requests, and reset completion have per-process IP rate limits.
+- Development reset links are written to the API log. Password-reset email delivery is not configured; the API returns a generic service-unavailable response in production until a mail provider is added.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Sign up with full name, optional username, email, and a validated password; registration signs the user in.
+- Sign in with a remember-me option, request/reset a password, view privacy and terms placeholders, and access a protected dashboard.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Keep the authentication scope focused; do not add the future dashboard, marketplace, or account modules yet.
+- Use the supplied near-black/charcoal and restrained warm-gold ReplenishCC palette; do not reuse SpiderCC branding or red buttons from reference screenshots.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- After updating the OpenAPI contract, run codegen before using generated API types.
+- Configure an email delivery provider before enabling password recovery in production.
+- The current rate limiter is in-memory and should be replaced with a shared store before running multiple API instances.
 
 ## Pointers
 
