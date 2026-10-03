@@ -154,6 +154,14 @@ function Frame({ children }: { children: ReactNode }) {
   );
 }
 
+function AuthBrandHeader() {
+  return (
+    <header className="auth-brand-header">
+      <Brand href="/" label="ReplenishCC home" />
+    </header>
+  );
+}
+
 function Story({ mode }: { mode: 'login' | 'register' | 'recovery' }) {
   const copy = {
     login: {
@@ -347,6 +355,7 @@ function LoginPage() {
 
   return (
     <Frame>
+      <AuthBrandHeader />
       <div className="auth-layout auth-layout-single">
         <section className="form-card fade-in" aria-labelledby="signin-title">
           <div className="eyebrow">Member access</div>
@@ -361,7 +370,7 @@ function LoginPage() {
                 <input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} data-testid="input-remember-me" />
                 Remember me
               </label>
-              <Link className="text-link" href="/forgot-password" data-testid="link-forgot-password">Forgot password?</Link>
+              <span className="text-link text-link-unavailable" aria-disabled="true" data-testid="text-forgot-password-unavailable">Forgot password? (unavailable for now)</span>
             </div>
             <ActionButton pending={login.isPending} testId="button-sign-in">
               Sign In <ArrowRight aria-hidden="true" />
@@ -448,6 +457,7 @@ function RegisterPage() {
 
   return (
     <Frame>
+      <AuthBrandHeader />
       <div className="auth-layout auth-layout-single">
         <section className="form-card fade-in" aria-labelledby="register-title">
           <div className="eyebrow">Start here</div>
