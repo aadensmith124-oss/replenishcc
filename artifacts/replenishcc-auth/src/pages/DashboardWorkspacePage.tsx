@@ -128,6 +128,7 @@ export function DashboardWorkspacePage() {
     return [...months.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, value]) => value);
   }, [filteredDeposits]);
   const announcements = announcementsQuery.data?.announcements ?? [];
+  const announcementBanners = announcements.filter((item) => !item.showAsPopup);
   const recentDeposits = [...filteredDeposits].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5);
   const setRange = (value: RangePreset) => {
     setPreset(value);
@@ -147,8 +148,8 @@ export function DashboardWorkspacePage() {
     <MemberShell pageTitle="Dashboard" user={user} contentClassName="member-dashboard-content">
       <div className="workspace-page">
         <section className="workspace-panel announcement-panel announcement-top-panel" aria-labelledby="dashboard-announcements-title">
-          <div className="workspace-panel-head announcement-top-head"><div><div className="section-kicker"><Megaphone aria-hidden="true" /> From ReplenishCC</div><h2 id="dashboard-announcements-title">Service announcements</h2><p>Updates from the team that matter to your account.</p></div><span className="announcement-count">{announcements.length} {announcements.length === 1 ? 'update' : 'updates'}</span></div>
-          {announcementsQuery.isLoading ? <div className="table-skeleton"><span /><span /></div> : announcementsQuery.isError ? <div className="inline-error" role="alert">Announcements are temporarily unavailable. <button type="button" onClick={() => void announcementsQuery.refetch()}>Retry</button></div> : announcements.length ? <div className="announcement-list">{announcements.slice(0, 3).map((item) => <article className="member-announcement" key={item.id}><div className="announcement-date">{dateLabel(item.publishedAt || item.createdAt)}</div><div><h3>{item.title}</h3><p>{item.body}</p></div></article>)}</div> : <div className="inline-empty">No service updates right now. Important announcements will be posted here.</div>}
+          <div className="workspace-panel-head announcement-top-head"><div><div className="section-kicker"><Megaphone aria-hidden="true" /> From ReplenishCC</div><h2 id="dashboard-announcements-title">Service announcements</h2><p>Updates from the team that matter to your account.</p></div><span className="announcement-count">{announcementBanners.length} {announcementBanners.length === 1 ? 'banner' : 'banners'}</span></div>
+          {announcementsQuery.isLoading ? <div className="table-skeleton"><span /><span /></div> : announcementsQuery.isError ? <div className="inline-error" role="alert">Announcements are temporarily unavailable. <button type="button" onClick={() => void announcementsQuery.refetch()}>Retry</button></div> : announcementBanners.length ? <div className="announcement-list">{announcementBanners.slice(0, 3).map((item) => <article className="member-announcement" key={item.id}><div className="announcement-date">{dateLabel(item.publishedAt || item.createdAt)}</div><div><h3>{item.title}</h3><p>{item.body}</p></div></article>)}</div> : <div className="inline-empty">No announcement banners right now. Pop-up announcements are shown separately.</div>}
         </section>
 
         <header className="workspace-heading">

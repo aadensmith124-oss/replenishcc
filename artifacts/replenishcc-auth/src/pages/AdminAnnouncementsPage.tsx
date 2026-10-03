@@ -25,7 +25,7 @@ function messageFrom(error: unknown) {
 function AnnouncementCard({ item, onAction, busy }: { item: Announcement; onAction: (item: Announcement, action: 'archive' | 'restore') => void; busy: boolean }) {
   const archived = Boolean(item.archivedAt);
   return <article className={`admin-announcement-card${archived ? ' is-archived' : ''}`} data-testid={`card-announcement-${item.id}`}>
-    <div className="admin-announcement-card-top"><div className="announcement-card-badges"><span className={archived ? 'publish-state archived' : 'publish-state'}><i />{archived ? 'Archived' : 'Published'}</span>{item.showAsPopup && <span className="announcement-popup-badge">Telegram pop-up</span>}</div><span className="announcement-created">Created {readableDate(item.createdAt)}</span></div>
+    <div className="admin-announcement-card-top"><div className="announcement-card-badges"><span className={archived ? 'publish-state archived' : 'publish-state'}><i />{archived ? 'Archived' : 'Published'}</span><span className={item.showAsPopup ? 'announcement-popup-badge' : 'announcement-banner-badge'}>{item.showAsPopup ? 'Telegram pop-up' : 'Dashboard banner'}</span></div><span className="announcement-created">Created {readableDate(item.createdAt)}</span></div>
     <h3>{item.title}</h3><p>{item.body}</p>
     {item.showAsPopup && item.telegramUrl && <a className="announcement-telegram-link" href={item.telegramUrl} target="_blank" rel="noopener noreferrer"><ExternalLink aria-hidden="true" />{item.telegramButtonText}</a>}
     <div className="admin-announcement-card-foot"><span>{archived ? `Archived ${readableDate(item.archivedAt!)}` : `Published ${readableDate(item.publishedAt)}`}</span>
@@ -46,7 +46,7 @@ export function AdminAnnouncementsPage() {
   const update = useUpdateAnnouncement();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [showAsPopup, setShowAsPopup] = useState(false);
+  const [displayType, setDisplayType] = useState<'banner' | 'popup'>('banner');
   const [telegramUrl, setTelegramUrl] = useState('');
   const [telegramButtonText, setTelegramButtonText] = useState('Visit Telegram channel');
   const [notice, setNotice] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
@@ -62,6 +62,7 @@ export function AdminAnnouncementsPage() {
     event.preventDefault();
     const cleanTitle = title.trim();
     const cleanBody = body.trim();
+    const showAsPopup = displayType === 'popup';
     if (!cleanTitle || !cleanBody) {
       setNotice({ kind: 'error', text: 'Add a title and message before publishing.' });
       return;
@@ -75,8 +76,8 @@ export function AdminAnnouncementsPage() {
     const cleanButtonText = telegramButtonText.trim() || 'Visit Telegram channel';
     create.mutate({ data: { title: cleanTitle, body: cleanBody, showAsPopup, telegramUrl: showAsPopup ? cleanTelegramUrl : null, telegramButtonText: showAsPopup ? cleanButtonText : null } }, {
       onSuccess: () => {
-        setTitle(''); setBody(''); setShowAsPopup(false); setTelegramUrl(''); setTelegramButtonText('Visit Telegram channel');
-        setNotice({ kind: 'success', text: showAsPopup ? 'Telegram pop-up published. Signed-in members will see it once until dismissed.' : 'Announcement published. Members can now see this update.' });
+        setTitle(''); setBody(''); setDisplayType('banner'); setTelegramUrl(''); setTelegramButtonText('Visit Telegram channel');
+        setNotice({ kind: 'success', text: showAsPopup ? 'Telegram pop-up published. Signed-in members will see it once until dismissed.' : 'Announcement banner published in the member dashboard.' });
         void client.invalidateQueries({ queryKey: getGetAnnouncementsQueryKey() });
         void client.invalidateQueries({ queryKey: getGetAdminAnnouncementsQueryKey() });
       },
@@ -111,10 +112,17 @@ export function AdminAnnouncementsPage() {
             <input id="announcement-title" className="announcement-input" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} required placeholder="A concise update title" data-testid="input-announcement-title" />
             <label className="finance-label" htmlFor="announcement-body">Message <span>{body.length}/2000</span></label>
             <textarea id="announcement-body" className="announcement-input announcement-textarea" value={body} onChange={(event) => setBody(event.target.value)} maxLength={2000} required placeholder="Share the details members need to know." data-testid="input-announcement-body" />
-            <label className="announcement-popup-option">
-              <input type="checkbox" checked={showAsPopup} onChange={(event) => setShowAsPopup(event.target.checked)} data-testid="checkbox-announcement-popup" />
-              <span><strong>Show as a member pop-up</strong><small>Signed-in members see it once per browser until they dismiss it.</small></span>
-            </label>
+            <fieldset className="announcement-display-selector">
+              <legend>Choose one display format</legend>
+              <label className={`announcement-popup-option${displayType === 'banner' ? ' selected' : ''}`}>
+                <input type="radio" name="announcement-display-type" value="banner" checked={displayType === 'banner'} onChange={() => setDisplayType('banner')} data-testid="radio-announcement-banner" />
+                <span><strong>Announcements banner</strong><small>Show this update in the member dashboard announcement panel.</small></span>
+              </label>
+              <label className={`announcement-popup-option${displayType === 'popup' ? ' selected' : ''}`}>
+                <input type="radio" name="announcement-display-type" value="popup" checked={displayType === 'popup'} onChange={() => setDisplayType('popup')} data-testid="radio-announcement-popup" />
+                <span><strong>Telegram pop-up</strong><small>Show a pop-up to signed-in members instead of adding it to the dashboard banner.</small></span>
+              </label>
+            </fieldset>
             {showAsPopup && <>
               <label className="finance-label" htmlFor="announcement-telegram-url">Telegram channel URL</label>
               <input id="announcement-telegram-url" className="announcement-input" type="url" value={telegramUrl} onChange={(event) => setTelegramUrl(event.target.value)} required maxLength={2048} placeholder="https://t.me/yourchannel" data-testid="input-announcement-telegram-url" />
