@@ -677,8 +677,9 @@ function DashboardPage() {
     checker: true,
     support: true,
   });
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const user = session.data?.authenticated ? session.data.user : null;
+  const isBinCheckerPage = location === '/dashboard/bin-checker';
 
   useEffect(() => { document.title = 'Your account | ReplenishCC'; }, []);
   useEffect(() => {
@@ -791,8 +792,8 @@ function DashboardPage() {
       </div>
       <nav className="member-nav" aria-label="Member navigation">
         <div className="nav-section-label">Workspace</div>
-        <Link href="/dashboard" className="nav-row nav-home active" aria-current="page" onClick={() => setMobileNavOpen(false)} data-testid="link-dashboard-home">
-          <Home aria-hidden="true" /><span>Home</span><span className="live-mark">Current</span>
+        <Link href="/dashboard" className={`nav-row nav-home${isBinCheckerPage ? '' : ' active'}`} aria-current={!isBinCheckerPage ? 'page' : undefined} onClick={() => setMobileNavOpen(false)} data-testid="link-dashboard-home">
+          <Home aria-hidden="true" /><span>Home</span>{!isBinCheckerPage && <span className="live-mark">Current</span>}
         </Link>
 
         <div className="nav-section-label">Finance</div>
@@ -831,7 +832,9 @@ function DashboardPage() {
           <Search aria-hidden="true" /><span>Checker</span><ChevronDown className={`nav-chevron${expanded.checker ? ' is-open' : ''}`} aria-hidden="true" />
         </button>
         {expanded.checker && <div className="nav-children">
-          <UnavailableNav icon={<Search />} label="Bin Checker" />
+          <Link href="/dashboard/bin-checker" className={`nav-row${isBinCheckerPage ? ' active' : ''}`} aria-current={isBinCheckerPage ? 'page' : undefined} onClick={() => setMobileNavOpen(false)} data-testid="link-bin-checker">
+            <Search aria-hidden="true" /><span>Bin Checker</span>
+          </Link>
           <UnavailableNav icon={<CreditCard />} label="Card Checker" />
         </div>}
 
@@ -940,36 +943,133 @@ function DashboardPage() {
             </div>
           </div>
         </header>
-        <section className="member-content fade-in" aria-labelledby="member-welcome">
-          <div className="welcome-eyebrow"><Sparkles aria-hidden="true" size={14} /> Your account</div>
-          <div className="welcome-heading-row">
-            <div>
-              <h1 id="member-welcome" data-testid="text-welcome">Welcome, {user.fullName.split(/\s+/)[0]}.</h1>
-              <p className="welcome-copy">Your ReplenishCC member space is ready.</p>
-            </div>
-            <div className="welcome-seal" aria-label="Secure member workspace"><ShieldCheck aria-hidden="true" /><span>SECURE<br />WORKSPACE</span></div>
-          </div>
-          <div className="member-divider" />
-          <div className="home-lower">
-            <div className="home-message">
-              <span className="home-message-index">01 <span /> ACCOUNT OVERVIEW</span>
-              <h2>A clear place<br />to begin.</h2>
-              <p>Account services will appear here as they become available. For now, your signed-in identity is the only information shown.</p>
-            </div>
-            <div className="identity-panel" data-testid="user-identity">
-              <div className="identity-panel-heading"><span>Signed in as</span><span className="identity-status"><i /> Active session</span></div>
-              <div className="identity-user">
-                <div className="user-avatar">{initials}</div>
-                <div className="user-meta"><strong data-testid="text-full-name">{user.fullName}</strong><span data-testid="text-user-email">{user.email}</span></div>
+        <section className="member-content fade-in" aria-labelledby={isBinCheckerPage ? 'bin-checker-title' : 'member-welcome'}>
+          {isBinCheckerPage ? <BinCheckerContent /> : <>
+            <div className="welcome-eyebrow"><Sparkles aria-hidden="true" size={14} /> Your account</div>
+            <div className="welcome-heading-row">
+              <div>
+                <h1 id="member-welcome" data-testid="text-welcome">Welcome, {user.fullName.split(/\s+/)[0]}.</h1>
+                <p className="welcome-copy">Your ReplenishCC member space is ready.</p>
               </div>
-              {user.username && <div className="identity-detail"><span>Username</span><strong data-testid="text-member-username">@{user.username}</strong></div>}
-              <div className="identity-detail"><span>Account access</span><strong><ShieldCheck aria-hidden="true" /> Protected</strong></div>
+              <div className="welcome-seal" aria-label="Secure member workspace"><ShieldCheck aria-hidden="true" /><span>SECURE<br />WORKSPACE</span></div>
             </div>
-          </div>
-          <div className="home-footnote"><ShieldCheck aria-hidden="true" /> ReplenishCC keeps this workspace tied to your authenticated session.</div>
+            <div className="member-divider" />
+            <div className="home-lower">
+              <div className="home-message">
+                <span className="home-message-index">01 <span /> ACCOUNT OVERVIEW</span>
+                <h2>A clear place<br />to begin.</h2>
+                <p>Account services will appear here as they become available. For now, your signed-in identity is the only information shown.</p>
+              </div>
+              <div className="identity-panel" data-testid="user-identity">
+                <div className="identity-panel-heading"><span>Signed in as</span><span className="identity-status"><i /> Active session</span></div>
+                <div className="identity-user">
+                  <div className="user-avatar">{initials}</div>
+                  <div className="user-meta"><strong data-testid="text-full-name">{user.fullName}</strong><span data-testid="text-user-email">{user.email}</span></div>
+                </div>
+                {user.username && <div className="identity-detail"><span>Username</span><strong data-testid="text-member-username">@{user.username}</strong></div>}
+                <div className="identity-detail"><span>Account access</span><strong><ShieldCheck aria-hidden="true" /> Protected</strong></div>
+              </div>
+            </div>
+            <div className="home-footnote"><ShieldCheck aria-hidden="true" /> ReplenishCC keeps this workspace tied to your authenticated session.</div>
+          </>}
         </section>
       </main>
     </div>
+  );
+}
+
+function BinCheckerContent() {
+  const [prefix, setPrefix] = useState('');
+  const [error, setError] = useState('');
+  const [resultLength, setResultLength] = useState<number | null>(null);
+
+  const checkPrefix = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!/^\d{6,8}$/.test(prefix)) {
+      setResultLength(null);
+      setError('Enter a prefix containing 6 to 8 digits. Do not enter a full card number.');
+      return;
+    }
+    setError('');
+    setResultLength(prefix.length);
+  };
+
+  return (
+    <>
+      <div className="welcome-eyebrow"><Search aria-hidden="true" /> Format check only</div>
+      <div className="welcome-heading-row bin-checker-heading-row">
+        <div>
+          <h1 id="bin-checker-title">BIN / IIN prefix checker</h1>
+          <p className="welcome-copy">Check the format of a short issuer identification prefix.</p>
+        </div>
+        <div className="bin-checker-status"><ShieldCheck aria-hidden="true" /><span>Local format check</span></div>
+      </div>
+      <div className="member-divider" />
+      <div className="bin-checker-grid">
+        <section className="bin-checker-card" aria-labelledby="bin-checker-form-title">
+          <div className="bin-checker-kicker">Prefix format</div>
+          <h2 id="bin-checker-form-title">Enter an IIN prefix</h2>
+          <p className="bin-checker-description">Use only the first 6–8 digits. This checks digits and length only; it does not confirm the prefix is assigned or identify an issuer.</p>
+          <form className="bin-checker-form" onSubmit={checkPrefix} noValidate>
+            <label htmlFor="bin-prefix">6–8 digit prefix</label>
+            <div className="bin-checker-control">
+              <input
+                id="bin-prefix"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                spellCheck={false}
+                maxLength={8}
+                pattern="[0-9]{6,8}"
+                value={prefix}
+                onChange={(event) => {
+                  setPrefix(event.target.value.replace(/\D/g, '').slice(0, 8));
+                  setError('');
+                  setResultLength(null);
+                }}
+                onPaste={(event) => {
+                  const pasted = event.clipboardData.getData('text').trim().replace(/[\s-]/g, '');
+                  if (!/^\d+$/.test(pasted) || pasted.length > 8) {
+                    event.preventDefault();
+                    setPrefix('');
+                    setResultLength(null);
+                    setError('Only a 6–8 digit prefix is accepted. Full card numbers are rejected.');
+                    return;
+                  }
+                  event.preventDefault();
+                  setPrefix(pasted);
+                  setError('');
+                  setResultLength(null);
+                }}
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? 'bin-prefix-help bin-prefix-error' : 'bin-prefix-help'}
+                data-testid="input-bin-prefix"
+              />
+              <button className="bin-checker-submit" type="submit" data-testid="button-check-bin-prefix">
+                Check format <ArrowRight aria-hidden="true" />
+              </button>
+            </div>
+            <p id="bin-prefix-help" className="bin-checker-hint">Digits only. Leading zeroes are preserved. No data is sent or saved.</p>
+            {error && <p id="bin-prefix-error" className="bin-checker-error" role="alert">{error}</p>}
+            {resultLength !== null && <div className="bin-checker-result" role="status" aria-live="polite">
+              <Check aria-hidden="true" />
+              <span><strong>Prefix format accepted</strong><small>{resultLength}-digit input. No issuer or card validity was checked.</small></span>
+            </div>}
+          </form>
+        </section>
+        <aside className="bin-checker-note" aria-label="Checker limitations">
+          <div className="bin-checker-note-label"><ShieldCheck aria-hidden="true" /> Limited check</div>
+          <h2>What this checks</h2>
+          <p>Only whether the input contains 6–8 digits.</p>
+          <ul>
+            <li>No issuer, network, or country lookup.</li>
+            <li>No card, balance, or authorization checks.</li>
+            <li>Never enter a full card number, security code, or expiration date.</li>
+          </ul>
+          <div className="bin-checker-privacy">The prefix is checked in this browser only and is not submitted or stored.</div>
+        </aside>
+      </div>
+    </>
   );
 }
 
@@ -995,6 +1095,7 @@ function Router() {
       <Route path="/reset-password/:token" component={ResetPasswordPage} />
       <Route path="/privacy"><LegalPage kind="privacy" /></Route>
       <Route path="/terms"><LegalPage kind="terms" /></Route>
+      <Route path="/dashboard/bin-checker" component={DashboardPage} />
       <Route path="/dashboard" component={DashboardPage} />
       <Route>
         <Frame>
