@@ -11,6 +11,15 @@ export interface DepositMethodsResponse {
   cashAppHandle: string | null;
   /** @nullable */
   chimeHandle: string | null;
+  /** @nullable */
+  applePayRecipient: string | null;
+  /** @nullable */
+  venmoHandle: string | null;
+  cashAppEnabled: boolean;
+  chimeEnabled: boolean;
+  applePayEnabled: boolean;
+  venmoEnabled: boolean;
+  nowPaymentsEnabled: boolean;
   nowPaymentsConfigured: boolean;
   minimumAmountCents: number;
   maximumAmountCents: number;

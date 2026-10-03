@@ -70,6 +70,7 @@ import {
   SupportTicketDetailPage,
 } from './pages/SupportPages';
 import { AdminDashboardPage } from './pages/AdminDashboard';
+import { BuyCardsPage, MyCardOrdersPage } from './pages/CardPages';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -980,6 +981,8 @@ function Router() {
       <Route path="/admin/dashboard/:section" component={AdminDashboardPage} />
       <Route path="/admin/announcements" component={AdminDashboardPage} />
       <Route path="/buy-logs" component={LicenseProductsPage} />
+      <Route path="/buy-cards" component={BuyCardsPage} />
+      <Route path="/my-card-orders" component={MyCardOrdersPage} />
       <Route path="/my-log-orders" component={LicenseOrdersPage} />
       <Route path="/license-products" component={LicenseProductsPage} />
       <Route path="/orders/license-keys" component={LicenseOrdersPage} />

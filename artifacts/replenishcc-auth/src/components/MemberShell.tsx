@@ -110,7 +110,9 @@ export function MemberShell({
   const initials = user?.fullName.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'R';
   const isDepositPage = location === '/deposits' || location === '/my-deposits';
   const isBuyLogsPage = location === '/buy-logs' || location === '/license-products';
+  const isBuyCardsPage = location === '/buy-cards';
   const isMyLogOrdersPage = location === '/my-log-orders' || location === '/orders/license-keys';
+  const isMyCardOrdersPage = location === '/my-card-orders';
   const isSupportPage = location.startsWith('/support/') || location.startsWith('/admin/support/');
 
   useEffect(() => {
@@ -238,20 +240,20 @@ export function MemberShell({
         <UnavailableNav icon={<Crown />} label="VIP & Free CC" />
         <Link href="/leaderboard" className={`nav-row${location === '/leaderboard' ? ' active' : ''}`} aria-current={location === '/leaderboard' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-leaderboard"><Trophy aria-hidden="true" /><span>Leaderboard</span></Link>
         <div className="nav-section-label">Shopping</div>
-        <button className={`nav-row nav-group${isBuyLogsPage ? ' active' : ''}`} type="button" onClick={() => toggleGroup('shop')} aria-expanded={expanded.shop} data-testid="button-toggle-shop">
+        <button className={`nav-row nav-group${isBuyLogsPage || isBuyCardsPage ? ' active' : ''}`} type="button" onClick={() => toggleGroup('shop')} aria-expanded={expanded.shop} data-testid="button-toggle-shop">
           <ShoppingBag aria-hidden="true" /><span>Shop</span><ChevronDown className={`nav-chevron${expanded.shop ? ' is-open' : ''}`} aria-hidden="true" />
         </button>
         {expanded.shop && <div className="nav-children">
           <Link href="/buy-logs" className={`nav-row${isBuyLogsPage ? ' active' : ''}`} aria-current={isBuyLogsPage ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-buy-logs"><ClipboardList aria-hidden="true" /><span>Buy Logs</span></Link>
-          <UnavailableNav icon={<CreditCard />} label="Buy Cards" />
+          <Link href="/buy-cards" className={`nav-row${location === '/buy-cards' ? ' active' : ''}`} aria-current={location === '/buy-cards' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-buy-cards"><CreditCard aria-hidden="true" /><span>Buy Cards</span></Link>
           <UnavailableNav icon={<Package />} label="Bulk Cards" />
         </div>}
-        <button className={`nav-row nav-group${isMyLogOrdersPage ? ' active' : ''}`} type="button" onClick={() => toggleGroup('orders')} aria-expanded={expanded.orders} data-testid="button-toggle-orders">
+        <button className={`nav-row nav-group${isMyLogOrdersPage || isMyCardOrdersPage ? ' active' : ''}`} type="button" onClick={() => toggleGroup('orders')} aria-expanded={expanded.orders} data-testid="button-toggle-orders">
           <Package aria-hidden="true" /><span>My Orders</span><ChevronDown className={`nav-chevron${expanded.orders ? ' is-open' : ''}`} aria-hidden="true" />
         </button>
         {expanded.orders && <div className="nav-children">
           <Link href="/my-log-orders" className={`nav-row${isMyLogOrdersPage ? ' active' : ''}`} aria-current={isMyLogOrdersPage ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-my-log-orders"><ClipboardList aria-hidden="true" /><span>My Log Orders</span></Link>
-          <UnavailableNav icon={<CreditCard />} label="My Card Orders" />
+          <Link href="/my-card-orders" className={`nav-row${location === '/my-card-orders' ? ' active' : ''}`} aria-current={location === '/my-card-orders' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-my-card-orders"><CreditCard aria-hidden="true" /><span>My Card Orders</span></Link>
           <UnavailableNav icon={<Package />} label="My Bulk Card Purchases" />
         </div>}
         <div className="nav-section-label">Support</div>

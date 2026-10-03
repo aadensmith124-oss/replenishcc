@@ -2,6 +2,7 @@ import { createInsertSchema } from "drizzle-zod";
 import {
   index,
   integer,
+  boolean,
   pgTable,
   text,
   timestamp,
@@ -14,11 +15,19 @@ import { usersTable } from "./auth";
 import { redeemCodesTable } from "./redeem_codes";
 import { supportTicketRefundsTable } from "./support";
 import { licenseOrdersTable } from "./license-store";
+import { giftCardOrdersTable } from "./gift-card-store";
 
 export const depositSettingsTable = pgTable("deposit_settings", {
   id: integer("id").primaryKey().default(1),
   cashAppHandle: varchar("cash_app_handle", { length: 100 }),
   chimeHandle: varchar("chime_handle", { length: 100 }),
+  applePayRecipient: varchar("apple_pay_recipient", { length: 100 }),
+  venmoHandle: varchar("venmo_handle", { length: 100 }),
+  cashAppEnabled: boolean("cash_app_enabled").notNull().default(true),
+  chimeEnabled: boolean("chime_enabled").notNull().default(true),
+  applePayEnabled: boolean("apple_pay_enabled").notNull().default(true),
+  venmoEnabled: boolean("venmo_enabled").notNull().default(true),
+  nowPaymentsEnabled: boolean("now_payments_enabled").notNull().default(true),
   minimumAmountCents: integer("minimum_amount_cents").notNull().default(1500),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
@@ -93,6 +102,10 @@ export const accountLedgerTable = pgTable(
     orderId: uuid("order_id").references(() => licenseOrdersTable.id, {
       onDelete: "cascade",
     }),
+    giftCardOrderId: uuid("gift_card_order_id").references(
+      () => giftCardOrdersTable.id,
+      { onDelete: "cascade" },
+    ),
     entryType: varchar("entry_type", { length: 32 }).notNull(),
     amountCents: integer("amount_cents").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -116,6 +129,10 @@ export const accountLedgerTable = pgTable(
     ),
     uniqueIndex("account_ledger_order_entry_type_unique").on(
       table.orderId,
+      table.entryType,
+    ),
+    uniqueIndex("account_ledger_gift_card_order_entry_type_unique").on(
+      table.giftCardOrderId,
       table.entryType,
     ),
   ],

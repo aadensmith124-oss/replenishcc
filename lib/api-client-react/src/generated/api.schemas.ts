@@ -470,6 +470,8 @@ export const DepositMethod = {
   nowpayments: 'nowpayments',
   cashapp: 'cashapp',
   chime: 'chime',
+  applepay: 'applepay',
+  venmo: 'venmo',
 } as const;
 
 export type DepositStatus = typeof DepositStatus[keyof typeof DepositStatus];
@@ -505,7 +507,10 @@ export interface Deposit {
   paymentUrl: string | null;
   /** @nullable */
   recipient: string | null;
-  /** @nullable */
+  /**
+     * Payment note for manual transfers
+     * @nullable
+     */
   referenceCode: string | null;
   /** @nullable */
   rejectionReason: string | null;
@@ -523,6 +528,8 @@ export const AdminDepositMethod = {
   nowpayments: 'nowpayments',
   cashapp: 'cashapp',
   chime: 'chime',
+  applepay: 'applepay',
+  venmo: 'venmo',
 } as const;
 
 export type AdminDepositStatus = typeof AdminDepositStatus[keyof typeof AdminDepositStatus];
@@ -556,7 +563,10 @@ export interface AdminDeposit {
   payinExtraId: string | null;
   /** @nullable */
   recipient: string | null;
-  /** @nullable */
+  /**
+     * Payment note for manual transfers
+     * @nullable
+     */
   referenceCode: string | null;
   /** @nullable */
   rejectionReason: string | null;
@@ -574,6 +584,15 @@ export interface DepositMethodsResponse {
   cashAppHandle: string | null;
   /** @nullable */
   chimeHandle: string | null;
+  /** @nullable */
+  applePayRecipient: string | null;
+  /** @nullable */
+  venmoHandle: string | null;
+  cashAppEnabled: boolean;
+  chimeEnabled: boolean;
+  applePayEnabled: boolean;
+  venmoEnabled: boolean;
+  nowPaymentsEnabled: boolean;
   nowPaymentsConfigured: boolean;
   minimumAmountCents: number;
   maximumAmountCents: number;
@@ -590,6 +609,21 @@ export interface DepositMethodsInput {
      * @nullable
      */
   chimeHandle: string | null;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  applePayRecipient: string | null;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  venmoHandle: string | null;
+  cashAppEnabled: boolean;
+  chimeEnabled: boolean;
+  applePayEnabled: boolean;
+  venmoEnabled: boolean;
+  nowPaymentsEnabled: boolean;
   /**
      * @minimum 100
      * @maximum 1000000
@@ -612,6 +646,8 @@ export type ManualDepositInputMethod = typeof ManualDepositInputMethod[keyof typ
 export const ManualDepositInputMethod = {
   cashapp: 'cashapp',
   chime: 'chime',
+  applepay: 'applepay',
+  venmo: 'venmo',
 } as const;
 
 export interface ManualDepositInput {
@@ -860,6 +896,117 @@ export interface MyLicenseOrdersResponse {
 
 export interface LicenseOrderPurchaseResult {
   order: LicenseOrder;
+  balanceCents: number;
+}
+
+export interface GiftCardProduct {
+  id: string;
+  name: string;
+  description: string;
+  faceValueCents: number;
+  priceCents: number;
+  availableCount: number;
+  createdAt: string;
+}
+
+export interface GiftCardProductsResponse {
+  products: GiftCardProduct[];
+}
+
+export interface CreateGiftCardProductInput {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  name: string;
+  /** @maxLength 1000 */
+  description: string;
+  /**
+     * @minimum 1
+     * @maximum 1000000
+     */
+  faceValueCents: number;
+  /**
+     * @minimum 1
+     * @maximum 1000000
+     */
+  priceCents: number;
+}
+
+export interface GiftCardCredentialInput {
+  /**
+     * @minLength 13
+     * @maxLength 19
+     * @pattern ^[0-9 ]+$
+     */
+  cardNumber: string;
+  /**
+     * @minLength 4
+     * @maxLength 7
+     */
+  expiration: string;
+  /**
+     * @minLength 3
+     * @maxLength 4
+     * @pattern ^[0-9]+$
+     */
+  securityCode: string;
+  /**
+     * @maxLength 16
+     * @nullable
+     */
+  pin: string | null;
+}
+
+export interface AddGiftCardStockInput {
+  /**
+     * @minItems 1
+     * @maxItems 500
+     */
+  cards: GiftCardCredentialInput[];
+}
+
+export interface AddGiftCardStockResponse {
+  addedCount: number;
+  availableCount: number;
+}
+
+export interface GiftCardCredential {
+  cardNumber: string;
+  expiration: string;
+  securityCode: string;
+  /** @nullable */
+  pin: string | null;
+}
+
+export interface PurchaseGiftCardInput {
+  productId: string;
+  /**
+     * @minimum 1
+     * @maximum 50
+     */
+  quantity: number;
+}
+
+export interface GiftCardOrder {
+  id: string;
+  productId: string;
+  productName: string;
+  description: string;
+  faceValueCents: number;
+  quantity: number;
+  unitPriceCents: number;
+  totalCents: number;
+  deliveredCards: GiftCardCredential[];
+  createdAt: string;
+}
+
+export interface MyGiftCardOrdersResponse {
+  orders: GiftCardOrder[];
+}
+
+export interface GiftCardPurchaseResult {
+  order: GiftCardOrder;
   balanceCents: number;
 }
 

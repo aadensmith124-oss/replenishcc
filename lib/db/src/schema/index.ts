@@ -24,4 +24,5 @@ export * from "./account_deletion_requests";
 export * from "./announcements";
 export * from "./support";
 export * from "./license-store";
+export * from "./gift-card-store";
 export * from "./coupons";

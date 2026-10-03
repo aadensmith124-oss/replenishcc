@@ -56,7 +56,7 @@ The database enforces unique email and username values. Password hashes, session
 
 ## User preferences
 
-- Keep the authentication scope focused; do not add the future dashboard, marketplace, or account modules yet.
+- Keep new work focused on the member and admin features the user has requested; do not add unrelated future modules.
 - Use the supplied near-black/charcoal and restrained warm-gold ReplenishCC palette; do not reuse SpiderCC branding or red buttons from reference screenshots.
 
 ## Gotchas

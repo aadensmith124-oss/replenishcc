@@ -13,4 +13,6 @@ export const AdminDepositMethod = {
   nowpayments: 'nowpayments',
   cashapp: 'cashapp',
   chime: 'chime',
+  applepay: 'applepay',
+  venmo: 'venmo',
 } as const;

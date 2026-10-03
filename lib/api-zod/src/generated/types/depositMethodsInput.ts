@@ -18,6 +18,21 @@ export interface DepositMethodsInput {
      */
   chimeHandle: string | null;
   /**
+     * @maxLength 100
+     * @nullable
+     */
+  applePayRecipient: string | null;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  venmoHandle: string | null;
+  cashAppEnabled: boolean;
+  chimeEnabled: boolean;
+  applePayEnabled: boolean;
+  venmoEnabled: boolean;
+  nowPaymentsEnabled: boolean;
+  /**
      * @minimum 100
      * @maximum 1000000
      */

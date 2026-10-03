@@ -662,6 +662,13 @@ export const CreateSupportTicketRefundResponse = zod.object({
 export const GetDepositMethodsResponse = zod.object({
   "cashAppHandle": zod.string().nullable(),
   "chimeHandle": zod.string().nullable(),
+  "applePayRecipient": zod.string().nullable(),
+  "venmoHandle": zod.string().nullable(),
+  "cashAppEnabled": zod.boolean(),
+  "chimeEnabled": zod.boolean(),
+  "applePayEnabled": zod.boolean(),
+  "venmoEnabled": zod.boolean(),
+  "nowPaymentsEnabled": zod.boolean(),
   "nowPaymentsConfigured": zod.boolean(),
   "minimumAmountCents": zod.number().int(),
   "maximumAmountCents": zod.number().int()
@@ -675,7 +682,7 @@ export const GetMyDepositsResponse = zod.object({
   "balanceCents": zod.number().int(),
   "deposits": zod.array(zod.object({
   "id": zod.string().uuid(),
-  "method": zod.enum(['nowpayments', 'cashapp', 'chime']),
+  "method": zod.enum(['nowpayments', 'cashapp', 'chime', 'applepay', 'venmo']),
   "amountCents": zod.number().int(),
   "transactionId": zod.string().nullable(),
   "status": zod.enum(['pending', 'confirmed', 'rejected', 'failed', 'expired', 'refunded']),
@@ -686,7 +693,7 @@ export const GetMyDepositsResponse = zod.object({
   "payinExtraId": zod.string().nullable(),
   "paymentUrl": zod.string().url().nullable(),
   "recipient": zod.string().nullable(),
-  "referenceCode": zod.string().nullable(),
+  "referenceCode": zod.string().nullable().describe('Payment note for manual transfers'),
   "rejectionReason": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "confirmedAt": zod.coerce.date().nullable(),
@@ -696,7 +703,7 @@ export const GetMyDepositsResponse = zod.object({
 
 
 /**
- * @summary Create a Cash App or Chime deposit request
+ * @summary Create a manual Cash App, Chime, Apple Pay, or Venmo deposit request
  */
 export const createManualDepositBodyAmountCentsMin = 100;
 export const createManualDepositBodyAmountCentsMax = 1000000;
@@ -704,13 +711,13 @@ export const createManualDepositBodyAmountCentsMax = 1000000;
 
 
 export const CreateManualDepositBody = zod.object({
-  "method": zod.enum(['cashapp', 'chime']),
+  "method": zod.enum(['cashapp', 'chime', 'applepay', 'venmo']),
   "amountCents": zod.number().int().min(createManualDepositBodyAmountCentsMin).max(createManualDepositBodyAmountCentsMax)
 })
 
 export const CreateManualDepositResponse = zod.object({
   "id": zod.string().uuid(),
-  "method": zod.enum(['nowpayments', 'cashapp', 'chime']),
+  "method": zod.enum(['nowpayments', 'cashapp', 'chime', 'applepay', 'venmo']),
   "amountCents": zod.number().int(),
   "transactionId": zod.string().nullable(),
   "status": zod.enum(['pending', 'confirmed', 'rejected', 'failed', 'expired', 'refunded']),
@@ -721,7 +728,7 @@ export const CreateManualDepositResponse = zod.object({
   "payinExtraId": zod.string().nullable(),
   "paymentUrl": zod.string().url().nullable(),
   "recipient": zod.string().nullable(),
-  "referenceCode": zod.string().nullable(),
+  "referenceCode": zod.string().nullable().describe('Payment note for manual transfers'),
   "rejectionReason": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "confirmedAt": zod.coerce.date().nullable(),
@@ -758,7 +765,7 @@ export const CreateCryptoDepositBody = zod.object({
 export const CreateCryptoDepositResponse = zod.object({
   "deposit": zod.object({
   "id": zod.string().uuid(),
-  "method": zod.enum(['nowpayments', 'cashapp', 'chime']),
+  "method": zod.enum(['nowpayments', 'cashapp', 'chime', 'applepay', 'venmo']),
   "amountCents": zod.number().int(),
   "transactionId": zod.string().nullable(),
   "status": zod.enum(['pending', 'confirmed', 'rejected', 'failed', 'expired', 'refunded']),
@@ -769,7 +776,7 @@ export const CreateCryptoDepositResponse = zod.object({
   "payinExtraId": zod.string().nullable(),
   "paymentUrl": zod.string().url().nullable(),
   "recipient": zod.string().nullable(),
-  "referenceCode": zod.string().nullable(),
+  "referenceCode": zod.string().nullable().describe('Payment note for manual transfers'),
   "rejectionReason": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "confirmedAt": zod.coerce.date().nullable(),
@@ -809,7 +816,7 @@ export const GetMyReferralSummaryResponse = zod.object({
 export const GetAdminDepositsResponse = zod.object({
   "deposits": zod.array(zod.object({
   "id": zod.string().uuid(),
-  "method": zod.enum(['nowpayments', 'cashapp', 'chime']),
+  "method": zod.enum(['nowpayments', 'cashapp', 'chime', 'applepay', 'venmo']),
   "amountCents": zod.number().int(),
   "transactionId": zod.string().nullable(),
   "status": zod.enum(['pending', 'confirmed', 'rejected', 'failed', 'expired', 'refunded']),
@@ -819,7 +826,7 @@ export const GetAdminDepositsResponse = zod.object({
   "payCurrency": zod.string().nullable(),
   "payinExtraId": zod.string().nullable(),
   "recipient": zod.string().nullable(),
-  "referenceCode": zod.string().nullable(),
+  "referenceCode": zod.string().nullable().describe('Payment note for manual transfers'),
   "rejectionReason": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "confirmedAt": zod.coerce.date().nullable(),
@@ -848,7 +855,7 @@ export const ReviewDepositBody = zod.object({
 
 export const ReviewDepositResponse = zod.object({
   "id": zod.string().uuid(),
-  "method": zod.enum(['nowpayments', 'cashapp', 'chime']),
+  "method": zod.enum(['nowpayments', 'cashapp', 'chime', 'applepay', 'venmo']),
   "amountCents": zod.number().int(),
   "transactionId": zod.string().nullable(),
   "status": zod.enum(['pending', 'confirmed', 'rejected', 'failed', 'expired', 'refunded']),
@@ -859,7 +866,7 @@ export const ReviewDepositResponse = zod.object({
   "payinExtraId": zod.string().nullable(),
   "paymentUrl": zod.string().url().nullable(),
   "recipient": zod.string().nullable(),
-  "referenceCode": zod.string().nullable(),
+  "referenceCode": zod.string().nullable().describe('Payment note for manual transfers'),
   "rejectionReason": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "confirmedAt": zod.coerce.date().nullable(),
@@ -873,6 +880,13 @@ export const ReviewDepositResponse = zod.object({
 export const GetAdminDepositMethodsResponse = zod.object({
   "cashAppHandle": zod.string().nullable(),
   "chimeHandle": zod.string().nullable(),
+  "applePayRecipient": zod.string().nullable(),
+  "venmoHandle": zod.string().nullable(),
+  "cashAppEnabled": zod.boolean(),
+  "chimeEnabled": zod.boolean(),
+  "applePayEnabled": zod.boolean(),
+  "venmoEnabled": zod.boolean(),
+  "nowPaymentsEnabled": zod.boolean(),
   "nowPaymentsConfigured": zod.boolean(),
   "minimumAmountCents": zod.number().int(),
   "maximumAmountCents": zod.number().int()
@@ -886,6 +900,10 @@ export const updateAdminDepositMethodsBodyCashAppHandleMax = 100;
 
 export const updateAdminDepositMethodsBodyChimeHandleMax = 100;
 
+export const updateAdminDepositMethodsBodyApplePayRecipientMax = 100;
+
+export const updateAdminDepositMethodsBodyVenmoHandleMax = 100;
+
 export const updateAdminDepositMethodsBodyMinimumAmountCentsMin = 100;
 export const updateAdminDepositMethodsBodyMinimumAmountCentsMax = 1000000;
 
@@ -894,12 +912,26 @@ export const updateAdminDepositMethodsBodyMinimumAmountCentsMax = 1000000;
 export const UpdateAdminDepositMethodsBody = zod.object({
   "cashAppHandle": zod.string().max(updateAdminDepositMethodsBodyCashAppHandleMax).nullable(),
   "chimeHandle": zod.string().max(updateAdminDepositMethodsBodyChimeHandleMax).nullable(),
+  "applePayRecipient": zod.string().max(updateAdminDepositMethodsBodyApplePayRecipientMax).nullable(),
+  "venmoHandle": zod.string().max(updateAdminDepositMethodsBodyVenmoHandleMax).nullable(),
+  "cashAppEnabled": zod.boolean(),
+  "chimeEnabled": zod.boolean(),
+  "applePayEnabled": zod.boolean(),
+  "venmoEnabled": zod.boolean(),
+  "nowPaymentsEnabled": zod.boolean(),
   "minimumAmountCents": zod.number().int().min(updateAdminDepositMethodsBodyMinimumAmountCentsMin).max(updateAdminDepositMethodsBodyMinimumAmountCentsMax)
 })
 
 export const UpdateAdminDepositMethodsResponse = zod.object({
   "cashAppHandle": zod.string().nullable(),
   "chimeHandle": zod.string().nullable(),
+  "applePayRecipient": zod.string().nullable(),
+  "venmoHandle": zod.string().nullable(),
+  "cashAppEnabled": zod.boolean(),
+  "chimeEnabled": zod.boolean(),
+  "applePayEnabled": zod.boolean(),
+  "venmoEnabled": zod.boolean(),
+  "nowPaymentsEnabled": zod.boolean(),
   "nowPaymentsConfigured": zod.boolean(),
   "minimumAmountCents": zod.number().int(),
   "maximumAmountCents": zod.number().int()
@@ -1152,6 +1184,178 @@ export const AddAdminLicenseStockBody = zod.object({
 })
 
 export const AddAdminLicenseStockResponse = zod.object({
+  "addedCount": zod.number().int(),
+  "availableCount": zod.number().int()
+})
+
+
+/**
+ * @summary List prepaid gift-card products that have available stock
+ */
+export const GetGiftCardProductsResponse = zod.object({
+  "products": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "faceValueCents": zod.number().int(),
+  "priceCents": zod.number().int(),
+  "availableCount": zod.number().int(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary List the signed-in user's gift-card orders and delivered cards
+ */
+export const GetMyGiftCardOrdersResponse = zod.object({
+  "orders": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "productId": zod.string().uuid(),
+  "productName": zod.string(),
+  "description": zod.string(),
+  "faceValueCents": zod.number().int(),
+  "quantity": zod.number().int(),
+  "unitPriceCents": zod.number().int(),
+  "totalCents": zod.number().int(),
+  "deliveredCards": zod.array(zod.object({
+  "cardNumber": zod.string(),
+  "expiration": zod.string(),
+  "securityCode": zod.string(),
+  "pin": zod.string().nullable()
+})),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Purchase prepaid gift cards using the signed-in user's account balance
+ */
+export const purchaseGiftCardBodyQuantityMax = 50;
+
+
+
+export const PurchaseGiftCardBody = zod.object({
+  "productId": zod.string().uuid(),
+  "quantity": zod.number().int().min(1).max(purchaseGiftCardBodyQuantityMax)
+})
+
+export const PurchaseGiftCardResponse = zod.object({
+  "order": zod.object({
+  "id": zod.string().uuid(),
+  "productId": zod.string().uuid(),
+  "productName": zod.string(),
+  "description": zod.string(),
+  "faceValueCents": zod.number().int(),
+  "quantity": zod.number().int(),
+  "unitPriceCents": zod.number().int(),
+  "totalCents": zod.number().int(),
+  "deliveredCards": zod.array(zod.object({
+  "cardNumber": zod.string(),
+  "expiration": zod.string(),
+  "securityCode": zod.string(),
+  "pin": zod.string().nullable()
+})),
+  "createdAt": zod.coerce.date()
+}),
+  "balanceCents": zod.number().int()
+})
+
+
+/**
+ * @summary List prepaid gift-card products and inventory counts for an administrator
+ */
+export const GetAdminGiftCardProductsResponse = zod.object({
+  "products": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "faceValueCents": zod.number().int(),
+  "priceCents": zod.number().int(),
+  "availableCount": zod.number().int(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Create a prepaid gift-card product listing
+ */
+export const createAdminGiftCardProductBodyNameMax = 100;
+
+export const createAdminGiftCardProductBodyDescriptionMax = 1000;
+
+export const createAdminGiftCardProductBodyFaceValueCentsMax = 1000000;
+
+export const createAdminGiftCardProductBodyPriceCentsMax = 1000000;
+
+
+
+export const CreateAdminGiftCardProductBody = zod.object({
+  "name": zod.string().min(1).max(createAdminGiftCardProductBodyNameMax),
+  "description": zod.string().max(createAdminGiftCardProductBodyDescriptionMax),
+  "faceValueCents": zod.number().int().min(1).max(createAdminGiftCardProductBodyFaceValueCentsMax),
+  "priceCents": zod.number().int().min(1).max(createAdminGiftCardProductBodyPriceCentsMax)
+})
+
+export const CreateAdminGiftCardProductResponse = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "faceValueCents": zod.number().int(),
+  "priceCents": zod.number().int(),
+  "availableCount": zod.number().int(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a gift-card product that has no inventory or order history
+ */
+export const DeleteAdminGiftCardProductParams = zod.object({
+  "productId": zod.coerce.string().uuid()
+})
+
+export const DeleteAdminGiftCardProductResponse = zod.void()
+
+
+/**
+ * @summary Add a batch of prepaid gift cards to a product's available stock
+ */
+export const AddAdminGiftCardStockParams = zod.object({
+  "productId": zod.coerce.string().uuid()
+})
+
+export const addAdminGiftCardStockBodyCardsItemCardNumberMin = 13;
+export const addAdminGiftCardStockBodyCardsItemCardNumberMax = 19;
+
+
+export const addAdminGiftCardStockBodyCardsItemCardNumberRegExp = new RegExp('^[0-9 ]+$');
+export const addAdminGiftCardStockBodyCardsItemExpirationMin = 4;
+export const addAdminGiftCardStockBodyCardsItemExpirationMax = 7;
+
+export const addAdminGiftCardStockBodyCardsItemSecurityCodeMin = 3;
+export const addAdminGiftCardStockBodyCardsItemSecurityCodeMax = 4;
+
+
+export const addAdminGiftCardStockBodyCardsItemSecurityCodeRegExp = new RegExp('^[0-9]+$');
+export const addAdminGiftCardStockBodyCardsItemPinMax = 16;
+
+export const addAdminGiftCardStockBodyCardsMax = 500;
+
+
+
+export const AddAdminGiftCardStockBody = zod.object({
+  "cards": zod.array(zod.object({
+  "cardNumber": zod.string().min(addAdminGiftCardStockBodyCardsItemCardNumberMin).max(addAdminGiftCardStockBodyCardsItemCardNumberMax).regex(addAdminGiftCardStockBodyCardsItemCardNumberRegExp),
+  "expiration": zod.string().min(addAdminGiftCardStockBodyCardsItemExpirationMin).max(addAdminGiftCardStockBodyCardsItemExpirationMax),
+  "securityCode": zod.string().min(addAdminGiftCardStockBodyCardsItemSecurityCodeMin).max(addAdminGiftCardStockBodyCardsItemSecurityCodeMax).regex(addAdminGiftCardStockBodyCardsItemSecurityCodeRegExp),
+  "pin": zod.string().max(addAdminGiftCardStockBodyCardsItemPinMax).nullable()
+})).min(1).max(addAdminGiftCardStockBodyCardsMax)
+})
+
+export const AddAdminGiftCardStockResponse = zod.object({
   "addedCount": zod.number().int(),
   "availableCount": zod.number().int()
 })

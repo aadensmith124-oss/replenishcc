@@ -12,4 +12,6 @@ export type ManualDepositInputMethod = typeof ManualDepositInputMethod[keyof typ
 export const ManualDepositInputMethod = {
   cashapp: 'cashapp',
   chime: 'chime',
+  applepay: 'applepay',
+  venmo: 'venmo',
 } as const;

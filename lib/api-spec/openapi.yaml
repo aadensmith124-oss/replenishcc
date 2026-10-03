@@ -32,6 +32,8 @@ tags:
     description: One-time balance redemption codes
   - name: licenseStore
     description: Member catalog, secure license delivery, and admin inventory management
+  - name: giftCardStore
+    description: Member prepaid gift-card catalog, secure order delivery, and admin inventory
 paths:
   /healthz:
     get:
@@ -594,7 +596,7 @@ paths:
     post:
       operationId: createManualDeposit
       tags: [deposits]
-      summary: Create a Cash App or Chime deposit request
+      summary: Create a manual Cash App, Chime, Apple Pay, or Venmo deposit request
       requestBody:
         required: true
         content:
@@ -603,7 +605,7 @@ paths:
               $ref: "#/components/schemas/ManualDepositInput"
       responses:
         "201":
-          description: Pending request with a unique payment note
+          description: Pending request with a unique payment note in the format Food - followed by a random number
           content:
             application/json:
               schema:
@@ -612,6 +614,8 @@ paths:
           description: Invalid amount or payment method is not configured
         "401":
           description: Sign-in required
+        "409":
+          description: This payment method is hidden by an administrator
   /deposits/crypto/currencies:
     get:
       operationId: getCryptoCurrencies
@@ -626,6 +630,8 @@ paths:
                 $ref: "#/components/schemas/CryptoCurrenciesResponse"
         "401":
           description: Sign-in required
+        "409":
+          description: Cryptocurrency deposits are hidden by an administrator
         "503":
           description: NOWPayments is not configured or unavailable
   /deposits/crypto:
@@ -650,6 +656,8 @@ paths:
           description: Invalid amount or unsupported currency
         "401":
           description: Sign-in required
+        "409":
+          description: Cryptocurrency deposits are hidden by an administrator
         "503":
           description: NOWPayments is not configured or unavailable
   /deposits/nowpayments/webhook:
@@ -1017,6 +1025,150 @@ paths:
           description: Product not found
         "409":
           description: One or more keys already exist
+  /gift-card-products:
+    get:
+      operationId: getGiftCardProducts
+      tags: [giftCardStore]
+      summary: List prepaid gift-card products that have available stock
+      responses:
+        "200":
+          description: Available prepaid gift-card products
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GiftCardProductsResponse"
+        "401":
+          description: Sign-in required
+  /orders/gift-cards:
+    get:
+      operationId: getMyGiftCardOrders
+      tags: [giftCardStore]
+      summary: List the signed-in user's gift-card orders and delivered cards
+      responses:
+        "200":
+          description: Gift-card orders belonging to the signed-in user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyGiftCardOrdersResponse"
+        "401":
+          description: Sign-in required
+    post:
+      operationId: purchaseGiftCard
+      tags: [giftCardStore]
+      summary: Purchase prepaid gift cards using the signed-in user's account balance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PurchaseGiftCardInput"
+      responses:
+        "201":
+          description: Purchase completed and gift cards delivered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GiftCardPurchaseResult"
+        "400":
+          description: Invalid product or quantity
+        "401":
+          description: Sign-in required
+        "404":
+          description: Product not found or no longer available
+        "409":
+          description: Insufficient balance or stock
+  /admin/gift-card-products:
+    get:
+      operationId: getAdminGiftCardProducts
+      tags: [giftCardStore]
+      summary: List prepaid gift-card products and inventory counts for an administrator
+      responses:
+        "200":
+          description: All gift-card products, including products with no stock
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GiftCardProductsResponse"
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+    post:
+      operationId: createAdminGiftCardProduct
+      tags: [giftCardStore]
+      summary: Create a prepaid gift-card product listing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGiftCardProductInput"
+      responses:
+        "201":
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GiftCardProduct"
+        "400":
+          description: Invalid product details
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+  /admin/gift-card-products/{productId}:
+    delete:
+      operationId: deleteAdminGiftCardProduct
+      tags: [giftCardStore]
+      summary: Delete a gift-card product that has no inventory or order history
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Product deleted
+        "400":
+          description: Invalid product identifier
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+        "404":
+          description: Product not found
+        "409":
+          description: Product has inventory or order history and cannot be deleted
+  /admin/gift-card-products/{productId}/stock:
+    post:
+      operationId: addAdminGiftCardStock
+      tags: [giftCardStore]
+      summary: Add a batch of prepaid gift cards to a product's available stock
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddGiftCardStockInput"
+      responses:
+        "200":
+          description: Gift-card stock added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddGiftCardStockResponse"
+        "400":
+          description: Invalid gift-card batch
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
   /admin/coupons:
     get:
       operationId: getAdminCoupons
@@ -1411,7 +1563,7 @@ components:
       type: object
       properties:
         id: { type: string, format: uuid }
-        method: { type: string, enum: [nowpayments, cashapp, chime] }
+        method: { type: string, enum: [nowpayments, cashapp, chime, applepay, venmo] }
         amountCents: { type: integer }
         transactionId: { type: ["string", "null"] }
         status: { type: string, enum: [pending, confirmed, rejected, failed, expired, refunded] }
@@ -1422,7 +1574,7 @@ components:
         payinExtraId: { type: ["string", "null"] }
         paymentUrl: { type: ["string", "null"], format: uri }
         recipient: { type: ["string", "null"] }
-        referenceCode: { type: ["string", "null"] }
+        referenceCode: { type: ["string", "null"], description: Payment note for manual transfers }
         rejectionReason: { type: ["string", "null"] }
         createdAt: { type: string, format: date-time }
         confirmedAt: { type: ["string", "null"], format: date-time }
@@ -1432,7 +1584,7 @@ components:
       type: object
       properties:
         id: { type: string, format: uuid }
-        method: { type: string, enum: [nowpayments, cashapp, chime] }
+        method: { type: string, enum: [nowpayments, cashapp, chime, applepay, venmo] }
         amountCents: { type: integer }
         transactionId: { type: ["string", "null"] }
         status: { type: string, enum: [pending, confirmed, rejected, failed, expired, refunded] }
@@ -1442,7 +1594,7 @@ components:
         payCurrency: { type: ["string", "null"] }
         payinExtraId: { type: ["string", "null"] }
         recipient: { type: ["string", "null"] }
-        referenceCode: { type: ["string", "null"] }
+        referenceCode: { type: ["string", "null"], description: Payment note for manual transfers }
         rejectionReason: { type: ["string", "null"] }
         createdAt: { type: string, format: date-time }
         confirmedAt: { type: ["string", "null"], format: date-time }
@@ -1455,17 +1607,31 @@ components:
       properties:
         cashAppHandle: { type: ["string", "null"] }
         chimeHandle: { type: ["string", "null"] }
+        applePayRecipient: { type: ["string", "null"] }
+        venmoHandle: { type: ["string", "null"] }
+        cashAppEnabled: { type: boolean }
+        chimeEnabled: { type: boolean }
+        applePayEnabled: { type: boolean }
+        venmoEnabled: { type: boolean }
+        nowPaymentsEnabled: { type: boolean }
         nowPaymentsConfigured: { type: boolean }
         minimumAmountCents: { type: integer }
         maximumAmountCents: { type: integer }
-      required: [cashAppHandle, chimeHandle, nowPaymentsConfigured, minimumAmountCents, maximumAmountCents]
+      required: [cashAppHandle, chimeHandle, applePayRecipient, venmoHandle, cashAppEnabled, chimeEnabled, applePayEnabled, venmoEnabled, nowPaymentsEnabled, nowPaymentsConfigured, minimumAmountCents, maximumAmountCents]
     DepositMethodsInput:
       type: object
       properties:
         cashAppHandle: { type: ["string", "null"], maxLength: 100 }
         chimeHandle: { type: ["string", "null"], maxLength: 100 }
+        applePayRecipient: { type: ["string", "null"], maxLength: 100 }
+        venmoHandle: { type: ["string", "null"], maxLength: 100 }
+        cashAppEnabled: { type: boolean }
+        chimeEnabled: { type: boolean }
+        applePayEnabled: { type: boolean }
+        venmoEnabled: { type: boolean }
+        nowPaymentsEnabled: { type: boolean }
         minimumAmountCents: { type: integer, minimum: 100, maximum: 1000000 }
-      required: [cashAppHandle, chimeHandle, minimumAmountCents]
+      required: [cashAppHandle, chimeHandle, applePayRecipient, venmoHandle, cashAppEnabled, chimeEnabled, applePayEnabled, venmoEnabled, nowPaymentsEnabled, minimumAmountCents]
     MyDepositsResponse:
       type: object
       properties:
@@ -1484,7 +1650,7 @@ components:
     ManualDepositInput:
       type: object
       properties:
-        method: { type: string, enum: [cashapp, chime] }
+        method: { type: string, enum: [cashapp, chime, applepay, venmo] }
         amountCents: { type: integer, minimum: 100, maximum: 1000000 }
       required: [method, amountCents]
     CryptoDepositInput:
@@ -1676,6 +1842,98 @@ components:
       type: object
       properties:
         order: { $ref: "#/components/schemas/LicenseOrder" }
+        balanceCents: { type: integer }
+      required: [order, balanceCents]
+    GiftCardProduct:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        faceValueCents: { type: integer }
+        priceCents: { type: integer }
+        availableCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+      required: [id, name, description, faceValueCents, priceCents, availableCount, createdAt]
+    GiftCardProductsResponse:
+      type: object
+      properties:
+        products:
+          type: array
+          items: { $ref: "#/components/schemas/GiftCardProduct" }
+      required: [products]
+    CreateGiftCardProductInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        description: { type: string, maxLength: 1000 }
+        faceValueCents: { type: integer, minimum: 1, maximum: 1000000 }
+        priceCents: { type: integer, minimum: 1, maximum: 1000000 }
+      required: [name, description, faceValueCents, priceCents]
+    GiftCardCredentialInput:
+      type: object
+      properties:
+        cardNumber: { type: string, minLength: 13, maxLength: 19, pattern: "^[0-9 ]+$" }
+        expiration: { type: string, minLength: 4, maxLength: 7 }
+        securityCode: { type: string, minLength: 3, maxLength: 4, pattern: "^[0-9]+$" }
+        pin: { type: ["string", "null"], maxLength: 16 }
+      required: [cardNumber, expiration, securityCode, pin]
+    AddGiftCardStockInput:
+      type: object
+      properties:
+        cards:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items: { $ref: "#/components/schemas/GiftCardCredentialInput" }
+      required: [cards]
+    AddGiftCardStockResponse:
+      type: object
+      properties:
+        addedCount: { type: integer }
+        availableCount: { type: integer }
+      required: [addedCount, availableCount]
+    GiftCardCredential:
+      type: object
+      properties:
+        cardNumber: { type: string }
+        expiration: { type: string }
+        securityCode: { type: string }
+        pin: { type: ["string", "null"] }
+      required: [cardNumber, expiration, securityCode, pin]
+    PurchaseGiftCardInput:
+      type: object
+      properties:
+        productId: { type: string, format: uuid }
+        quantity: { type: integer, minimum: 1, maximum: 50 }
+      required: [productId, quantity]
+    GiftCardOrder:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        productId: { type: string, format: uuid }
+        productName: { type: string }
+        description: { type: string }
+        faceValueCents: { type: integer }
+        quantity: { type: integer }
+        unitPriceCents: { type: integer }
+        totalCents: { type: integer }
+        deliveredCards:
+          type: array
+          items: { $ref: "#/components/schemas/GiftCardCredential" }
+        createdAt: { type: string, format: date-time }
+      required: [id, productId, productName, description, faceValueCents, quantity, unitPriceCents, totalCents, deliveredCards, createdAt]
+    MyGiftCardOrdersResponse:
+      type: object
+      properties:
+        orders:
+          type: array
+          items: { $ref: "#/components/schemas/GiftCardOrder" }
+      required: [orders]
+    GiftCardPurchaseResult:
+      type: object
+      properties:
+        order: { $ref: "#/components/schemas/GiftCardOrder" }
         balanceCents: { type: integer }
       required: [order, balanceCents]
 

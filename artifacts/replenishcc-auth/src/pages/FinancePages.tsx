@@ -6,7 +6,7 @@ import {
   WalletCards, XCircle, Columns3, Gift,
 } from 'lucide-react';
 import {
-  getGetAdminDepositMethodsQueryKey, getGetAdminDepositsQueryKey, getGetDepositMethodsQueryKey,
+  getGetAdminDepositMethodsQueryKey, getGetAdminDepositsQueryKey, getGetCryptoCurrenciesQueryKey, getGetDepositMethodsQueryKey,
   getGetAdminRedeemCodesQueryKey, getGetMyDepositsQueryKey, getGetMyReferralSummaryQueryKey, useCreateAdminRedeemCode, useCreateAdminRedeemCodeBatch, useGetAdminRedeemCodes, useCreateCryptoDeposit,
   useCreateManualDeposit, useGetAdminDepositMethods, useGetAdminDeposits, useGetAuthMe,
   useGetCryptoCurrencies, useGetDepositMethods, useGetMyDeposits, useGetMyReferralSummary,
@@ -76,8 +76,8 @@ function History({ deposits }: { deposits: Deposit[] }) {
   if (!deposits.length) return <div className="finance-empty"><span className="empty-mark"><FileText /></span><h3>No deposit activity yet</h3><p>When you make a deposit request, its server-verified status will appear here.</p></div>;
   return <div className="deposit-table-wrap"><table className="deposit-table"><thead><tr><th>Request</th><th>Method</th><th>Amount</th><th>Status</th><th>Created</th></tr></thead><tbody>
     {deposits.map((deposit) => <tr key={deposit.id} data-testid={`row-deposit-${deposit.id}`}>
-      <td><strong>#{deposit.id}</strong>{deposit.referenceCode && <small>Ref. {deposit.referenceCode}</small>}{deposit.rejectionReason && <small className="rejection-note">{deposit.rejectionReason}</small>}</td>
-      <td className="method-cell">{deposit.method === 'nowpayments' ? (deposit.payCurrency ? deposit.payCurrency.toUpperCase() : 'Crypto') : deposit.method === 'cashapp' ? 'Cash App' : 'Chime'}</td>
+      <td><strong>#{deposit.id}</strong>{deposit.referenceCode && <small>Payment note: {deposit.referenceCode}</small>}{deposit.rejectionReason && <small className="rejection-note">{deposit.rejectionReason}</small>}</td>
+      <td className="method-cell">{deposit.method === 'nowpayments' ? (deposit.payCurrency ? deposit.payCurrency.toUpperCase() : 'Crypto') : deposit.method === 'cashapp' ? 'Cash App' : deposit.method === 'chime' ? 'Chime' : deposit.method === 'applepay' ? 'Apple Pay' : 'Venmo'}</td>
       <td>{dollars(deposit.amountCents)}</td><td><Status value={deposit.status} />{deposit.providerStatus && <small className="provider-status">{deposit.providerStatus}</small>}</td><td>{dateTime(deposit.createdAt)}</td>
     </tr>)}
   </tbody></table></div>;
@@ -87,27 +87,49 @@ export function DepositsPage() {
   const client = useQueryClient();
   const methods = useGetDepositMethods();
   const account = useGetMyDeposits();
-  const currencies = useGetCryptoCurrencies();
+  const config = methods.data;
+  const currencies = useGetCryptoCurrencies({
+    query: {
+      enabled: Boolean(config?.nowPaymentsEnabled && config.nowPaymentsConfigured),
+      queryKey: getGetCryptoCurrenciesQueryKey(),
+    },
+  });
   const manualDeposit = useCreateManualDeposit();
   const cryptoDeposit = useCreateCryptoDeposit();
   const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState<'nowpayments' | 'cashapp' | 'chime'>('nowpayments');
+  const [method, setMethod] = useState<'nowpayments' | 'cashapp' | 'chime' | 'applepay' | 'venmo'>('nowpayments');
   const [currency, setCurrency] = useState('');
   const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
   const [created, setCreated] = useState<Deposit | null>(null);
   const [copyMessage, setCopyMessage] = useState('');
-  const config = methods.data;
   const availableCurrencies = currencies.data?.currencies ?? [];
+  const availableMethods: Array<['nowpayments' | 'cashapp' | 'chime' | 'applepay' | 'venmo', string, string]> = [];
+  if (config?.nowPaymentsEnabled && config.nowPaymentsConfigured) {
+    availableMethods.push(['nowpayments', 'Crypto', 'NOWPayments']);
+  }
+  if (config?.cashAppEnabled && config.cashAppHandle) {
+    availableMethods.push(['cashapp', 'Cash App', 'Manual transfer']);
+  }
+  if (config?.applePayEnabled && config.applePayRecipient) {
+    availableMethods.push(['applepay', 'Apple Pay', 'Manual transfer']);
+  }
+  if (config?.venmoEnabled && config.venmoHandle) {
+    availableMethods.push(['venmo', 'Venmo', 'Manual transfer']);
+  }
+  if (config?.chimeEnabled && config.chimeHandle) {
+    availableMethods.push(['chime', 'Chime', 'Manual transfer']);
+  }
   useEffect(() => {
-    if (!config || method !== 'nowpayments' || config.nowPaymentsConfigured) return;
-    if (config.cashAppHandle) setMethod('cashapp');
-    else if (config.chimeHandle) setMethod('chime');
-  }, [config, method]);
+    if (!availableMethods.length || availableMethods.some(([id]) => id === method)) return;
+    setMethod(availableMethods[0][0]);
+    setCreated(null);
+    setMessage(null);
+  }, [availableMethods, method]);
   const minimum = config?.minimumAmountCents ?? 1500;
   const maximum = config ? Math.min(1_000_000, config.maximumAmountCents) : 1_000_000;
   const methodsError = methods.isError ? <QueryError error={methods.error} retry={() => void methods.refetch()} /> : null;
   const historyError = account.isError ? <QueryError error={account.error} retry={() => void account.refetch()} /> : null;
-  const usable = config && (method === 'nowpayments' ? config.nowPaymentsConfigured : method === 'cashapp' ? Boolean(config.cashAppHandle) : Boolean(config.chimeHandle));
+  const usable = availableMethods.some(([id]) => id === method);
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage(null); setCreated(null);
@@ -149,16 +171,11 @@ export function DepositsPage() {
     <div className="deposit-layout">
       <section className="finance-panel deposit-form-panel" aria-labelledby="deposit-form-title">
         <div className="panel-overline">01 / New request</div><h2 id="deposit-form-title">Choose how to fund</h2>
-        {methods.isLoading ? <LoadingBlock label="Loading configured payment methods" /> : methodsError ? null : config && <form onSubmit={submit}>
+        {methods.isLoading ? <LoadingBlock label="Loading configured payment methods" /> : methodsError ? null : config && availableMethods.length > 0 && <form onSubmit={submit}>
           <fieldset className="method-picker"><legend>Payment method</legend>
-            {([
-              ['nowpayments', 'Crypto', 'NOWPayments'],
-              ['cashapp', 'Cash App', config.cashAppHandle ? 'Manual transfer' : 'Not configured'],
-              ['chime', 'Chime', config.chimeHandle ? 'Manual transfer' : 'Not configured'],
-            ] as const).map(([id, label, note]) => {
-              const configured = id === 'nowpayments' ? config.nowPaymentsConfigured : id === 'cashapp' ? Boolean(config.cashAppHandle) : Boolean(config.chimeHandle);
-              return <button key={id} type="button" className={`method-option${method === id ? ' selected' : ''}`} onClick={() => { setMethod(id); setCreated(null); setMessage(null); }} aria-pressed={method === id} disabled={!configured} data-testid={`button-method-${id}`}>
-                <span className="method-radio" /><span><strong>{label}</strong><small>{note}</small></span>{id === 'nowpayments' && configured && <span className="method-live">Live</span>}
+            {availableMethods.map(([id, label, note]) => {
+              return <button key={id} type="button" className={`method-option${method === id ? ' selected' : ''}`} onClick={() => { setMethod(id); setCreated(null); setMessage(null); }} aria-pressed={method === id} data-testid={`button-method-${id}`}>
+                <span className="method-radio" /><span><strong>{label}</strong><small>{note}</small></span>{id === 'nowpayments' && <span className="method-live">Live</span>}
               </button>;
             })}
           </fieldset>
@@ -168,11 +185,11 @@ export function DepositsPage() {
           {method === 'nowpayments' && <div className="currency-field"><label className="finance-label" htmlFor="deposit-currency">Receive payment in</label>
             {currencies.isLoading ? <LoadingBlock label="Loading live crypto currencies" /> : currencies.isError ? <QueryError error={currencies.error} retry={() => void currencies.refetch()} /> : availableCurrencies.length ? <select id="deposit-currency" value={currency} onChange={(event) => setCurrency(event.target.value)} required data-testid="select-crypto-currency"><option value="">Choose a currency</option>{availableCurrencies.map((item) => <option key={item} value={item}>{item.toUpperCase()}</option>)}</select> : <Alert kind="info">No payment currencies are currently offered by the live payment service.</Alert>}
           </div>}
-          {method !== 'nowpayments' && <div className="manual-note"><CircleAlert /><span>After submitting, use the exact reference code shown below with your Cash App or Chime transfer. Requests are reviewed before your balance is credited.</span></div>}
+           {method !== 'nowpayments' && <div className="manual-note"><CircleAlert /><span>After submitting, include the exact payment note shown below with your transfer. Requests are reviewed before your balance is credited.</span></div>}
           {message && <Alert kind={message.kind}>{message.text}</Alert>}
           <button className="primary-button finance-submit" type="submit" disabled={pending || methods.isLoading || (method === 'nowpayments' && (currencies.isLoading || !availableCurrencies.length))} data-testid="button-create-deposit">{pending ? 'Creating request…' : <>Continue to payment <ArrowRight /></>}</button>
         </form>}
-        {!methods.isLoading && !methods.isError && config && !config.nowPaymentsConfigured && !config.cashAppHandle && !config.chimeHandle && <Alert kind="info">No deposit methods are configured at this time. Please check back later.</Alert>}
+         {!methods.isLoading && !methods.isError && config && availableMethods.length === 0 && <Alert kind="info">No deposit methods are currently available. Please check back later.</Alert>}
         {created && <div className="payment-instructions" aria-live="polite">
           <div className="instruction-title"><CheckCircle2 /><div><strong>Request #{created.id}</strong><span>{created.method === 'nowpayments' ? 'Payment instructions from the provider' : 'Manual transfer request'}</span></div></div>
           {created.method === 'nowpayments' ? <>
@@ -187,7 +204,7 @@ export function DepositsPage() {
           </> : <>
             <p className="manual-transfer-copy">Send <strong>{dollars(created.amountCents)}</strong> to the recipient below and include the request code exactly as shown. Keep this page for your records.</p>
             {created.recipient && <Instruction label="Send to" value={created.recipient} onCopy={() => void copy(created.recipient!, 'Recipient')} />}
-            {created.referenceCode && <Instruction label="Required transfer note / code" value={created.referenceCode} onCopy={() => void copy(created.referenceCode!, 'Reference code')} />}
+             {created.referenceCode && <Instruction label="Payment note" value={created.referenceCode} onCopy={() => void copy(created.referenceCode!, 'Payment note')} />}
             {!created.recipient && !created.referenceCode && <Alert kind="info">Recipient details are not included in the response. Use the request ID in your account history and contact support before sending.</Alert>}
           </>}
           {copyMessage && <div className="copy-feedback" role="status">{copyMessage}</div>}
@@ -483,6 +500,13 @@ export function AdminDepositsPage() {
   const client = useQueryClient();
   const [cashAppHandle, setCashAppHandle] = useState('');
   const [chimeHandle, setChimeHandle] = useState('');
+  const [applePayRecipient, setApplePayRecipient] = useState('');
+  const [venmoHandle, setVenmoHandle] = useState('');
+  const [cashAppEnabled, setCashAppEnabled] = useState(true);
+  const [chimeEnabled, setChimeEnabled] = useState(true);
+  const [applePayEnabled, setApplePayEnabled] = useState(true);
+  const [venmoEnabled, setVenmoEnabled] = useState(true);
+  const [nowPaymentsEnabled, setNowPaymentsEnabled] = useState(true);
   const [minimumAmount, setMinimumAmount] = useState('15.00');
   const [initialized, setInitialized] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
@@ -494,6 +518,13 @@ export function AdminDepositsPage() {
     if (!methods.data || initialized) return;
     setCashAppHandle(methods.data.cashAppHandle ?? '');
     setChimeHandle(methods.data.chimeHandle ?? '');
+    setApplePayRecipient(methods.data.applePayRecipient ?? '');
+    setVenmoHandle(methods.data.venmoHandle ?? '');
+    setCashAppEnabled(methods.data.cashAppEnabled);
+    setChimeEnabled(methods.data.chimeEnabled);
+    setApplePayEnabled(methods.data.applePayEnabled);
+    setVenmoEnabled(methods.data.venmoEnabled);
+    setNowPaymentsEnabled(methods.data.nowPaymentsEnabled);
     setMinimumAmount((methods.data.minimumAmountCents / 100).toFixed(2));
     setInitialized(true);
   }, [methods.data, initialized]);
@@ -508,7 +539,7 @@ export function AdminDepositsPage() {
       setSettingsMessage({ kind: 'error', text: 'Set a minimum deposit between $1.00 and $10,000.00.' });
       return;
     }
-    saveMethods.mutate({ data: { cashAppHandle: cashAppHandle.trim() || null, chimeHandle: chimeHandle.trim() || null, minimumAmountCents } }, {
+     saveMethods.mutate({ data: { cashAppHandle: cashAppHandle.trim() || null, chimeHandle: chimeHandle.trim() || null, applePayRecipient: applePayRecipient.trim() || null, venmoHandle: venmoHandle.trim() || null, cashAppEnabled, chimeEnabled, applePayEnabled, venmoEnabled, nowPaymentsEnabled, minimumAmountCents } }, {
       onSuccess: () => { setSettingsMessage({ kind: 'success', text: 'Deposit settings saved.' }); void client.invalidateQueries({ queryKey: getGetDepositMethodsQueryKey() }); void client.invalidateQueries({ queryKey: getGetAdminDepositMethodsQueryKey() }); },
       onError: (error) => setSettingsMessage({ kind: 'error', text: errorText(error) }),
     });
@@ -529,27 +560,39 @@ export function AdminDepositsPage() {
       onError: (error) => setReviewMessage({ kind: 'error', text: errorText(error) }),
     });
   };
-  const pendingDeposits = queue.data?.deposits.filter((deposit) => deposit.status === 'pending' && (deposit.method === 'cashapp' || deposit.method === 'chime') && !decidedIds.has(deposit.id)) ?? [];
+  const pendingDeposits = queue.data?.deposits.filter((deposit) => deposit.status === 'pending' && (deposit.method === 'cashapp' || deposit.method === 'chime' || deposit.method === 'applepay' || deposit.method === 'venmo') && !decidedIds.has(deposit.id)) ?? [];
   return <PortalFrame title="Deposit review">
-    <PageHeading eyebrow="Operations / authorized" title="Deposit review" copy="Review manual Cash App and Chime requests. Each decision is recorded once by the server." />
+    <PageHeading eyebrow="Operations / authorized" title="Deposit review" copy="Review pending manual transfer requests. Each decision is recorded once by the server." />
     {reviewMessage && <Alert kind={reviewMessage.kind}>{reviewMessage.text}</Alert>}
     <section className="finance-panel admin-queue" aria-labelledby="queue-heading">
       <div className="history-heading"><div><div className="panel-overline">Manual transfers</div><h2 id="queue-heading">Pending requests</h2></div><button type="button" className="quiet-button" onClick={() => void queue.refetch()} disabled={queue.isFetching} data-testid="button-refresh-admin-deposits"><RefreshCw className={queue.isFetching ? 'spin' : ''} /> Refresh</button></div>
       {queue.isLoading ? <LoadingBlock label="Loading pending deposit requests" /> : queue.isError ? <QueryError error={queue.error} retry={() => void queue.refetch()} /> : pendingDeposits.length === 0 ? <div className="finance-empty compact-empty"><span className="empty-mark"><CheckCircle2 /></span><h3>Queue is clear</h3><p>There are no pending manual deposit requests to review.</p></div> : <div className="admin-request-list">{pendingDeposits.map((deposit) => <article className="admin-request" key={deposit.id} data-testid={`admin-deposit-${deposit.id}`}>
-        <div className="admin-request-head"><div><span className="request-type">{deposit.method === 'cashapp' ? 'Cash App' : 'Chime'} · #{deposit.id}</span><h3>{deposit.memberName}</h3><a href={`mailto:${deposit.memberEmail}`}>{deposit.memberEmail}</a></div><div className="admin-request-amount">{dollars(deposit.amountCents)}<small>{dateTime(deposit.createdAt)}</small></div></div>
-        <div className="admin-request-details"><div><span>Recipient</span><strong>{deposit.recipient || 'Not provided'}</strong></div><div><span>Reference code</span><strong>{deposit.referenceCode || 'Not provided'}</strong></div></div>
+        <div className="admin-request-head"><div><span className="request-type">{deposit.method === 'cashapp' ? 'Cash App' : deposit.method === 'chime' ? 'Chime' : deposit.method === 'applepay' ? 'Apple Pay' : 'Venmo'} · #{deposit.id}</span><h3>{deposit.memberName}</h3><a href={`mailto:${deposit.memberEmail}`}>{deposit.memberEmail}</a></div><div className="admin-request-amount">{dollars(deposit.amountCents)}<small>{dateTime(deposit.createdAt)}</small></div></div>
+         <div className="admin-request-details"><div><span>Recipient</span><strong>{deposit.recipient || 'Not provided'}</strong></div><div><span>Payment note</span><strong>{deposit.referenceCode || 'Not provided'}</strong></div></div>
         {rejecting === deposit.id && <div className="reject-reason"><label htmlFor={`reject-reason-${deposit.id}`}>Reason for rejection</label><textarea id={`reject-reason-${deposit.id}`} value={reason} maxLength={250} onChange={(event) => setReason(event.target.value)} placeholder="Explain why this request cannot be approved" data-testid={`input-rejection-reason-${deposit.id}`} /><div className="reason-actions"><button type="button" className="quiet-button" onClick={() => setRejecting(null)}>Cancel</button><button type="button" className="admin-action reject-action" onClick={() => decide(deposit, 'reject')} disabled={review.isPending} data-testid={`button-confirm-reject-${deposit.id}`}>{review.isPending ? 'Saving…' : 'Confirm rejection'}</button></div></div>}
         {rejecting !== deposit.id && <div className="admin-request-actions"><button type="button" className="admin-action approve-action" onClick={() => decide(deposit, 'approve')} disabled={review.isPending} data-testid={`button-approve-deposit-${deposit.id}`}><Check /> Approve request</button><button type="button" className="admin-action reject-action" onClick={() => decide(deposit, 'reject')} disabled={review.isPending} data-testid={`button-reject-deposit-${deposit.id}`}>Reject</button></div>}
       </article>)}</div>}
     </section>
     <section className="finance-panel settings-panel" aria-labelledby="recipient-settings-title">
-      <div className="panel-overline">Payment routing</div><h2 id="recipient-settings-title">Deposit settings</h2><p>Set available manual payment handles and the minimum deposit members may request. The threshold applies to manual and cryptocurrency deposits.</p>
+       <div className="panel-overline">Payment routing</div><h2 id="recipient-settings-title">Deposit settings</h2><p>Choose which payment methods members can use for new deposits, set manual transfer handles, and set the minimum deposit. The threshold applies to manual and cryptocurrency deposits.</p>
       {methods.isLoading ? <LoadingBlock label="Loading recipient settings" /> : methods.isError ? <QueryError error={methods.error} retry={() => void methods.refetch()} /> : <form onSubmit={save} className="recipient-settings-form">
-        <div><label className="finance-label" htmlFor="admin-cashapp">Cash App handle</label><input id="admin-cashapp" className="field-input" value={cashAppHandle} onChange={(event) => setCashAppHandle(event.target.value)} maxLength={100} placeholder="Leave empty to disable" data-testid="input-admin-cashapp-handle" /></div>
-        <div><label className="finance-label" htmlFor="admin-chime">Chime handle</label><input id="admin-chime" className="field-input" value={chimeHandle} onChange={(event) => setChimeHandle(event.target.value)} maxLength={100} placeholder="Leave empty to disable" data-testid="input-admin-chime-handle" /></div>
+         <fieldset className="payment-method-visibility">
+           <legend>Methods visible to members</legend>
+           <div className="payment-method-visibility-list">
+             <label className="payment-method-visibility-option" htmlFor="admin-cashapp-enabled"><input id="admin-cashapp-enabled" type="checkbox" checked={cashAppEnabled} onChange={(event) => setCashAppEnabled(event.target.checked)} data-testid="input-admin-cashapp-enabled" /><span><strong>Cash App</strong><small>Manual transfer</small></span><em>{cashAppEnabled ? 'Visible' : 'Hidden'}</em></label>
+             <label className="payment-method-visibility-option" htmlFor="admin-chime-enabled"><input id="admin-chime-enabled" type="checkbox" checked={chimeEnabled} onChange={(event) => setChimeEnabled(event.target.checked)} data-testid="input-admin-chime-enabled" /><span><strong>Chime</strong><small>Manual transfer</small></span><em>{chimeEnabled ? 'Visible' : 'Hidden'}</em></label>
+             <label className="payment-method-visibility-option" htmlFor="admin-applepay-enabled"><input id="admin-applepay-enabled" type="checkbox" checked={applePayEnabled} onChange={(event) => setApplePayEnabled(event.target.checked)} data-testid="input-admin-applepay-enabled" /><span><strong>Apple Pay</strong><small>Manual transfer</small></span><em>{applePayEnabled ? 'Visible' : 'Hidden'}</em></label>
+             <label className="payment-method-visibility-option" htmlFor="admin-venmo-enabled"><input id="admin-venmo-enabled" type="checkbox" checked={venmoEnabled} onChange={(event) => setVenmoEnabled(event.target.checked)} data-testid="input-admin-venmo-enabled" /><span><strong>Venmo</strong><small>Manual transfer</small></span><em>{venmoEnabled ? 'Visible' : 'Hidden'}</em></label>
+             <label className="payment-method-visibility-option" htmlFor="admin-nowpayments-enabled"><input id="admin-nowpayments-enabled" type="checkbox" checked={nowPaymentsEnabled} onChange={(event) => setNowPaymentsEnabled(event.target.checked)} data-testid="input-admin-nowpayments-enabled" /><span><strong>Cryptocurrency</strong><small>NOWPayments</small></span><em>{nowPaymentsEnabled ? 'Visible' : 'Hidden'}</em></label>
+           </div>
+         </fieldset>
+         <div><label className="finance-label" htmlFor="admin-cashapp">Cash App handle</label><input id="admin-cashapp" className="field-input" value={cashAppHandle} onChange={(event) => setCashAppHandle(event.target.value)} maxLength={100} placeholder="Enter Cash App handle" data-testid="input-admin-cashapp-handle" /></div>
+         <div><label className="finance-label" htmlFor="admin-chime">Chime handle</label><input id="admin-chime" className="field-input" value={chimeHandle} onChange={(event) => setChimeHandle(event.target.value)} maxLength={100} placeholder="Enter Chime handle" data-testid="input-admin-chime-handle" /></div>
+         <div><label className="finance-label" htmlFor="admin-applepay">Apple Pay recipient (email or phone)</label><input id="admin-applepay" className="field-input" value={applePayRecipient} onChange={(event) => setApplePayRecipient(event.target.value)} maxLength={100} placeholder="Enter Apple Pay recipient" data-testid="input-admin-applepay-recipient" /></div>
+         <div><label className="finance-label" htmlFor="admin-venmo">Venmo handle</label><input id="admin-venmo" className="field-input" value={venmoHandle} onChange={(event) => setVenmoHandle(event.target.value)} maxLength={100} placeholder="Enter Venmo handle" data-testid="input-admin-venmo-handle" /></div>
         <div><label className="finance-label" htmlFor="admin-minimum-deposit">Minimum deposit (USD)</label><div className="amount-input-wrap"><span>$</span><input id="admin-minimum-deposit" type="number" min="1.00" max="10000.00" step="0.01" inputMode="decimal" value={minimumAmount} onChange={(event) => setMinimumAmount(event.target.value)} required data-testid="input-admin-minimum-deposit" /></div></div>
         {settingsMessage && <Alert kind={settingsMessage.kind}>{settingsMessage.text}</Alert>}
-        <button className="primary-button settings-save" type="submit" disabled={saveMethods.isPending || methods.isLoading} data-testid="button-save-recipient-settings">{saveMethods.isPending ? 'Saving…' : <>Save recipient settings <ArrowRight /></>}</button>
+         <button className="primary-button settings-save" type="submit" disabled={saveMethods.isPending || methods.isLoading} data-testid="button-save-recipient-settings">{saveMethods.isPending ? 'Saving…' : <>Save payment settings <ArrowRight /></>}</button>
       </form>}
     </section>
     <AdminRedeemCodes />

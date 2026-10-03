@@ -58,6 +58,13 @@ function configuredNowPayments(): boolean {
   );
 }
 
+function createManualPaymentNote(): string {
+  const randomNumber =
+    BigInt(`0x${randomBytes(8).toString("hex")}`) % 90_000_000_000_000_000n +
+    10_000_000_000_000_000n;
+  return `Food - ${randomNumber.toString()}`;
+}
+
 async function getDepositSettings() {
   await db
     .insert(depositSettingsTable)
@@ -258,6 +265,13 @@ router.get("/deposits/methods", async (req, res): Promise<void> => {
     GetDepositMethodsResponse.parse({
       cashAppHandle: settings.cashAppHandle,
       chimeHandle: settings.chimeHandle,
+      applePayRecipient: settings.applePayRecipient,
+      venmoHandle: settings.venmoHandle,
+      cashAppEnabled: settings.cashAppEnabled,
+      chimeEnabled: settings.chimeEnabled,
+      applePayEnabled: settings.applePayEnabled,
+      venmoEnabled: settings.venmoEnabled,
+      nowPaymentsEnabled: settings.nowPaymentsEnabled,
       nowPaymentsConfigured: configuredNowPayments(),
       minimumAmountCents: settings.minimumAmountCents,
       maximumAmountCents: MAXIMUM_AMOUNT_CENTS,
@@ -309,16 +323,31 @@ router.post(
     }
 
     const settings = await getDepositSettings();
+    const methodSettings = {
+      cashapp: {
+        enabled: settings.cashAppEnabled,
+        recipient: settings.cashAppHandle,
+      },
+      chime: { enabled: settings.chimeEnabled, recipient: settings.chimeHandle },
+      applepay: {
+        enabled: settings.applePayEnabled,
+        recipient: settings.applePayRecipient,
+      },
+      venmo: { enabled: settings.venmoEnabled, recipient: settings.venmoHandle },
+    }[parsed.data.method];
+    if (!methodSettings.enabled) {
+      res.status(409).json({
+        error: "This payment method is currently hidden by an administrator.",
+      });
+      return;
+    }
     if (parsed.data.amountCents < settings.minimumAmountCents) {
       res.status(400).json({
         error: `The minimum deposit is $${(settings.minimumAmountCents / 100).toFixed(2)}.`,
       });
       return;
     }
-    const recipient =
-      parsed.data.method === "cashapp"
-        ? settings.cashAppHandle
-        : settings.chimeHandle;
+    const recipient = methodSettings.recipient;
     if (!recipient) {
       res.status(400).json({
         error: "This manual payment method is not configured yet.",
@@ -333,7 +362,7 @@ router.post(
         method: parsed.data.method,
         amountCents: parsed.data.amountCents,
         recipient,
-        referenceCode: `RCC${randomBytes(8).toString("hex").toUpperCase()}`,
+        referenceCode: createManualPaymentNote(),
       })
       .returning();
 
@@ -353,6 +382,14 @@ router.get(
     const user = await getCurrentUser(req);
     if (!user) {
       res.status(401).json({ error: "Sign in to view payment currencies." });
+      return;
+    }
+
+    const settings = await getDepositSettings();
+    if (!settings.nowPaymentsEnabled) {
+      res.status(409).json({
+        error: "Cryptocurrency deposits are currently hidden by an administrator.",
+      });
       return;
     }
 
@@ -391,6 +428,12 @@ router.post(
     }
 
     const settings = await getDepositSettings();
+    if (!settings.nowPaymentsEnabled) {
+      res.status(409).json({
+        error: "Cryptocurrency deposits are currently hidden by an administrator.",
+      });
+      return;
+    }
     if (parsed.data.amountCents < settings.minimumAmountCents) {
       res.status(400).json({
         error: `The minimum deposit is $${(settings.minimumAmountCents / 100).toFixed(2)}.`,
@@ -843,6 +886,13 @@ router.get("/admin/deposit-methods", async (req, res): Promise<void> => {
     GetAdminDepositMethodsResponse.parse({
       cashAppHandle: settings.cashAppHandle,
       chimeHandle: settings.chimeHandle,
+      applePayRecipient: settings.applePayRecipient,
+      venmoHandle: settings.venmoHandle,
+      cashAppEnabled: settings.cashAppEnabled,
+      chimeEnabled: settings.chimeEnabled,
+      applePayEnabled: settings.applePayEnabled,
+      venmoEnabled: settings.venmoEnabled,
+      nowPaymentsEnabled: settings.nowPaymentsEnabled,
       nowPaymentsConfigured: configuredNowPayments(),
       minimumAmountCents: settings.minimumAmountCents,
       maximumAmountCents: MAXIMUM_AMOUNT_CENTS,
@@ -869,15 +919,41 @@ router.put("/admin/deposit-methods", async (req, res): Promise<void> => {
 
   const cashAppHandle = parsed.data.cashAppHandle?.trim() || null;
   const chimeHandle = parsed.data.chimeHandle?.trim() || null;
+  const applePayRecipient = parsed.data.applePayRecipient?.trim() || null;
+  const venmoHandle = parsed.data.venmoHandle?.trim() || null;
+  const cashAppEnabled = parsed.data.cashAppEnabled;
+  const chimeEnabled = parsed.data.chimeEnabled;
+  const applePayEnabled = parsed.data.applePayEnabled;
+  const venmoEnabled = parsed.data.venmoEnabled;
+  const nowPaymentsEnabled = parsed.data.nowPaymentsEnabled;
   const minimumAmountCents = parsed.data.minimumAmountCents;
   await db
     .insert(depositSettingsTable)
-    .values({ id: 1, cashAppHandle, chimeHandle, minimumAmountCents })
+    .values({
+      id: 1,
+      cashAppHandle,
+      chimeHandle,
+      applePayRecipient,
+      venmoHandle,
+      cashAppEnabled,
+      chimeEnabled,
+      applePayEnabled,
+      venmoEnabled,
+      nowPaymentsEnabled,
+      minimumAmountCents,
+    })
     .onConflictDoUpdate({
       target: depositSettingsTable.id,
       set: {
         cashAppHandle,
         chimeHandle,
+        applePayRecipient,
+        venmoHandle,
+        cashAppEnabled,
+        chimeEnabled,
+        applePayEnabled,
+        venmoEnabled,
+        nowPaymentsEnabled,
         minimumAmountCents,
         updatedAt: new Date(),
       },
@@ -887,6 +963,13 @@ router.put("/admin/deposit-methods", async (req, res): Promise<void> => {
     UpdateAdminDepositMethodsResponse.parse({
       cashAppHandle: settings.cashAppHandle,
       chimeHandle: settings.chimeHandle,
+      applePayRecipient: settings.applePayRecipient,
+      venmoHandle: settings.venmoHandle,
+      cashAppEnabled: settings.cashAppEnabled,
+      chimeEnabled: settings.chimeEnabled,
+      applePayEnabled: settings.applePayEnabled,
+      venmoEnabled: settings.venmoEnabled,
+      nowPaymentsEnabled: settings.nowPaymentsEnabled,
       nowPaymentsConfigured: configuredNowPayments(),
       minimumAmountCents: settings.minimumAmountCents,
       maximumAmountCents: MAXIMUM_AMOUNT_CENTS,

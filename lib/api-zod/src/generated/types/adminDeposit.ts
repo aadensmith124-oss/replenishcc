@@ -27,7 +27,10 @@ export interface AdminDeposit {
   payinExtraId: string | null;
   /** @nullable */
   recipient: string | null;
-  /** @nullable */
+  /**
+     * Payment note for manual transfers
+     * @nullable
+     */
   referenceCode: string | null;
   /** @nullable */
   rejectionReason: string | null;

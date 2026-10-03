@@ -8,6 +8,7 @@ import announcementsRouter from "./announcements";
 import leaderboardRouter from "./leaderboard";
 import supportRouter from "./support";
 import licenseStoreRouter from "./license-store";
+import giftCardStoreRouter from "./gift-card-store";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(announcementsRouter);
 router.use(leaderboardRouter);
 router.use(supportRouter);
 router.use(licenseStoreRouter);
+router.use(giftCardStoreRouter);
 
 export default router;
