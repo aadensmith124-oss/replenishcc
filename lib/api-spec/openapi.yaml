@@ -18,6 +18,8 @@ tags:
     description: Published member announcements
   - name: adminAnnouncements
     description: Admin-only announcement publishing and archiving
+  - name: leaderboard
+    description: Weekly rankings from confirmed member deposits
   - name: deposits
     description: Member deposits, balances, and referral rewards
   - name: depositAdmin
@@ -294,6 +296,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AnnouncementListResponse"
+        "401":
+          description: Sign-in required
+  /leaderboard/weekly:
+    get:
+      operationId: getWeeklyLeaderboard
+      tags: [leaderboard]
+      summary: Get the top ten confirmed deposit totals for the current UTC week
+      responses:
+        "200":
+          description: Weekly ranking data with masked member email addresses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeeklyLeaderboardResponse"
         "401":
           description: Sign-in required
   /admin/announcements:
@@ -718,6 +734,22 @@ components:
           type: array
           items: { $ref: "#/components/schemas/Announcement" }
       required: [announcements]
+    WeeklyLeaderboardEntry:
+      type: object
+      properties:
+        rank: { type: integer, minimum: 1 }
+        maskedEmail: { type: string, minLength: 4, maxLength: 254 }
+        amountCents: { type: integer, minimum: 0 }
+      required: [rank, maskedEmail, amountCents]
+    WeeklyLeaderboardResponse:
+      type: object
+      properties:
+        weekStart: { type: string, format: date-time }
+        weekEnd: { type: string, format: date-time }
+        rankings:
+          type: array
+          items: { $ref: "#/components/schemas/WeeklyLeaderboardEntry" }
+      required: [weekStart, weekEnd, rankings]
     AnnouncementInput:
       type: object
       properties:

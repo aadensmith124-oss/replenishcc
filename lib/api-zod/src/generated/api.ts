@@ -291,6 +291,28 @@ export const GetAnnouncementsResponse = zod.object({
 
 
 /**
+ * @summary Get the top ten confirmed deposit totals for the current UTC week
+ */
+
+export const getWeeklyLeaderboardResponseRankingsItemMaskedEmailMin = 4;
+export const getWeeklyLeaderboardResponseRankingsItemMaskedEmailMax = 254;
+
+export const getWeeklyLeaderboardResponseRankingsItemAmountCentsMin = 0;
+
+
+
+export const GetWeeklyLeaderboardResponse = zod.object({
+  "weekStart": zod.coerce.date(),
+  "weekEnd": zod.coerce.date(),
+  "rankings": zod.array(zod.object({
+  "rank": zod.number().int().min(1),
+  "maskedEmail": zod.string().min(getWeeklyLeaderboardResponseRankingsItemMaskedEmailMin).max(getWeeklyLeaderboardResponseRankingsItemMaskedEmailMax),
+  "amountCents": zod.number().int().min(getWeeklyLeaderboardResponseRankingsItemAmountCentsMin)
+}))
+})
+
+
+/**
  * @summary List published and archived announcements
  */
 export const getAdminAnnouncementsResponseAnnouncementsItemTitleMax = 120;

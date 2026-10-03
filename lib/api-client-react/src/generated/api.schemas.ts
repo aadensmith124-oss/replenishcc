@@ -49,6 +49,24 @@ export interface AnnouncementListResponse {
   announcements: Announcement[];
 }
 
+export interface WeeklyLeaderboardEntry {
+  /** @minimum 1 */
+  rank: number;
+  /**
+     * @minLength 4
+     * @maxLength 254
+     */
+  maskedEmail: string;
+  /** @minimum 0 */
+  amountCents: number;
+}
+
+export interface WeeklyLeaderboardResponse {
+  weekStart: string;
+  weekEnd: string;
+  rankings: WeeklyLeaderboardEntry[];
+}
+
 export interface AnnouncementInput {
   /**
      * @minLength 1

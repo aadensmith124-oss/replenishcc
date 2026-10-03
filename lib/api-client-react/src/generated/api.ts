@@ -55,7 +55,8 @@ import type {
   ReferralSummary,
   RegisterInput,
   ResetPasswordInput,
-  ReviewAccountDeletionRequestInput
+  ReviewAccountDeletionRequestInput,
+  WeeklyLeaderboardResponse
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -1224,6 +1225,83 @@ export function useGetAnnouncements<TData = Awaited<ReturnType<typeof getAnnounc
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetAnnouncementsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetWeeklyLeaderboardUrl = () => {
+
+
+
+
+  return `/api/leaderboard/weekly`
+}
+
+/**
+ * @summary Get the top ten confirmed deposit totals for the current UTC week
+ */
+export const getWeeklyLeaderboard = async ( options?: Parameters<typeof customFetch>[1]): Promise<WeeklyLeaderboardResponse> => {
+
+  return customFetch<WeeklyLeaderboardResponse>(getGetWeeklyLeaderboardUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWeeklyLeaderboardQueryKey = () => {
+    return [
+    `/api/leaderboard/weekly`
+    ] as const;
+    }
+
+
+export const getGetWeeklyLeaderboardQueryOptions = <TData = Awaited<ReturnType<typeof getWeeklyLeaderboard>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWeeklyLeaderboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWeeklyLeaderboardQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWeeklyLeaderboard>>> = ({ signal }) => getWeeklyLeaderboard({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWeeklyLeaderboard>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWeeklyLeaderboardQueryResult = NonNullable<Awaited<ReturnType<typeof getWeeklyLeaderboard>>>
+export type GetWeeklyLeaderboardQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get the top ten confirmed deposit totals for the current UTC week
+ */
+
+export function useGetWeeklyLeaderboard<TData = Awaited<ReturnType<typeof getWeeklyLeaderboard>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWeeklyLeaderboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWeeklyLeaderboardQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

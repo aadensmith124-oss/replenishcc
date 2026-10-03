@@ -56,3 +56,5 @@ export * from './resetPasswordInput';
 export * from './reviewAccountDeletionRequestInput';
 export * from './reviewAccountDeletionRequestInputAction';
 export * from './user';
+export * from './weeklyLeaderboardEntry';
+export * from './weeklyLeaderboardResponse';
