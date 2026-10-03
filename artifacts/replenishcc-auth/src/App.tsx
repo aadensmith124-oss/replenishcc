@@ -1,12 +1,35 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   ArrowLeft,
   ArrowRight,
+  Check,
+  Copy,
   Eye,
   EyeOff,
   LoaderCircle,
   LogOut,
+  Moon,
+  Menu,
+  Sun,
+  X,
+  ChevronDown,
+  Home,
+  WalletCards,
+  CircleDollarSign,
+  FileText,
+  Gift,
+  Crown,
+  Trophy,
+  ShoppingBag,
+  CreditCard,
+  Package,
+  ClipboardList,
+  Search,
+  Headphones,
+  MessageSquare,
+  Settings2,
+  LockKeyhole,
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
@@ -42,9 +65,9 @@ const queryClient = new QueryClient({
   },
 });
 
-function Brand() {
+function Brand({ href = '/login', label = 'ReplenishCC sign in' }: { href?: string; label?: string }) {
   return (
-    <Link href="/login" className="brand" aria-label="ReplenishCC sign in">
+    <Link href={href} className="brand" aria-label={label}>
       <span className="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 32 32" fill="none">
           <path d="M16 2.8 27.4 9.4v13.2L16 29.2 4.6 22.6V9.4L16 2.8Z" stroke="currentColor" strokeWidth="1.15" />
@@ -56,14 +79,48 @@ function Brand() {
   );
 }
 
+const passwordCharacterGroups = [
+  'abcdefghijkmnopqrstuvwxyz',
+  'ABCDEFGHJKLMNPQRSTUVWXYZ',
+  '23456789',
+  '!@#$%^&*()-_=+?',
+];
+
+function secureRandomIndex(maxExclusive: number): number {
+  if (!window.isSecureContext || typeof window.crypto?.getRandomValues !== 'function') {
+    throw new Error('Secure password generation is unavailable in this browser.');
+  }
+  const range = 0x1_0000_0000;
+  const limit = range - (range % maxExclusive);
+  const sample = new Uint32Array(1);
+  let value: number;
+  do {
+    window.crypto.getRandomValues(sample);
+    value = sample[0]!;
+  } while (value >= limit);
+  return value % maxExclusive;
+}
+
+function generateSignupPassword(length = 20): string {
+  if (length < passwordCharacterGroups.length) throw new Error('Password length is too short.');
+  const characters = passwordCharacterGroups.map((group) => group[secureRandomIndex(group.length)]!);
+  const allCharacters = passwordCharacterGroups.join('');
+  while (characters.length < length) {
+    characters.push(allCharacters[secureRandomIndex(allCharacters.length)]!);
+  }
+  for (let index = characters.length - 1; index > 0; index -= 1) {
+    const swapIndex = secureRandomIndex(index + 1);
+    const current = characters[index]!;
+    characters[index] = characters[swapIndex]!;
+    characters[swapIndex] = current;
+  }
+  return characters.join('');
+}
+
 function Frame({ children }: { children: ReactNode }) {
   return (
     <main className="app-frame">
       <div className="page-shell">
-        <header className="topbar">
-          <Brand />
-          <div className="secure-label"><ShieldCheck aria-hidden="true" /> Secure account portal</div>
-        </header>
         {children}
         <footer className="site-footer">
           <span>© {new Date().getFullYear()} ReplenishCC</span>
@@ -122,6 +179,7 @@ function Field({
   maxLength,
   action,
   hint,
+  labelAction,
 }: {
   id: string;
   label: string;
@@ -134,10 +192,14 @@ function Field({
   maxLength?: number;
   action?: ReactNode;
   hint?: string;
+  labelAction?: ReactNode;
 }) {
   return (
     <div className="field">
-      <label className="field-label" htmlFor={id}>{label}</label>
+      <div className="field-label-row">
+        <label className="field-label" htmlFor={id}>{label}</label>
+        {labelAction}
+      </div>
       <div className="input-wrap">
         <input
           className={`field-input${action ? ' has-action' : ''}`}
@@ -168,6 +230,7 @@ function PasswordInput({
   autoComplete,
   placeholder = 'Enter your password',
   required = true,
+  labelAction,
 }: {
   id: string;
   label: string;
@@ -176,6 +239,7 @@ function PasswordInput({
   autoComplete: string;
   placeholder?: string;
   required?: boolean;
+  labelAction?: ReactNode;
 }) {
   const [visible, setVisible] = useState(false);
   return (
@@ -189,6 +253,7 @@ function PasswordInput({
       autoComplete={autoComplete}
       required={required}
       maxLength={128}
+      labelAction={labelAction}
       action={
         <button
           type="button"
@@ -293,6 +358,8 @@ function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [generatedPassword, setGeneratedPassword] = useState('');
+  const [copyStatus, setCopyStatus] = useState('');
   const [error, setError] = useState('');
   const [, setLocation] = useLocation();
   const register = usePostAuthRegister();
@@ -305,6 +372,32 @@ function RegisterPage() {
     /[^A-Za-z0-9]/.test(password),
   ].filter(Boolean).length;
   const strengthLabel = password.length === 0 ? 'Use at least 10 characters' : ['Needs work', 'Fair', 'Good', 'Strong', 'Excellent'][strength];
+
+  const generatePassword = () => {
+    setError('');
+    try {
+      const nextPassword = generateSignupPassword();
+      setPassword(nextPassword);
+      setConfirmPassword(nextPassword);
+      setGeneratedPassword(nextPassword);
+      setCopyStatus('');
+    } catch {
+      setGeneratedPassword('');
+      setCopyStatus('');
+      setError('Secure password generation is unavailable here. Enter a password manually.');
+    }
+  };
+
+  const copyGeneratedPassword = async () => {
+    if (!generatedPassword) return;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard access is unavailable.');
+      await navigator.clipboard.writeText(generatedPassword);
+      setCopyStatus('Generated password copied to clipboard.');
+    } catch {
+      setCopyStatus('Clipboard access failed. Show the password and copy it manually.');
+    }
+  };
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -338,7 +431,27 @@ function RegisterPage() {
           {error && <FormMessage>{error}</FormMessage>}
           <form onSubmit={submit} noValidate>
             <Field id="email" label="Email address" type="email" value={email} onChange={setEmail} placeholder="you@example.com" autoComplete="email" maxLength={254} />
-            <PasswordInput id="password" label="Password" value={password} onChange={setPassword} autoComplete="new-password" />
+            <PasswordInput
+              id="password"
+              label="Password"
+              value={password}
+              onChange={(value) => { setPassword(value); setGeneratedPassword(''); setCopyStatus(''); }}
+              autoComplete="new-password"
+              labelAction={
+                <button className="password-generator-button" type="button" onClick={generatePassword} data-testid="button-generate-password">
+                  <Sparkles aria-hidden="true" /> Generate
+                </button>
+              }
+            />
+            {generatedPassword && (
+              <div className="generated-password-status" role="status" data-testid="status-generated-password">
+                <span>{copyStatus || 'Strong password generated and filled in both fields.'}</span>
+                <button className="generated-password-copy" type="button" onClick={copyGeneratedPassword} data-testid="button-copy-generated-password">
+                  {copyStatus.startsWith('Generated password copied') ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+                  {copyStatus.startsWith('Generated password copied') ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            )}
             <div className="password-strength" aria-live="polite">
               <div className="strength-track"><div className="strength-fill" style={{ width: `${strength * 25}%` }} /></div>
               <div className="strength-caption" data-testid="text-password-strength"><span>Password strength</span><span>{strengthLabel}</span></div>
@@ -395,13 +508,11 @@ function ForgotPasswordPage() {
                 If an account matches that email address, we’ll send instructions to reset its password.
               </div>
               <p className="form-intro">For your privacy, this message is the same whether or not an account exists.</p>
-              {import.meta.env.DEV && <p className="dev-note" data-testid="status-development-recovery">Development mode: reset links for existing accounts are written to server logs. This build does not send email.</p>}
               <Link className="legal-back" href="/login"><ArrowLeft aria-hidden="true" /> Return to sign in</Link>
             </>
           ) : (
             <>
               <p className="form-intro">Enter your email address and we’ll send you a link to reset your password.</p>
-              {import.meta.env.DEV && <p className="dev-note" data-testid="status-development-recovery">Development mode: reset links for existing accounts are written to server logs. This build does not send email.</p>}
               {error && <FormMessage>{error}</FormMessage>}
               <form onSubmit={submit} noValidate>
                 <Field id="email" label="Email" type="email" value={email} onChange={setEmail} placeholder="Enter your email address" autoComplete="email" maxLength={254} />
@@ -522,6 +633,20 @@ function DashboardPage() {
   const session = useGetAuthMe();
   const logout = usePostAuthLogout();
   const [logoutError, setLogoutError] = useState('');
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const mobileSidebarRef = useRef<HTMLElement>(null);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileCloseButtonRef = useRef<HTMLButtonElement>(null);
+  const accountControlRef = useRef<HTMLDivElement>(null);
+  const accountTriggerRef = useRef<HTMLButtonElement>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({
+    financeDeposit: true,
+    shop: true,
+    orders: true,
+    checker: true,
+    support: true,
+  });
   const [, setLocation] = useLocation();
   const user = session.data?.authenticated ? session.data.user : null;
 
@@ -529,6 +654,60 @@ function DashboardPage() {
   useEffect(() => {
     if (!session.isLoading && (!session.data?.authenticated || session.isError)) setLocation('/login');
   }, [session.isLoading, session.data?.authenticated, session.isError, setLocation]);
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    mobileCloseButtonRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setMobileNavOpen(false);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusable = Array.from(
+        mobileSidebarRef.current?.querySelectorAll<HTMLElement>('a[href], button:not(:disabled)') ?? [],
+      );
+      if (!focusable.length) {
+        event.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      mobileMenuButtonRef.current?.focus();
+    };
+  }, [mobileNavOpen]);
+  useEffect(() => {
+    if (!accountOpen) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!accountControlRef.current?.contains(event.target as Node)) setAccountOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setAccountOpen(false);
+        accountTriggerRef.current?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [accountOpen]);
 
   const signOut = () => {
     if (logout.isPending) return;
@@ -543,53 +722,168 @@ function DashboardPage() {
     });
   };
 
+  const toggleGroup = (key: string) => setExpanded((current) => ({ ...current, [key]: !current[key] }));
+  const initials = user?.fullName.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'R';
+
+  const memberSidebar = (
+    <>
+      <div className="member-brand">
+        <Brand href="/dashboard" label="ReplenishCC dashboard" />
+        <button ref={mobileCloseButtonRef} className="mobile-close" type="button" onClick={() => setMobileNavOpen(false)} aria-label="Close navigation" data-testid="button-close-navigation"><X /></button>
+      </div>
+      <nav className="member-nav" aria-label="Member navigation">
+        <div className="nav-section-label">Workspace</div>
+        <Link href="/dashboard" className="nav-row nav-home active" aria-current="page" onClick={() => setMobileNavOpen(false)} data-testid="link-dashboard-home">
+          <Home aria-hidden="true" /><span>Home</span><span className="live-mark">Current</span>
+        </Link>
+
+        <div className="nav-section-label">Finance</div>
+        <button className="nav-row nav-group" type="button" onClick={() => toggleGroup('financeDeposit')} aria-expanded={expanded.financeDeposit} data-testid="button-toggle-deposit">
+          <WalletCards aria-hidden="true" /><span>Deposit</span><ChevronDown className={`nav-chevron${expanded.financeDeposit ? ' is-open' : ''}`} aria-hidden="true" />
+        </button>
+        {expanded.financeDeposit && <div className="nav-children">
+          <UnavailableNav icon={<CircleDollarSign />} label="Deposit Money" />
+          <UnavailableNav icon={<FileText />} label="My Deposit" />
+        </div>}
+        <UnavailableNav icon={<Gift />} label="Referral" />
+        <UnavailableNav icon={<Gift />} label="Redeem Code" />
+        <UnavailableNav icon={<Crown />} label="VIP & Free CC" />
+        <UnavailableNav icon={<Trophy />} label="Leaderboard" />
+
+        <div className="nav-section-label">Shopping</div>
+        <button className="nav-row nav-group" type="button" onClick={() => toggleGroup('shop')} aria-expanded={expanded.shop} data-testid="button-toggle-shop">
+          <ShoppingBag aria-hidden="true" /><span>Shop</span><ChevronDown className={`nav-chevron${expanded.shop ? ' is-open' : ''}`} aria-hidden="true" />
+        </button>
+        {expanded.shop && <div className="nav-children">
+          <UnavailableNav icon={<CreditCard />} label="Buy Cards" />
+          <UnavailableNav icon={<Package />} label="Bulk Cards" />
+          <UnavailableNav icon={<ClipboardList />} label="Buy Logs" />
+        </div>}
+        <button className="nav-row nav-group" type="button" onClick={() => toggleGroup('orders')} aria-expanded={expanded.orders} data-testid="button-toggle-orders">
+          <Package aria-hidden="true" /><span>My Orders</span><ChevronDown className={`nav-chevron${expanded.orders ? ' is-open' : ''}`} aria-hidden="true" />
+        </button>
+        {expanded.orders && <div className="nav-children">
+          <UnavailableNav icon={<CreditCard />} label="My Card Orders" />
+          <UnavailableNav icon={<ClipboardList />} label="My Log Orders" />
+          <UnavailableNav icon={<Package />} label="My Bulk Card Purchases" />
+        </div>}
+
+        <div className="nav-section-label">Tools</div>
+        <button className="nav-row nav-group" type="button" onClick={() => toggleGroup('checker')} aria-expanded={expanded.checker} data-testid="button-toggle-checker">
+          <Search aria-hidden="true" /><span>Checker</span><ChevronDown className={`nav-chevron${expanded.checker ? ' is-open' : ''}`} aria-hidden="true" />
+        </button>
+        {expanded.checker && <div className="nav-children">
+          <UnavailableNav icon={<Search />} label="Bin Checker" />
+          <UnavailableNav icon={<CreditCard />} label="Card Checker" />
+        </div>}
+
+        <div className="nav-section-label">Support</div>
+        <button className="nav-row nav-group" type="button" onClick={() => toggleGroup('support')} aria-expanded={expanded.support} data-testid="button-toggle-support">
+          <Headphones aria-hidden="true" /><span>Support</span><ChevronDown className={`nav-chevron${expanded.support ? ' is-open' : ''}`} aria-hidden="true" />
+        </button>
+        {expanded.support && <div className="nav-children">
+          <UnavailableNav icon={<MessageSquare />} label="My Tickets" />
+          <UnavailableNav icon={<MessageSquare />} label="Create Ticket" />
+        </div>}
+
+        <div className="nav-section-label">Settings</div>
+        <UnavailableNav icon={<Settings2 />} label="Account Management" />
+      </nav>
+      <div className="sidebar-foot">
+        <ShieldCheck aria-hidden="true" />
+        <span><strong>Private member space</strong><small>Your account, kept secure.</small></span>
+      </div>
+    </>
+  );
+
   if (session.isLoading || (!session.data && !session.isError)) {
     return (
-      <Frame>
-        <section className="dashboard-wrap" aria-label="Loading your account" aria-busy="true">
-          <div className="dashboard-card" style={{ maxWidth: 770 }}>
-            <div className="skeleton" style={{ width: 128, marginBottom: 22 }} />
-            <div className="skeleton" style={{ width: '65%', height: 38, marginBottom: 18 }} />
-            <div className="skeleton" style={{ width: '88%', marginBottom: 9 }} />
-            <div className="skeleton" style={{ width: '73%' }} />
-          </div>
-        </section>
-      </Frame>
+      <div className={`member-shell${mobileNavOpen ? ' mobile-nav-open' : ''}`}>
+        <aside ref={mobileSidebarRef} id="member-navigation" className="member-sidebar">{memberSidebar}</aside>
+        {mobileNavOpen && <button className="member-scrim" type="button" aria-label="Close navigation menu" onClick={() => setMobileNavOpen(false)} data-testid="button-navigation-backdrop" />}
+        <main className="member-main" aria-label="Loading your account" aria-busy="true">
+          <header className="member-topbar">
+            <button ref={mobileMenuButtonRef} type="button" className="mobile-menu-button" onClick={() => setMobileNavOpen(true)} aria-label="Open navigation" aria-expanded={mobileNavOpen} aria-controls="member-navigation" data-testid="button-open-navigation"><Menu /></button>
+            <div className="topbar-context">Member workspace</div>
+            <div className="skeleton" style={{ width: 40, height: 40, borderRadius: '50%' }} />
+          </header>
+          <div className="member-content"><div className="skeleton" style={{ width: 110, marginBottom: 22 }} /><div className="skeleton" style={{ width: '54%', height: 46, marginBottom: 16 }} /><div className="skeleton" style={{ width: '65%' }} /></div>
+        </main>
+      </div>
     );
   }
   if (!user) {
-    return <Frame><div className="dashboard-wrap" role="status"><div className="dashboard-card"><div className="skeleton" style={{ width: 200 }} /></div></div></Frame>;
+    return <div className="member-shell" role="status" aria-label="Returning to sign in" />;
   }
-  const initials = user.fullName.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
 
   return (
-    <Frame>
-      <section className="dashboard-wrap">
-        <div className="dashboard-card fade-in">
-          <div className="dashboard-head">
-            <div>
-              <div className="eyebrow"><Sparkles aria-hidden="true" size={14} /> Your account</div>
-              <h1 data-testid="text-welcome">Welcome to ReplenishCC</h1>
-            </div>
-            <button type="button" className="quiet-button" onClick={signOut} disabled={logout.isPending} data-testid="button-logout">
-              {logout.isPending ? <LoaderCircle className="spin" aria-hidden="true" /> : <LogOut aria-hidden="true" />}
-              {logout.isPending ? 'Signing out' : 'Sign out'}
+    <div className={`member-shell${mobileNavOpen ? ' mobile-nav-open' : ''}`}>
+      <aside
+        ref={mobileSidebarRef}
+        id="member-navigation"
+        className="member-sidebar"
+        role={mobileNavOpen ? 'dialog' : undefined}
+        aria-modal={mobileNavOpen || undefined}
+        aria-label={mobileNavOpen ? 'Member navigation' : undefined}
+      >{memberSidebar}</aside>
+      {mobileNavOpen && <button className="member-scrim" type="button" aria-label="Close navigation menu" onClick={() => setMobileNavOpen(false)} data-testid="button-navigation-backdrop" />}
+      <main className="member-main">
+        <header className="member-topbar">
+          <button ref={mobileMenuButtonRef} type="button" className="mobile-menu-button" onClick={() => { setAccountOpen(false); setMobileNavOpen(true); }} aria-label="Open navigation" aria-expanded={mobileNavOpen} aria-controls="member-navigation" data-testid="button-open-navigation"><Menu /></button>
+          <div className="topbar-context"><span className="context-dot" /> Member workspace <span className="context-divider">/</span> Home</div>
+          <div ref={accountControlRef} className="account-control">
+            <button ref={accountTriggerRef} type="button" className="account-trigger" onClick={() => setAccountOpen((open) => !open)} aria-expanded={accountOpen} aria-controls="account-popover" data-testid="button-account-menu">
+              <span className="account-avatar">{initials}</span><span className="account-trigger-name">{user.fullName}</span><ChevronDown aria-hidden="true" />
             </button>
+            {accountOpen && <div id="account-popover" className="account-popover" role="region" aria-label="Account options">
+              <div className="account-popover-head"><div className="account-avatar large">{initials}</div><div><strong data-testid="text-account-name">{user.fullName}</strong><span data-testid="text-account-email">{user.email}</span></div></div>
+              {user.username && <div className="account-username" data-testid="text-account-username">Username <strong>@{user.username}</strong></div>}
+              <div className="account-menu-note"><LockKeyhole aria-hidden="true" /> Account management is not available yet</div>
+              {logoutError && <div className="account-error" role="alert">{logoutError}</div>}
+              <button type="button" className="account-logout" onClick={signOut} disabled={logout.isPending} data-testid="button-logout">
+                {logout.isPending ? <LoaderCircle className="spin" aria-hidden="true" /> : <LogOut aria-hidden="true" />}
+                {logout.isPending ? 'Signing out…' : 'Log out'}
+              </button>
+            </div>}
           </div>
-          <p>Your dashboard is currently under development.</p>
-          {logoutError && <FormMessage>{logoutError}</FormMessage>}
-          <div className="user-pill" data-testid="user-identity">
-            <div className="user-avatar" aria-hidden="true">{initials || 'R'}</div>
-            <div className="user-meta">
-              <strong data-testid="text-full-name">{user.fullName}</strong>
-              <span data-testid="text-user-email">{user.email}</span>
+        </header>
+        <section className="member-content fade-in" aria-labelledby="member-welcome">
+          <div className="welcome-eyebrow"><Sparkles aria-hidden="true" size={14} /> Your account</div>
+          <div className="welcome-heading-row">
+            <div>
+              <h1 id="member-welcome" data-testid="text-welcome">Welcome, {user.fullName.split(/\s+/)[0]}.</h1>
+              <p className="welcome-copy">Your ReplenishCC member space is ready.</p>
+            </div>
+            <div className="welcome-seal" aria-label="Secure member workspace"><ShieldCheck aria-hidden="true" /><span>SECURE<br />WORKSPACE</span></div>
+          </div>
+          <div className="member-divider" />
+          <div className="home-lower">
+            <div className="home-message">
+              <span className="home-message-index">01 <span /> ACCOUNT OVERVIEW</span>
+              <h2>A clear place<br />to begin.</h2>
+              <p>Account services will appear here as they become available. For now, your signed-in identity is the only information shown.</p>
+            </div>
+            <div className="identity-panel" data-testid="user-identity">
+              <div className="identity-panel-heading"><span>Signed in as</span><span className="identity-status"><i /> Active session</span></div>
+              <div className="identity-user">
+                <div className="user-avatar">{initials}</div>
+                <div className="user-meta"><strong data-testid="text-full-name">{user.fullName}</strong><span data-testid="text-user-email">{user.email}</span></div>
+              </div>
+              {user.username && <div className="identity-detail"><span>Username</span><strong data-testid="text-member-username">@{user.username}</strong></div>}
+              <div className="identity-detail"><span>Account access</span><strong><ShieldCheck aria-hidden="true" /> Protected</strong></div>
             </div>
           </div>
-          {user.username && <p style={{ margin: '18px 0 0', fontSize: 12 }} data-testid="text-username">Username <strong style={{ color: '#dfcf95', fontWeight: 500 }}>@{user.username}</strong></p>}
-        </div>
-      </section>
-    </Frame>
+          <div className="home-footnote"><ShieldCheck aria-hidden="true" /> ReplenishCC keeps this workspace tied to your authenticated session.</div>
+        </section>
+      </main>
+    </div>
   );
+}
+
+function UnavailableNav({ icon, label }: { icon: ReactNode; label: string }) {
+  return <div className="nav-row nav-unavailable" aria-disabled="true" title={`${label} is not available yet`} data-testid={`nav-unavailable-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}>
+    {icon}<span>{label}</span><span className="soon-label">Soon</span>
+  </div>;
 }
 
 function RootRedirect() {
