@@ -1,7 +1,8 @@
 import { getHealthCheckQueryKey, useHealthCheck } from '@workspace/api-client-react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 
 export function SiteFooter() {
+  const [location] = useLocation();
   const health = useHealthCheck({
     query: {
       queryKey: getHealthCheckQueryKey(),
@@ -15,6 +16,14 @@ export function SiteFooter() {
     : operational
       ? 'Account API operational'
       : 'Account service status unavailable';
+  const rememberLegalReturnPath = () => {
+    if (location === '/terms' || location === '/privacy') return;
+    try {
+      window.sessionStorage.setItem('replenishcc-legal-return-path', location);
+    } catch {
+      // Returning to the sign-in or dashboard page remains available as a fallback.
+    }
+  };
 
   return (
     <footer className="site-footer" data-testid="site-footer">
@@ -28,9 +37,9 @@ export function SiteFooter() {
         <span>{statusLabel}</span>
       </div>
       <nav className="footer-links" aria-label="Footer links">
-        <Link href="/privacy" data-testid="link-footer-privacy">Privacy Policy</Link>
+        <Link href="/privacy" onClick={rememberLegalReturnPath} data-testid="link-footer-privacy">Privacy Policy</Link>
         <span aria-hidden="true">•</span>
-        <Link href="/terms" data-testid="link-footer-terms">Terms of Service</Link>
+        <Link href="/terms" onClick={rememberLegalReturnPath} data-testid="link-footer-terms">Terms of Service</Link>
         <span aria-hidden="true">•</span>
         <a href="/api/healthz" target="_blank" rel="noreferrer" data-testid="link-footer-status">Status</a>
       </nav>

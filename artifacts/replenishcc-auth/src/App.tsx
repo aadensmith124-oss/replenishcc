@@ -622,7 +622,23 @@ const termsSections = [
 function LegalPage({ kind }: { kind: 'privacy' | 'terms' }) {
   const isPrivacy = kind === 'privacy';
   const sections = isPrivacy ? privacySections : termsSections;
+  const session = useGetAuthMe();
+  const [, setLocation] = useLocation();
   useEffect(() => { document.title = `${isPrivacy ? 'Privacy Policy' : 'Terms of Service'} | ReplenishCC`; }, [isPrivacy]);
+  const returnToPreviousPage = () => {
+    let previousPath = '';
+    try {
+      previousPath = window.sessionStorage.getItem('replenishcc-legal-return-path') ?? '';
+      window.sessionStorage.removeItem('replenishcc-legal-return-path');
+    } catch {
+      // Use the signed-in or signed-out fallback when session storage is unavailable.
+    }
+    if (previousPath.startsWith('/') && !previousPath.startsWith('//') && previousPath !== '/terms' && previousPath !== '/privacy') {
+      setLocation(previousPath);
+    } else {
+      setLocation(session.data?.authenticated ? '/dashboard' : '/login');
+    }
+  };
   return (
     <Frame>
       <article className="legal-layout fade-in">
@@ -638,7 +654,9 @@ function LegalPage({ kind }: { kind: 'privacy' | 'terms' }) {
             <p>{copy}</p>
           </section>
         ))}
-        <Link href="/login" className="legal-back"><ArrowLeft aria-hidden="true" /> Return to account access</Link>
+        <button type="button" className="legal-back" onClick={returnToPreviousPage} data-testid="button-return-from-legal">
+          <ArrowLeft aria-hidden="true" /> Return to {session.data?.authenticated ? 'your account' : 'account access'}
+        </button>
       </article>
     </Frame>
   );
@@ -873,29 +891,10 @@ function DashboardPage() {
   );
 
   if (session.isLoading || (!session.data && !session.isError)) {
-    return (
-      <div className={`member-shell${mobileNavOpen ? ' mobile-nav-open' : ''}`} data-theme={theme}>
-        <aside ref={mobileSidebarRef} id="member-navigation" className="member-sidebar">{memberSidebar}</aside>
-        {mobileNavOpen && <button className="member-scrim" type="button" aria-label="Close navigation menu" onClick={() => setMobileNavOpen(false)} data-testid="button-navigation-backdrop" />}
-        <main className="member-main" aria-label="Loading your account" aria-busy="true">
-          <header className="member-topbar">
-            <button ref={mobileMenuButtonRef} type="button" className="mobile-menu-button" onClick={() => setMobileNavOpen(true)} aria-label="Open navigation" aria-expanded={mobileNavOpen} aria-controls="member-navigation" data-testid="button-open-navigation"><Menu /></button>
-            <div className="topbar-brand-tools">
-              <div className="topbar-context">ReplenishCC</div>
-            </div>
-            <div className="topbar-actions">
-              <WorkspaceThemeToggle theme={theme} onToggle={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')} />
-              <span className="skeleton topbar-balance-skeleton" aria-label="Loading available balance" />
-              <div className="skeleton" style={{ width: 40, height: 40, borderRadius: '50%' }} />
-            </div>
-          </header>
-          <div className="member-content"><div className="skeleton" style={{ width: 110, marginBottom: 22 }} /><div className="skeleton" style={{ width: '54%', height: 46, marginBottom: 16 }} /><div className="skeleton" style={{ width: '65%' }} /></div>
-        </main>
-      </div>
-    );
+    return <MemberShell pageTitle="Your account" user={null} loading />;
   }
   if (!user) {
-    return <div className="member-shell" role="status" aria-label="Returning to sign in" />;
+    return <MemberShell pageTitle="Your account" user={null} loading />;
   }
 
   return (
