@@ -51,6 +51,184 @@ export interface Announcement {
   telegramUrl: string | null;
 }
 
+export type SupportTicketCategory = typeof SupportTicketCategory[keyof typeof SupportTicketCategory];
+
+
+export const SupportTicketCategory = {
+  account: 'account',
+  deposit_balance: 'deposit_balance',
+  purchase: 'purchase',
+  other: 'other',
+} as const;
+
+export type SupportTicketStatus = typeof SupportTicketStatus[keyof typeof SupportTicketStatus];
+
+
+export const SupportTicketStatus = {
+  open: 'open',
+  in_progress: 'in_progress',
+  resolved: 'resolved',
+  closed: 'closed',
+} as const;
+
+export interface SupportTicket {
+  id: string;
+  category: SupportTicketCategory;
+  subject: string;
+  /** @nullable */
+  orderReference: string | null;
+  status: SupportTicketStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SupportTicketMessageAuthorRole = typeof SupportTicketMessageAuthorRole[keyof typeof SupportTicketMessageAuthorRole];
+
+
+export const SupportTicketMessageAuthorRole = {
+  member: 'member',
+  admin: 'admin',
+} as const;
+
+export interface SupportTicketMessage {
+  id: string;
+  /** @nullable */
+  authorUserId: string | null;
+  authorName: string;
+  authorRole: SupportTicketMessageAuthorRole;
+  body: string;
+  createdAt: string;
+}
+
+export interface SupportTicketRefund {
+  id: string;
+  /** @minimum 1 */
+  amountCents: number;
+  reason: string;
+  adminName: string;
+  createdAt: string;
+}
+
+export interface SupportTicketDetailResponse {
+  ticket: SupportTicket;
+  messages: SupportTicketMessage[];
+  refund: SupportTicketRefund | null;
+  memberName: string;
+  memberEmail: string;
+}
+
+export interface SupportTicketListResponse {
+  tickets: SupportTicket[];
+}
+
+export type AdminSupportTicketCategory = typeof AdminSupportTicketCategory[keyof typeof AdminSupportTicketCategory];
+
+
+export const AdminSupportTicketCategory = {
+  account: 'account',
+  deposit_balance: 'deposit_balance',
+  purchase: 'purchase',
+  other: 'other',
+} as const;
+
+export type AdminSupportTicketStatus = typeof AdminSupportTicketStatus[keyof typeof AdminSupportTicketStatus];
+
+
+export const AdminSupportTicketStatus = {
+  open: 'open',
+  in_progress: 'in_progress',
+  resolved: 'resolved',
+  closed: 'closed',
+} as const;
+
+export interface AdminSupportTicket {
+  id: string;
+  category: AdminSupportTicketCategory;
+  subject: string;
+  /** @nullable */
+  orderReference: string | null;
+  status: AdminSupportTicketStatus;
+  createdAt: string;
+  updatedAt: string;
+  memberName: string;
+  memberEmail: string;
+  hasRefund: boolean;
+}
+
+export interface AdminSupportTicketListResponse {
+  tickets: AdminSupportTicket[];
+}
+
+export type SupportTicketInputCategory = typeof SupportTicketInputCategory[keyof typeof SupportTicketInputCategory];
+
+
+export const SupportTicketInputCategory = {
+  account: 'account',
+  deposit_balance: 'deposit_balance',
+  purchase: 'purchase',
+  other: 'other',
+} as const;
+
+export interface SupportTicketInput {
+  category: SupportTicketInputCategory;
+  /**
+     * @minLength 1
+     * @maxLength 140
+     */
+  subject: string;
+  /** @maxLength 120 */
+  orderReference?: string;
+  /**
+     * @minLength 1
+     * @maxLength 4000
+     */
+  message: string;
+}
+
+export interface SupportTicketMessageInput {
+  /**
+     * @minLength 1
+     * @maxLength 4000
+     */
+  message: string;
+}
+
+export interface SupportTicketMessageResponse {
+  message: SupportTicketMessage;
+}
+
+export type SupportTicketStatusInputStatus = typeof SupportTicketStatusInputStatus[keyof typeof SupportTicketStatusInputStatus];
+
+
+export const SupportTicketStatusInputStatus = {
+  open: 'open',
+  in_progress: 'in_progress',
+  resolved: 'resolved',
+  closed: 'closed',
+} as const;
+
+export interface SupportTicketStatusInput {
+  status: SupportTicketStatusInputStatus;
+}
+
+export interface SupportTicketRefundInput {
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  amountCents: number;
+  /**
+     * @minLength 1
+     * @maxLength 250
+     */
+  reason: string;
+}
+
+export interface SupportTicketRefundResponse {
+  refund: SupportTicketRefund;
+  balanceCents: number;
+}
+
 export interface AnnouncementListResponse {
   announcements: Announcement[];
 }

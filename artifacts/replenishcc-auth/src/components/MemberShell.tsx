@@ -105,6 +105,7 @@ export function MemberShell({
   });
   const initials = user?.fullName.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'R';
   const isDepositPage = location === '/deposits' || location === '/my-deposits';
+  const isSupportPage = location.startsWith('/support/') || location.startsWith('/admin/support/');
 
   useEffect(() => {
     try {
@@ -248,12 +249,13 @@ export function MemberShell({
           <UnavailableNav icon={<Package />} label="My Bulk Card Purchases" />
         </div>}
         <div className="nav-section-label">Support</div>
-        <button className="nav-row nav-group" type="button" onClick={() => toggleGroup('support')} aria-expanded={expanded.support} data-testid="button-toggle-support">
+        <button className={`nav-row nav-group${isSupportPage ? ' active' : ''}`} type="button" onClick={() => toggleGroup('support')} aria-expanded={expanded.support} data-testid="button-toggle-support">
           <Headphones aria-hidden="true" /><span>Support</span><ChevronDown className={`nav-chevron${expanded.support ? ' is-open' : ''}`} aria-hidden="true" />
         </button>
         {expanded.support && <div className="nav-children">
-          <UnavailableNav icon={<MessageSquare />} label="My Tickets" />
-          <UnavailableNav icon={<MessageSquare />} label="Create Ticket" />
+          <Link href="/support/tickets" className={`nav-row${location === '/support/tickets' ? ' active' : ''}`} aria-current={location === '/support/tickets' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-my-support-tickets"><MessageSquare aria-hidden="true" /><span>My Tickets</span></Link>
+          <Link href="/support/create" className={`nav-row${location === '/support/create' ? ' active' : ''}`} aria-current={location === '/support/create' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-create-support-ticket"><MessageSquare aria-hidden="true" /><span>Create Ticket</span></Link>
+          {user?.isDepositAdmin && <Link href="/admin/support/tickets" className={`nav-row${location === '/admin/support/tickets' ? ' active' : ''}`} aria-current={location === '/admin/support/tickets' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-admin-support-tickets"><ShieldCheck aria-hidden="true" /><span>Ticket Review</span></Link>}
         </div>}
         <div className="nav-section-label">Settings</div>
         <Link href="/account-management" className={`nav-row${location === '/account-management' ? ' active' : ''}`} aria-current={location === '/account-management' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-account-management"><Settings2 aria-hidden="true" /><span>Account management</span></Link>

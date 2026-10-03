@@ -6,6 +6,7 @@ import redeemCodesRouter from "./redeem-codes";
 import accountManagementRouter from "./account-management";
 import announcementsRouter from "./announcements";
 import leaderboardRouter from "./leaderboard";
+import supportRouter from "./support";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(redeemCodesRouter);
 router.use(accountManagementRouter);
 router.use(announcementsRouter);
 router.use(leaderboardRouter);
+router.use(supportRouter);
 
 export default router;

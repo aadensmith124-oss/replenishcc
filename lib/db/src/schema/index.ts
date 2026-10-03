@@ -22,3 +22,4 @@ export * from "./redeem_codes";
 export * from "./deposits";
 export * from "./account_deletion_requests";
 export * from "./announcements";
+export * from "./support";

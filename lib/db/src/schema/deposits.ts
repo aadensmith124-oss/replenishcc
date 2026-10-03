@@ -12,6 +12,7 @@ import {
 import { z } from "zod/v4";
 import { usersTable } from "./auth";
 import { redeemCodesTable } from "./redeem_codes";
+import { supportTicketRefundsTable } from "./support";
 
 export const depositSettingsTable = pgTable("deposit_settings", {
   id: integer("id").primaryKey().default(1),
@@ -83,6 +84,10 @@ export const accountLedgerTable = pgTable(
       () => redeemCodesTable.id,
       { onDelete: "restrict" },
     ),
+    supportRefundId: uuid("support_refund_id").references(
+      () => supportTicketRefundsTable.id,
+      { onDelete: "cascade" },
+    ),
     entryType: varchar("entry_type", { length: 32 }).notNull(),
     amountCents: integer("amount_cents").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -100,6 +105,9 @@ export const accountLedgerTable = pgTable(
     ),
     uniqueIndex("account_ledger_redeem_code_id_unique").on(
       table.redeemCodeId,
+    ),
+    uniqueIndex("account_ledger_support_refund_id_unique").on(
+      table.supportRefundId,
     ),
   ],
 );

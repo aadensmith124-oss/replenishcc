@@ -412,6 +412,236 @@ export const UpdateAnnouncementResponse = zod.object({
 
 
 /**
+ * @summary Create a support ticket
+ */
+export const createSupportTicketBodySubjectMax = 140;
+
+export const createSupportTicketBodyOrderReferenceMax = 120;
+
+export const createSupportTicketBodyMessageMax = 4000;
+
+
+
+export const CreateSupportTicketBody = zod.object({
+  "category": zod.enum(['account', 'deposit_balance', 'purchase', 'other']),
+  "subject": zod.string().min(1).max(createSupportTicketBodySubjectMax),
+  "orderReference": zod.string().max(createSupportTicketBodyOrderReferenceMax).optional(),
+  "message": zod.string().min(1).max(createSupportTicketBodyMessageMax)
+})
+
+
+
+
+export const CreateSupportTicketResponse = zod.object({
+  "ticket": zod.object({
+  "id": zod.string().uuid(),
+  "category": zod.enum(['account', 'deposit_balance', 'purchase', 'other']),
+  "subject": zod.string(),
+  "orderReference": zod.string().nullable(),
+  "status": zod.enum(['open', 'in_progress', 'resolved', 'closed']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "messages": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "authorUserId": zod.string().uuid().nullable(),
+  "authorName": zod.string(),
+  "authorRole": zod.enum(['member', 'admin']),
+  "body": zod.string(),
+  "createdAt": zod.coerce.date()
+})),
+  "refund": zod.union([zod.object({
+  "id": zod.string().uuid(),
+  "amountCents": zod.number().int().min(1),
+  "reason": zod.string(),
+  "adminName": zod.string(),
+  "createdAt": zod.coerce.date()
+}),zod.null()]),
+  "memberName": zod.string(),
+  "memberEmail": zod.string().email()
+})
+
+
+/**
+ * @summary List the current user's tickets
+ */
+export const GetMySupportTicketsResponse = zod.object({
+  "tickets": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "category": zod.enum(['account', 'deposit_balance', 'purchase', 'other']),
+  "subject": zod.string(),
+  "orderReference": zod.string().nullable(),
+  "status": zod.enum(['open', 'in_progress', 'resolved', 'closed']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Get a ticket conversation
+ */
+export const GetSupportTicketParams = zod.object({
+  "ticketId": zod.coerce.string().uuid()
+})
+
+
+
+
+export const GetSupportTicketResponse = zod.object({
+  "ticket": zod.object({
+  "id": zod.string().uuid(),
+  "category": zod.enum(['account', 'deposit_balance', 'purchase', 'other']),
+  "subject": zod.string(),
+  "orderReference": zod.string().nullable(),
+  "status": zod.enum(['open', 'in_progress', 'resolved', 'closed']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "messages": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "authorUserId": zod.string().uuid().nullable(),
+  "authorName": zod.string(),
+  "authorRole": zod.enum(['member', 'admin']),
+  "body": zod.string(),
+  "createdAt": zod.coerce.date()
+})),
+  "refund": zod.union([zod.object({
+  "id": zod.string().uuid(),
+  "amountCents": zod.number().int().min(1),
+  "reason": zod.string(),
+  "adminName": zod.string(),
+  "createdAt": zod.coerce.date()
+}),zod.null()]),
+  "memberName": zod.string(),
+  "memberEmail": zod.string().email()
+})
+
+
+/**
+ * @summary Add a message to a ticket
+ */
+export const PostSupportTicketMessageParams = zod.object({
+  "ticketId": zod.coerce.string().uuid()
+})
+
+export const postSupportTicketMessageBodyMessageMax = 4000;
+
+
+
+export const PostSupportTicketMessageBody = zod.object({
+  "message": zod.string().min(1).max(postSupportTicketMessageBodyMessageMax)
+})
+
+export const PostSupportTicketMessageResponse = zod.object({
+  "message": zod.object({
+  "id": zod.string().uuid(),
+  "authorUserId": zod.string().uuid().nullable(),
+  "authorName": zod.string(),
+  "authorRole": zod.enum(['member', 'admin']),
+  "body": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary List support tickets for admin review
+ */
+export const GetAdminSupportTicketsResponse = zod.object({
+  "tickets": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "category": zod.enum(['account', 'deposit_balance', 'purchase', 'other']),
+  "subject": zod.string(),
+  "orderReference": zod.string().nullable(),
+  "status": zod.enum(['open', 'in_progress', 'resolved', 'closed']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "memberName": zod.string(),
+  "memberEmail": zod.string().email(),
+  "hasRefund": zod.boolean()
+}))
+})
+
+
+/**
+ * @summary Update a ticket status
+ */
+export const PatchAdminSupportTicketStatusParams = zod.object({
+  "ticketId": zod.coerce.string().uuid()
+})
+
+export const PatchAdminSupportTicketStatusBody = zod.object({
+  "status": zod.enum(['open', 'in_progress', 'resolved', 'closed'])
+})
+
+
+
+
+export const PatchAdminSupportTicketStatusResponse = zod.object({
+  "ticket": zod.object({
+  "id": zod.string().uuid(),
+  "category": zod.enum(['account', 'deposit_balance', 'purchase', 'other']),
+  "subject": zod.string(),
+  "orderReference": zod.string().nullable(),
+  "status": zod.enum(['open', 'in_progress', 'resolved', 'closed']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "messages": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "authorUserId": zod.string().uuid().nullable(),
+  "authorName": zod.string(),
+  "authorRole": zod.enum(['member', 'admin']),
+  "body": zod.string(),
+  "createdAt": zod.coerce.date()
+})),
+  "refund": zod.union([zod.object({
+  "id": zod.string().uuid(),
+  "amountCents": zod.number().int().min(1),
+  "reason": zod.string(),
+  "adminName": zod.string(),
+  "createdAt": zod.coerce.date()
+}),zod.null()]),
+  "memberName": zod.string(),
+  "memberEmail": zod.string().email()
+})
+
+
+/**
+ * @summary Credit a member's balance for a support ticket
+ */
+export const CreateSupportTicketRefundParams = zod.object({
+  "ticketId": zod.coerce.string().uuid()
+})
+
+export const createSupportTicketRefundBodyAmountCentsMax = 2147483647;
+
+export const createSupportTicketRefundBodyReasonMax = 250;
+
+
+
+export const CreateSupportTicketRefundBody = zod.object({
+  "amountCents": zod.number().int().min(1).max(createSupportTicketRefundBodyAmountCentsMax),
+  "reason": zod.string().min(1).max(createSupportTicketRefundBodyReasonMax)
+})
+
+
+
+
+export const CreateSupportTicketRefundResponse = zod.object({
+  "refund": zod.object({
+  "id": zod.string().uuid(),
+  "amountCents": zod.number().int().min(1),
+  "reason": zod.string(),
+  "adminName": zod.string(),
+  "createdAt": zod.coerce.date()
+}),
+  "balanceCents": zod.number().int()
+})
+
+
+/**
  * @summary Get deposit methods and limits
  */
 export const GetDepositMethodsResponse = zod.object({

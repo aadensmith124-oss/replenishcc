@@ -64,6 +64,12 @@ import { AccountManagementPage, AdminAccountDeletionRequestsPage } from './pages
 import { DashboardWorkspacePage } from './pages/DashboardWorkspacePage';
 import { WeeklyLeaderboardPage } from './pages/WeeklyLeaderboardPage';
 import { AdminAnnouncementsPage } from './pages/AdminAnnouncementsPage';
+import {
+  AdminSupportTicketsPage,
+  CreateSupportTicketPage,
+  MySupportTicketsPage,
+  SupportTicketDetailPage,
+} from './pages/SupportPages';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -961,6 +967,10 @@ function Router() {
       <Route path="/dashboard" component={DashboardWorkspacePage} />
       <Route path="/leaderboard" component={WeeklyLeaderboardPage} />
       <Route path="/admin/announcements" component={AdminAnnouncementsPage} />
+      <Route path="/support/create" component={CreateSupportTicketPage} />
+      <Route path="/support/tickets" component={MySupportTicketsPage} />
+      <Route path="/support/tickets/:ticketId" component={SupportTicketDetailPage} />
+      <Route path="/admin/support/tickets" component={AdminSupportTicketsPage} />
       <Route path="/deposits" component={DepositsPage} />
       <Route path="/my-deposits" component={MyDepositsPage} />
       <Route path="/referrals" component={ReferralsPage} />

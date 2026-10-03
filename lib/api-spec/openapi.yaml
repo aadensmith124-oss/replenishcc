@@ -24,6 +24,10 @@ tags:
     description: Member deposits, balances, and referral rewards
   - name: depositAdmin
     description: Admin-only manual deposit approvals and payment settings
+  - name: support
+    description: Member support tickets and conversations
+  - name: supportAdmin
+    description: Admin ticket review and balance refunds
   - name: redeemCodes
     description: One-time balance redemption codes
 paths:
@@ -384,6 +388,178 @@ paths:
           description: Admin access required
         "404":
           description: Announcement not found
+  /support/tickets:
+    post:
+      operationId: createSupportTicket
+      tags: [support]
+      summary: Create a support ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportTicketInput"
+      responses:
+        "201":
+          description: Ticket and initial message created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportTicketDetailResponse"
+        "400":
+          description: Invalid ticket details
+        "401":
+          description: Sign-in required
+  /support/tickets/me:
+    get:
+      operationId: getMySupportTickets
+      tags: [support]
+      summary: List the current user's tickets
+      responses:
+        "200":
+          description: Tickets belonging to the signed-in member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportTicketListResponse"
+        "401":
+          description: Sign-in required
+  /support/tickets/{ticketId}:
+    get:
+      operationId: getSupportTicket
+      tags: [support]
+      summary: Get a ticket conversation
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Ticket conversation and any recorded balance refund
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportTicketDetailResponse"
+        "401":
+          description: Sign-in required
+        "403":
+          description: Ticket belongs to another member
+        "404":
+          description: Ticket not found
+  /support/tickets/{ticketId}/messages:
+    post:
+      operationId: postSupportTicketMessage
+      tags: [support]
+      summary: Add a message to a ticket
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportTicketMessageInput"
+      responses:
+        "201":
+          description: Message added to the ticket
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportTicketMessageResponse"
+        "400":
+          description: Invalid message
+        "401":
+          description: Sign-in required
+        "403":
+          description: Ticket belongs to another member
+        "404":
+          description: Ticket not found
+        "409":
+          description: Ticket is closed
+  /admin/support/tickets:
+    get:
+      operationId: getAdminSupportTickets
+      tags: [supportAdmin]
+      summary: List support tickets for admin review
+      responses:
+        "200":
+          description: Ticket queue with member identity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSupportTicketListResponse"
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+  /admin/support/tickets/{ticketId}/status:
+    patch:
+      operationId: patchAdminSupportTicketStatus
+      tags: [supportAdmin]
+      summary: Update a ticket status
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportTicketStatusInput"
+      responses:
+        "200":
+          description: Ticket status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportTicketDetailResponse"
+        "400":
+          description: Invalid status
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+        "404":
+          description: Ticket not found
+  /admin/support/tickets/{ticketId}/refund:
+    post:
+      operationId: createSupportTicketRefund
+      tags: [supportAdmin]
+      summary: Credit a member's balance for a support ticket
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportTicketRefundInput"
+      responses:
+        "201":
+          description: Balance credit recorded in the account ledger
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportTicketRefundResponse"
+        "400":
+          description: Invalid refund details
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+        "404":
+          description: Ticket not found
+        "409":
+          description: This ticket already has a refund
   /deposits/methods:
     get:
       operationId: getDepositMethods
@@ -729,6 +905,113 @@ components:
         showAsPopup: { type: boolean }
         telegramUrl: { type: ["string", "null"], format: uri, maxLength: 2048 }
       required: [id, title, body, createdAt, publishedAt, archivedAt, showAsPopup, telegramUrl]
+    SupportTicket:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        category: { type: string, enum: [account, deposit_balance, purchase, other, card_purchase, log_purchase, deposits] }
+        subject: { type: string }
+        orderReference: { type: ["string", "null"] }
+        status: { type: string, enum: [open, in_progress, resolved, closed] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, category, subject, orderReference, status, createdAt, updatedAt]
+    SupportTicketMessage:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        authorUserId: { type: ["string", "null"], format: uuid }
+        authorName: { type: string }
+        authorRole: { type: string, enum: [member, admin] }
+        body: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, authorUserId, authorName, authorRole, body, createdAt]
+    SupportTicketRefund:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        amountCents: { type: integer, minimum: 1 }
+        reason: { type: string }
+        adminName: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, amountCents, reason, adminName, createdAt]
+    SupportTicketDetailResponse:
+      type: object
+      properties:
+        ticket: { $ref: "#/components/schemas/SupportTicket" }
+        messages:
+          type: array
+          items: { $ref: "#/components/schemas/SupportTicketMessage" }
+        refund:
+          anyOf:
+            - $ref: "#/components/schemas/SupportTicketRefund"
+            - type: "null"
+        memberName: { type: string }
+        memberEmail: { type: string, format: email }
+      required: [ticket, messages, refund, memberName, memberEmail]
+    SupportTicketListResponse:
+      type: object
+      properties:
+        tickets:
+          type: array
+          items: { $ref: "#/components/schemas/SupportTicket" }
+      required: [tickets]
+    AdminSupportTicket:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        category: { type: string, enum: [account, deposit_balance, purchase, other, card_purchase, log_purchase, deposits] }
+        subject: { type: string }
+        orderReference: { type: ["string", "null"] }
+        status: { type: string, enum: [open, in_progress, resolved, closed] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        memberName: { type: string }
+        memberEmail: { type: string, format: email }
+        hasRefund: { type: boolean }
+      required: [id, category, subject, orderReference, status, createdAt, updatedAt, memberName, memberEmail, hasRefund]
+    AdminSupportTicketListResponse:
+      type: object
+      properties:
+        tickets:
+          type: array
+          items: { $ref: "#/components/schemas/AdminSupportTicket" }
+      required: [tickets]
+    SupportTicketInput:
+      type: object
+      properties:
+        category: { type: string, enum: [card_purchase, log_purchase, deposits] }
+        subject: { type: string, minLength: 1, maxLength: 140 }
+        orderReference: { type: string, maxLength: 120 }
+        message: { type: string, minLength: 1, maxLength: 4000 }
+      required: [category, subject, message]
+    SupportTicketMessageInput:
+      type: object
+      properties:
+        message: { type: string, minLength: 1, maxLength: 4000 }
+      required: [message]
+    SupportTicketMessageResponse:
+      type: object
+      properties:
+        message: { $ref: "#/components/schemas/SupportTicketMessage" }
+      required: [message]
+    SupportTicketStatusInput:
+      type: object
+      properties:
+        status: { type: string, enum: [open, in_progress, resolved, closed] }
+      required: [status]
+    SupportTicketRefundInput:
+      type: object
+      properties:
+        amountCents: { type: integer, minimum: 1, maximum: 2147483647 }
+        reason: { type: string, minLength: 1, maxLength: 250 }
+      required: [amountCents, reason]
+    SupportTicketRefundResponse:
+      type: object
+      properties:
+        refund: { $ref: "#/components/schemas/SupportTicketRefund" }
+        balanceCents: { type: integer }
+      required: [refund, balanceCents]
     AnnouncementListResponse:
       type: object
       properties:
