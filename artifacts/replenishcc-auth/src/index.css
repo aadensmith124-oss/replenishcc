@@ -673,6 +673,34 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .announcement-top-panel .workspace-panel-head h2 { margin: 4px 0 3px; font-size: 17px; }
 .announcement-top-panel .announcement-list { margin-top: 9px; }
 .announcement-top-panel .member-announcement { padding: 11px 0; }
+.leaderboard-page { gap: 18px; }
+.leaderboard-page-heading { padding-bottom: 0; }
+.leaderboard-period-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.leaderboard-week-range { margin: 0; color: #a8b0a7; font-size: 14px; font-variant-numeric: tabular-nums; letter-spacing: .015em; }
+.leaderboard-refresh-button svg { width: 14px; height: 14px; }
+.leaderboard-panel { padding: 23px 24px 20px; }
+.leaderboard-card-heading { display: flex; align-items: center; gap: 14px; }
+.leaderboard-trophy-mark { width: 42px; height: 42px; flex: 0 0 auto; display: grid; place-items: center; border: 1px solid #514b34; border-radius: 9px; color: #d5bd64; background: #29281f; }
+.leaderboard-trophy-mark svg { width: 21px; height: 21px; }
+.leaderboard-card-heading h2 { margin: 0 0 5px; color: #e8ebe4; font: 600 20px/1.2 var(--app-font-serif); letter-spacing: -.02em; }
+.leaderboard-card-heading p { margin: 0; color: #9ba49b; font-size: 11px; line-height: 1.5; }
+.leaderboard-table-wrap { margin-top: 21px; overflow-x: auto; border: 1px solid #303a33; border-radius: 8px; }
+.leaderboard-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.leaderboard-table th,.leaderboard-table td { padding: 14px 13px; border-bottom: 1px solid #303834; text-align: left; }
+.leaderboard-table th { color: #c4cbc3; background: #191f1b; font-size: 12px; font-weight: 600; }
+.leaderboard-table td { color: #e2e6df; font-size: 13px; }
+.leaderboard-table tbody tr:last-child td { border-bottom: 0; }
+.leaderboard-table tbody tr:hover { background: hsl(90 8% 70% / .035); }
+.leaderboard-table th:first-child,.leaderboard-table td:first-child { width: 67px; }
+.leaderboard-table th:last-child,.leaderboard-table td:last-child { width: 142px; }
+.leaderboard-table .leaderboard-rank { color: #e5d486; font-weight: 700; font-variant-numeric: tabular-nums; }
+.leaderboard-table .leaderboard-user { overflow: hidden; color: #c8cec7; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.leaderboard-table .leaderboard-amount { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.leaderboard-loading { display: grid; gap: 0; margin-top: 21px; }
+.leaderboard-loading span { height: 42px; border-bottom: 1px solid #303834; }
+.leaderboard-error { margin-top: 20px; }
+.leaderboard-error button { margin-left: auto; border: 0; color: #e4d08a; background: transparent; font-size: 10px; cursor: pointer; text-decoration: underline; }
+.leaderboard-empty { margin-top: 8px; }
 .data-integrity-note { display: flex; align-items: center; gap: 7px; margin: 1px 0 0; color: #747f76; font-size: 9px; }
 .data-integrity-note svg { width: 13px; color: #899873; }
 .workspace-error,.inline-error,.announcement-query-error { display: flex; align-items: center; gap: 10px; border: 1px solid #5d4538; border-radius: 7px; padding: 11px 13px; color: #d6b29b; background: #28211d; font-size: 10px; }
@@ -758,6 +786,22 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
   .auto-refresh-control select { width: 160px; }
   .workspace-panel { padding: 17px 14px; }
   .workspace-chart { height: 205px; margin-left: -13px; margin-right: -13px; }
+  .leaderboard-page { gap: 12px; }
+  .leaderboard-period-row { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .leaderboard-week-range { font-size: 12px; }
+  .leaderboard-panel { padding: 17px 14px; }
+  .leaderboard-card-heading { align-items: flex-start; gap: 11px; }
+  .leaderboard-trophy-mark { width: 36px; height: 36px; }
+  .leaderboard-trophy-mark svg { width: 18px; height: 18px; }
+  .leaderboard-card-heading h2 { font-size: 18px; }
+  .leaderboard-card-heading p { font-size: 10px; }
+  .leaderboard-table th,.leaderboard-table td { padding: 13px 8px; }
+  .leaderboard-table th { font-size: 10px; }
+  .leaderboard-table td { font-size: 11px; }
+  .leaderboard-table th:first-child,.leaderboard-table td:first-child { width: 49px; }
+  .leaderboard-table th:last-child,.leaderboard-table td:last-child { width: 112px; }
+  .leaderboard-table .leaderboard-user { font-size: 10px; }
+  .leaderboard-table .leaderboard-amount { font-size: 10px; }
   .chart-legend { gap: 8px 12px; font-size: 8px; }
   .deposit-list-row { grid-template-columns: 31px minmax(0,1fr) auto; gap: 8px; padding: 9px 0; }
   .deposit-record-amount { grid-column: 2; justify-self: start; text-align: left; }
