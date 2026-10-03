@@ -12,6 +12,8 @@ tags:
     description: Health operations
   - name: auth
     description: Account registration, sessions, and password recovery
+  - name: accountManagement
+    description: Authenticated member account and security settings
   - name: deposits
     description: Member deposits, balances, and referral rewards
   - name: depositAdmin
@@ -152,6 +154,130 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorMessage"
+  /auth/password:
+    patch:
+      operationId: changeAuthPassword
+      tags: [accountManagement]
+      summary: Change the signed-in user's password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordInput"
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Current password is incorrect or new password is invalid
+        "401":
+          description: Sign-in required
+  /account-deletion-requests/me:
+    get:
+      operationId: getMyAccountDeletionRequest
+      tags: [accountManagement]
+      summary: Get the signed-in user's latest deletion request
+      responses:
+        "200":
+          description: Latest request or null when none exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyAccountDeletionRequestResponse"
+        "401":
+          description: Sign-in required
+    delete:
+      operationId: cancelMyAccountDeletionRequest
+      tags: [accountManagement]
+      summary: Cancel the signed-in user's pending deletion request
+      responses:
+        "200":
+          description: Pending request cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401":
+          description: Sign-in required
+        "404":
+          description: No pending request exists
+  /account-deletion-requests:
+    post:
+      operationId: createAccountDeletionRequest
+      tags: [accountManagement]
+      summary: Request permanent account deletion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountDeletionRequestInput"
+      responses:
+        "201":
+          description: Deletion request submitted for admin review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyAccountDeletionRequestResponse"
+        "400":
+          description: Invalid request details
+        "401":
+          description: Sign-in required
+        "409":
+          description: A pending request already exists
+  /admin/account-deletion-requests:
+    get:
+      operationId: getAdminAccountDeletionRequests
+      tags: [depositAdmin]
+      summary: List pending account deletion requests
+      responses:
+        "200":
+          description: Pending requests for authorized admin review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAccountDeletionRequestsResponse"
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+  /admin/account-deletion-requests/{requestId}:
+    patch:
+      operationId: reviewAccountDeletionRequest
+      tags: [depositAdmin]
+      summary: Approve permanent deletion or reject a request
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewAccountDeletionRequestInput"
+      responses:
+        "200":
+          description: Request reviewed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountDeletionReviewResult"
+        "400":
+          description: Request is no longer pending
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+        "404":
+          description: Request not found
   /deposits/methods:
     get:
       operationId: getDepositMethods
@@ -485,6 +611,71 @@ components:
         message:
           type: string
       required: [message]
+    AccountDeletionRequest:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [pending, rejected] }
+        requestedAt: { type: string, format: date-time }
+        reason: { type: ["string", "null"] }
+        reviewedAt: { type: ["string", "null"], format: date-time }
+        reviewNote: { type: ["string", "null"] }
+      required: [id, status, requestedAt, reason, reviewedAt, reviewNote]
+    MyAccountDeletionRequestResponse:
+      type: object
+      properties:
+        request:
+          anyOf:
+            - $ref: "#/components/schemas/AccountDeletionRequest"
+            - type: "null"
+      required: [request]
+    AccountDeletionRequestInput:
+      type: object
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 500 }
+    AdminAccountDeletionRequest:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        memberName: { type: string }
+        memberEmail: { type: string, format: email }
+        requestedAt: { type: string, format: date-time }
+        reason: { type: ["string", "null"] }
+      required: [id, userId, memberName, memberEmail, requestedAt, reason]
+    AdminAccountDeletionRequestsResponse:
+      type: object
+      properties:
+        requests:
+          type: array
+          items: { $ref: "#/components/schemas/AdminAccountDeletionRequest" }
+      required: [requests]
+    ReviewAccountDeletionRequestInput:
+      type: object
+      properties:
+        action: { type: string, enum: [approve, reject] }
+        note: { type: string, maxLength: 250 }
+      required: [action]
+    AccountDeletionReviewResult:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        memberName: { type: string }
+        memberEmail: { type: string, format: email }
+        status: { type: string, enum: [approved, rejected] }
+        requestedAt: { type: string, format: date-time }
+        reviewedAt: { type: string, format: date-time }
+        reason: { type: ["string", "null"] }
+        reviewNote: { type: ["string", "null"] }
+      required: [id, userId, memberName, memberEmail, status, requestedAt, reviewedAt, reason, reviewNote]
+    ChangePasswordInput:
+      type: object
+      properties:
+        currentPassword: { type: string, minLength: 1, maxLength: 128 }
+        newPassword: { type: string, minLength: 10, maxLength: 128 }
+        confirmPassword: { type: string, minLength: 10, maxLength: 128 }
+      required: [currentPassword, newPassword, confirmPassword]
     ErrorMessage:
       type: object
       properties:
