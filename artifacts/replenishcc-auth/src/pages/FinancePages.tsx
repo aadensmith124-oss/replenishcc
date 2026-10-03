@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowDownLeft, ArrowRight, Check, CheckCircle2, ChevronRight, ChevronLeft, CircleAlert, Clipboard, Menu,
-  Clock3, Copy, ExternalLink, FileText, Gift, LockKeyhole, LogOut, RefreshCw, Search, ShieldCheck,
+  Clock3, Copy, ExternalLink, FileText, LockKeyhole, LogOut, RefreshCw, Search, ShieldCheck,
   WalletCards, XCircle, Columns3,
 } from 'lucide-react';
 import {
@@ -330,12 +330,7 @@ export function ReferralsPage() {
     : '';
   const formattedRewardPercent = summary.data ? String(summary.data.rewardPercent) : '';
   return <PortalFrame title="Referrals">
-    <PageHeading eyebrow="Member referrals" title="Invite with clarity." copy="Share your personal code and follow verified referral results. Every figure below comes from your account summary." />
     {summary.isLoading ? <div className="referral-skeleton"><LoadingBlock label="Loading referral summary" /><div className="referral-loading-cards" aria-hidden="true"><span /><span /><span /><span /></div></div> : summary.isError ? <QueryError error={summary.error} retry={() => void summary.refetch()} /> : summary.data && <>
-      <section className="referral-hero" aria-labelledby="referral-hero-title">
-        <div className="referral-mark"><Gift aria-hidden="true" /></div><div className="referral-hero-copy"><div className="panel-overline">A good reason to share</div><h2 id="referral-hero-title">Bring someone into the circle.</h2><p>When a referred member’s qualifying deposit is confirmed, the reward is credited to your account automatically.</p></div>
-        <div className="referral-reward"><strong>{formattedRewardPercent}%</strong><span>reward rate<br />on qualifying deposits</span></div>
-      </section>
       <section className="referral-link-panel finance-panel" aria-label="Your share details">
         <div className="referral-share-intro"><span className="panel-overline">Make an introduction</span><h2>One link. Yours to share.</h2><p>Send your link directly. The referral code is also ready to copy on its own.</p></div>
         <div className="referral-share-fields">
