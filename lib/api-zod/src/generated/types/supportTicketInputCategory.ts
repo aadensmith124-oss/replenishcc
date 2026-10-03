@@ -10,8 +10,7 @@ export type SupportTicketInputCategory = typeof SupportTicketInputCategory[keyof
 
 
 export const SupportTicketInputCategory = {
-  account: 'account',
-  deposit_balance: 'deposit_balance',
-  purchase: 'purchase',
-  other: 'other',
+  card_purchase: 'card_purchase',
+  log_purchase: 'log_purchase',
+  deposits: 'deposits',
 } as const;

@@ -423,7 +423,7 @@ export const createSupportTicketBodyMessageMax = 4000;
 
 
 export const CreateSupportTicketBody = zod.object({
-  "category": zod.enum(['account', 'deposit_balance', 'purchase', 'other']),
+  "category": zod.enum(['card_purchase', 'log_purchase', 'deposits']),
   "subject": zod.string().min(1).max(createSupportTicketBodySubjectMax),
   "orderReference": zod.string().max(createSupportTicketBodyOrderReferenceMax).optional(),
   "message": zod.string().min(1).max(createSupportTicketBodyMessageMax)
@@ -435,7 +435,7 @@ export const CreateSupportTicketBody = zod.object({
 export const CreateSupportTicketResponse = zod.object({
   "ticket": zod.object({
   "id": zod.string().uuid(),
-  "category": zod.enum(['account', 'deposit_balance', 'purchase', 'other']),
+  "category": zod.enum(['account', 'deposit_balance', 'purchase', 'other', 'card_purchase', 'log_purchase', 'deposits']),
   "subject": zod.string(),
   "orderReference": zod.string().nullable(),
   "status": zod.enum(['open', 'in_progress', 'resolved', 'closed']),
@@ -468,7 +468,7 @@ export const CreateSupportTicketResponse = zod.object({
 export const GetMySupportTicketsResponse = zod.object({
   "tickets": zod.array(zod.object({
   "id": zod.string().uuid(),
-  "category": zod.enum(['account', 'deposit_balance', 'purchase', 'other']),
+  "category": zod.enum(['account', 'deposit_balance', 'purchase', 'other', 'card_purchase', 'log_purchase', 'deposits']),
   "subject": zod.string(),
   "orderReference": zod.string().nullable(),
   "status": zod.enum(['open', 'in_progress', 'resolved', 'closed']),
@@ -491,7 +491,7 @@ export const GetSupportTicketParams = zod.object({
 export const GetSupportTicketResponse = zod.object({
   "ticket": zod.object({
   "id": zod.string().uuid(),
-  "category": zod.enum(['account', 'deposit_balance', 'purchase', 'other']),
+  "category": zod.enum(['account', 'deposit_balance', 'purchase', 'other', 'card_purchase', 'log_purchase', 'deposits']),
   "subject": zod.string(),
   "orderReference": zod.string().nullable(),
   "status": zod.enum(['open', 'in_progress', 'resolved', 'closed']),
@@ -551,7 +551,7 @@ export const PostSupportTicketMessageResponse = zod.object({
 export const GetAdminSupportTicketsResponse = zod.object({
   "tickets": zod.array(zod.object({
   "id": zod.string().uuid(),
-  "category": zod.enum(['account', 'deposit_balance', 'purchase', 'other']),
+  "category": zod.enum(['account', 'deposit_balance', 'purchase', 'other', 'card_purchase', 'log_purchase', 'deposits']),
   "subject": zod.string(),
   "orderReference": zod.string().nullable(),
   "status": zod.enum(['open', 'in_progress', 'resolved', 'closed']),
@@ -581,7 +581,7 @@ export const PatchAdminSupportTicketStatusBody = zod.object({
 export const PatchAdminSupportTicketStatusResponse = zod.object({
   "ticket": zod.object({
   "id": zod.string().uuid(),
-  "category": zod.enum(['account', 'deposit_balance', 'purchase', 'other']),
+  "category": zod.enum(['account', 'deposit_balance', 'purchase', 'other', 'card_purchase', 'log_purchase', 'deposits']),
   "subject": zod.string(),
   "orderReference": zod.string().nullable(),
   "status": zod.enum(['open', 'in_progress', 'resolved', 'closed']),

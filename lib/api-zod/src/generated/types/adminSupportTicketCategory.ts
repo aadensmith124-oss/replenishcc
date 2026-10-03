@@ -14,4 +14,7 @@ export const AdminSupportTicketCategory = {
   deposit_balance: 'deposit_balance',
   purchase: 'purchase',
   other: 'other',
+  card_purchase: 'card_purchase',
+  log_purchase: 'log_purchase',
+  deposits: 'deposits',
 } as const;

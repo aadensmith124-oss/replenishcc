@@ -59,6 +59,9 @@ export const SupportTicketCategory = {
   deposit_balance: 'deposit_balance',
   purchase: 'purchase',
   other: 'other',
+  card_purchase: 'card_purchase',
+  log_purchase: 'log_purchase',
+  deposits: 'deposits',
 } as const;
 
 export type SupportTicketStatus = typeof SupportTicketStatus[keyof typeof SupportTicketStatus];
@@ -129,6 +132,9 @@ export const AdminSupportTicketCategory = {
   deposit_balance: 'deposit_balance',
   purchase: 'purchase',
   other: 'other',
+  card_purchase: 'card_purchase',
+  log_purchase: 'log_purchase',
+  deposits: 'deposits',
 } as const;
 
 export type AdminSupportTicketStatus = typeof AdminSupportTicketStatus[keyof typeof AdminSupportTicketStatus];
@@ -163,10 +169,9 @@ export type SupportTicketInputCategory = typeof SupportTicketInputCategory[keyof
 
 
 export const SupportTicketInputCategory = {
-  account: 'account',
-  deposit_balance: 'deposit_balance',
-  purchase: 'purchase',
-  other: 'other',
+  card_purchase: 'card_purchase',
+  log_purchase: 'log_purchase',
+  deposits: 'deposits',
 } as const;
 
 export interface SupportTicketInput {
