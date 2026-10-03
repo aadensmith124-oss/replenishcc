@@ -156,6 +156,120 @@ export const PostAuthResetPasswordResponse = zod.object({
 
 
 /**
+ * @summary Change the signed-in user's password
+ */
+export const changeAuthPasswordBodyCurrentPasswordMax = 128;
+
+export const changeAuthPasswordBodyNewPasswordMin = 10;
+export const changeAuthPasswordBodyNewPasswordMax = 128;
+
+export const changeAuthPasswordBodyConfirmPasswordMin = 10;
+export const changeAuthPasswordBodyConfirmPasswordMax = 128;
+
+
+
+export const ChangeAuthPasswordBody = zod.object({
+  "currentPassword": zod.string().min(1).max(changeAuthPasswordBodyCurrentPasswordMax),
+  "newPassword": zod.string().min(changeAuthPasswordBodyNewPasswordMin).max(changeAuthPasswordBodyNewPasswordMax),
+  "confirmPassword": zod.string().min(changeAuthPasswordBodyConfirmPasswordMin).max(changeAuthPasswordBodyConfirmPasswordMax)
+})
+
+export const ChangeAuthPasswordResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Get the signed-in user's latest deletion request
+ */
+export const GetMyAccountDeletionRequestResponse = zod.object({
+  "request": zod.union([zod.object({
+  "id": zod.string().uuid(),
+  "status": zod.enum(['pending', 'rejected']),
+  "requestedAt": zod.coerce.date(),
+  "reason": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "reviewNote": zod.string().nullable()
+}),zod.null()])
+})
+
+
+/**
+ * @summary Cancel the signed-in user's pending deletion request
+ */
+export const CancelMyAccountDeletionRequestResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Request permanent account deletion
+ */
+export const createAccountDeletionRequestBodyReasonMax = 500;
+
+
+
+export const CreateAccountDeletionRequestBody = zod.object({
+  "reason": zod.string().min(1).max(createAccountDeletionRequestBodyReasonMax).optional()
+})
+
+export const CreateAccountDeletionRequestResponse = zod.object({
+  "request": zod.union([zod.object({
+  "id": zod.string().uuid(),
+  "status": zod.enum(['pending', 'rejected']),
+  "requestedAt": zod.coerce.date(),
+  "reason": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "reviewNote": zod.string().nullable()
+}),zod.null()])
+})
+
+
+/**
+ * @summary List pending account deletion requests
+ */
+export const GetAdminAccountDeletionRequestsResponse = zod.object({
+  "requests": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "userId": zod.string().uuid(),
+  "memberName": zod.string(),
+  "memberEmail": zod.string().email(),
+  "requestedAt": zod.coerce.date(),
+  "reason": zod.string().nullable()
+}))
+})
+
+
+/**
+ * @summary Approve permanent deletion or reject a request
+ */
+export const ReviewAccountDeletionRequestParams = zod.object({
+  "requestId": zod.coerce.string().uuid()
+})
+
+export const reviewAccountDeletionRequestBodyNoteMax = 250;
+
+
+
+export const ReviewAccountDeletionRequestBody = zod.object({
+  "action": zod.enum(['approve', 'reject']),
+  "note": zod.string().max(reviewAccountDeletionRequestBodyNoteMax).optional()
+})
+
+export const ReviewAccountDeletionRequestResponse = zod.object({
+  "id": zod.string().uuid(),
+  "userId": zod.string().uuid(),
+  "memberName": zod.string(),
+  "memberEmail": zod.string().email(),
+  "status": zod.enum(['approved', 'rejected']),
+  "requestedAt": zod.coerce.date(),
+  "reviewedAt": zod.coerce.date(),
+  "reason": zod.string().nullable(),
+  "reviewNote": zod.string().nullable()
+})
+
+
+/**
  * @summary Get deposit methods and limits
  */
 export const GetDepositMethodsResponse = zod.object({

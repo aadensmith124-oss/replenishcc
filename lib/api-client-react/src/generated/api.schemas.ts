@@ -33,6 +33,106 @@ export interface MessageResponse {
   message: string;
 }
 
+export type AccountDeletionRequestStatus = typeof AccountDeletionRequestStatus[keyof typeof AccountDeletionRequestStatus];
+
+
+export const AccountDeletionRequestStatus = {
+  pending: 'pending',
+  rejected: 'rejected',
+} as const;
+
+export interface AccountDeletionRequest {
+  id: string;
+  status: AccountDeletionRequestStatus;
+  requestedAt: string;
+  /** @nullable */
+  reason: string | null;
+  /** @nullable */
+  reviewedAt: string | null;
+  /** @nullable */
+  reviewNote: string | null;
+}
+
+export interface MyAccountDeletionRequestResponse {
+  request: AccountDeletionRequest | null;
+}
+
+export interface AccountDeletionRequestInput {
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  reason?: string;
+}
+
+export interface AdminAccountDeletionRequest {
+  id: string;
+  userId: string;
+  memberName: string;
+  memberEmail: string;
+  requestedAt: string;
+  /** @nullable */
+  reason: string | null;
+}
+
+export interface AdminAccountDeletionRequestsResponse {
+  requests: AdminAccountDeletionRequest[];
+}
+
+export type ReviewAccountDeletionRequestInputAction = typeof ReviewAccountDeletionRequestInputAction[keyof typeof ReviewAccountDeletionRequestInputAction];
+
+
+export const ReviewAccountDeletionRequestInputAction = {
+  approve: 'approve',
+  reject: 'reject',
+} as const;
+
+export interface ReviewAccountDeletionRequestInput {
+  action: ReviewAccountDeletionRequestInputAction;
+  /** @maxLength 250 */
+  note?: string;
+}
+
+export type AccountDeletionReviewResultStatus = typeof AccountDeletionReviewResultStatus[keyof typeof AccountDeletionReviewResultStatus];
+
+
+export const AccountDeletionReviewResultStatus = {
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface AccountDeletionReviewResult {
+  id: string;
+  userId: string;
+  memberName: string;
+  memberEmail: string;
+  status: AccountDeletionReviewResultStatus;
+  requestedAt: string;
+  reviewedAt: string;
+  /** @nullable */
+  reason: string | null;
+  /** @nullable */
+  reviewNote: string | null;
+}
+
+export interface ChangePasswordInput {
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  currentPassword: string;
+  /**
+     * @minLength 10
+     * @maxLength 128
+     */
+  newPassword: string;
+  /**
+     * @minLength 10
+     * @maxLength 128
+     */
+  confirmPassword: string;
+}
+
 export interface ErrorMessage {
   error: string;
 }

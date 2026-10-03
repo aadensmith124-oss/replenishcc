@@ -223,6 +223,7 @@ export function MemberShell({
         </div>}
         <Link href="/referrals" className={`nav-row${location === '/referrals' ? ' active' : ''}`} aria-current={location === '/referrals' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-referrals"><Gift aria-hidden="true" /><span>Referrals</span></Link>
         {user?.isDepositAdmin && <Link href="/admin/deposits" className={`nav-row${location === '/admin/deposits' ? ' active' : ''}`} aria-current={location === '/admin/deposits' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-admin-deposits"><ShieldCheck aria-hidden="true" /><span>Deposit review</span></Link>}
+        {user?.isDepositAdmin && <Link href="/admin/account-deletion-requests" className={`nav-row${location === '/admin/account-deletion-requests' ? ' active' : ''}`} aria-current={location === '/admin/account-deletion-requests' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-admin-account-deletion"><ShieldCheck aria-hidden="true" /><span>Account deletion review</span></Link>}
         <Link href="/redeem-code" className={`nav-row${location === '/redeem-code' ? ' active' : ''}`} aria-current={location === '/redeem-code' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-redeem-code"><Gift aria-hidden="true" /><span>Redeem Code</span></Link>
         <UnavailableNav icon={<Crown />} label="VIP & Free CC" />
         <UnavailableNav icon={<Trophy />} label="Leaderboard" />
@@ -252,7 +253,7 @@ export function MemberShell({
           <UnavailableNav icon={<MessageSquare />} label="Create Ticket" />
         </div>}
         <div className="nav-section-label">Settings</div>
-        <UnavailableNav icon={<Settings2 />} label="Account Management" />
+        <Link href="/account-management" className={`nav-row${location === '/account-management' ? ' active' : ''}`} aria-current={location === '/account-management' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-account-management"><Settings2 aria-hidden="true" /><span>Account management</span></Link>
       </nav>
       <div className="sidebar-foot">
         {user ? (
@@ -343,7 +344,7 @@ export function MemberShell({
               {accountOpen && <div id="account-popover" className="account-popover" role="region" aria-label="Account options">
                 <div className="account-popover-head"><div className="account-avatar large">{initials}</div><div><strong data-testid="text-account-name">{user.fullName}</strong><span data-testid="text-account-email">{user.email}</span></div></div>
                 {user.username && <div className="account-username" data-testid="text-account-username">Username <strong>@{user.username}</strong></div>}
-                <div className="account-menu-note"><LockKeyhole aria-hidden="true" /> Account management is not available yet</div>
+                <Link href="/account-management" className="account-menu-note" onClick={() => setAccountOpen(false)} data-testid="link-account-management-menu"><LockKeyhole aria-hidden="true" /> Manage account security</Link>
                 {logoutError && <div className="account-error" role="alert">{logoutError}</div>}
                 <button type="button" className="account-logout" onClick={signOut} disabled={logout.isPending} data-testid="button-logout">
                   {logout.isPending ? <LoaderCircle className="spin" aria-hidden="true" /> : <LogOut aria-hidden="true" />}

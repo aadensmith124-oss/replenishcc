@@ -60,6 +60,7 @@ import { Brand } from './components/Brand';
 import { MemberShell } from './components/MemberShell';
 import { AdminDepositsPage, DepositsPage, MyDepositsPage, ReferralsPage } from './pages/FinancePages';
 import { RedeemCodePage } from './pages/RedeemCodePage';
+import { AccountManagementPage, AdminAccountDeletionRequestsPage } from './pages/AccountManagementPages';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -960,6 +961,8 @@ function Router() {
       <Route path="/referrals" component={ReferralsPage} />
       <Route path="/redeem-code" component={RedeemCodePage} />
       <Route path="/admin/deposits" component={AdminDepositsPage} />
+      <Route path="/account-management" component={AccountManagementPage} />
+      <Route path="/admin/account-deletion-requests" component={AdminAccountDeletionRequestsPage} />
       <Route>
         <Frame>
           <div className="legal-layout">

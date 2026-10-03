@@ -6,6 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './accountDeletionRequest';
+export * from './accountDeletionRequestInput';
+export * from './accountDeletionRequestStatus';
+export * from './accountDeletionReviewResult';
+export * from './accountDeletionReviewResultStatus';
+export * from './adminAccountDeletionRequest';
+export * from './adminAccountDeletionRequestsResponse';
 export * from './adminDeposit';
 export * from './adminDepositMethod';
 export * from './adminDepositsResponse';
@@ -14,6 +21,7 @@ export * from './adminRedeemCode';
 export * from './adminRedeemCodesResponse';
 export * from './authMeResponse';
 export * from './authResponse';
+export * from './changePasswordInput';
 export * from './createRedeemCodeInput';
 export * from './cryptoCurrenciesResponse';
 export * from './cryptoDepositInput';
@@ -32,6 +40,7 @@ export * from './loginInput';
 export * from './manualDepositInput';
 export * from './manualDepositInputMethod';
 export * from './messageResponse';
+export * from './myAccountDeletionRequestResponse';
 export * from './myDepositsResponse';
 export * from './nowPaymentsWebhookInput';
 export * from './redeemCodeInput';
@@ -39,4 +48,6 @@ export * from './redeemCodeResult';
 export * from './referralSummary';
 export * from './registerInput';
 export * from './resetPasswordInput';
+export * from './reviewAccountDeletionRequestInput';
+export * from './reviewAccountDeletionRequestInputAction';
 export * from './user';
