@@ -730,6 +730,12 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .announcement-textarea { min-height: 165px; resize: vertical; line-height: 1.65; }
 .compose-form-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
 .compose-form-foot > span { color: #7d897f; font-size: 9px; }
+.announcement-popup-option { display: flex; align-items: flex-start; gap: 10px; border: 1px solid #343f36; border-radius: 7px; padding: 11px; color: #dce2d9; background: #1a201c; cursor: pointer; }
+.announcement-popup-option input { width: 15px; height: 15px; flex: 0 0 auto; margin: 1px 0 0; accent-color: #d4bb61; }
+.announcement-popup-option > span { display: grid; gap: 4px; }
+.announcement-popup-option strong { font-size: 10px; font-weight: 600; }
+.announcement-popup-option small,.announcement-popup-hint { color: #89958a; font-size: 9px; line-height: 1.5; }
+.announcement-popup-hint { margin: -1px 0 2px; }
 .admin-feedback { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 12px; border: 1px solid #3d5943; border-radius: 6px; padding: 10px; color: #b8c8b3; background: #202a21; font-size: 10px; line-height: 1.55; }
 .admin-feedback.error { border-color: #604638; color: #ddb49b; background: #2b221e; }
 .admin-feedback svg { width: 14px; height: 14px; flex: 0 0 auto; }
@@ -740,11 +746,16 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .admin-announcement-card { border: 1px solid #344037; border-radius: 7px; padding: 14px; background: #171e19; }
 .admin-announcement-card.is-archived { border-color: #373d37; background: #191c19; }
 .admin-announcement-card-top,.admin-announcement-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.announcement-card-badges { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .publish-state { display: inline-flex; align-items: center; gap: 6px; color: #aabd9e; font-size: 8px; text-transform: uppercase; letter-spacing: .09em; }
 .publish-state i { background: #93b084; }.publish-state.archived { color: #a2a49a; }.publish-state.archived i { background: #85877e; }
+.announcement-popup-badge { border: 1px solid #4b4631; border-radius: 99px; padding: 4px 7px; color: #d4c477; background: #28271f; font-size: 8px; }
 .announcement-created { color: #717e74; font-size: 8px; }
 .admin-announcement-card h3 { margin: 12px 0 6px; color: #e0e5dc; font: 600 14px/1.35 var(--app-font-serif); }
 .admin-announcement-card p { margin: 0 0 13px; color: #9aa39a; font-size: 10px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.announcement-telegram-link { display: inline-flex; align-items: center; gap: 6px; margin: -5px 0 12px; color: #d4bf68; font-size: 9px; text-decoration: none; }
+.announcement-telegram-link:hover { text-decoration: underline; }
+.announcement-telegram-link svg { width: 12px; height: 12px; }
 .admin-announcement-card-foot { border-top: 1px solid #2b342d; padding-top: 10px; color: #78847a; font-size: 8px; }
 .admin-action-button { min-height: 30px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #444c3f; border-radius: 5px; padding: 0 9px; color: #c0c6b8; background: #22271f; font-size: 9px; cursor: pointer; }
 .admin-action-button:hover:not(:disabled) { border-color: #927f46; color: #e0ce7d; }
@@ -752,6 +763,23 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .admin-action-button:disabled { opacity: .55; cursor: wait; }
 .admin-action-button svg { width: 12px; height: 12px; }
 .announcement-query-error { flex-wrap: wrap; margin-top: 15px; }
+.telegram-popup-dialog { width: min(520px, calc(100vw - 32px)); max-width: 520px; max-height: min(82vh, 720px); overflow-y: auto; border: 1px solid #474838; border-radius: 13px; padding: 25px; color: #e8ece3; background: linear-gradient(145deg, #202720, #171d19 78%); box-shadow: 0 26px 90px hsl(0 0% 0% / .55); }
+.telegram-popup-dialog::backdrop { background: hsl(150 10% 4% / .76); backdrop-filter: blur(3px); }
+.telegram-popup-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.telegram-popup-label { display: inline-flex; align-items: center; gap: 8px; color: #d8c56f; font-size: 10px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
+.telegram-popup-label svg { width: 16px; height: 16px; }
+.telegram-popup-close { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid #3d473f; border-radius: 50%; color: #aeb7ad; background: #1a201c; cursor: pointer; }
+.telegram-popup-close:hover { border-color: #827341; color: #e9d784; }
+.telegram-popup-close svg { width: 16px; height: 16px; }
+.telegram-popup-dialog h2 { margin: 22px 0 10px; color: #f0f1ea; font: 600 clamp(23px, 4vw, 30px)/1.17 var(--app-font-serif); letter-spacing: -.035em; }
+.telegram-popup-dialog > p { max-height: min(38vh, 260px); overflow-y: auto; margin: 0; color: #aeb8ad; font-size: 13px; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; }
+.telegram-popup-actions { display: grid; gap: 10px; margin-top: 24px; }
+.telegram-popup-cta { min-height: 46px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; border: 1px solid #d1b85b; border-radius: 7px; padding: 0 16px; color: #171912; background: linear-gradient(115deg, #dfc762, #c3a944); font-size: 12px; font-weight: 700; text-decoration: none; transition: filter .15s ease, transform .15s ease; }
+.telegram-popup-cta:hover { filter: brightness(1.07); transform: translateY(-1px); }
+.telegram-popup-cta svg { width: 15px; height: 15px; }
+.telegram-popup-secondary { justify-self: center; border: 0; padding: 8px 12px; color: #9ca79d; background: transparent; font-size: 10px; cursor: pointer; }
+.telegram-popup-secondary:hover { color: #e1d080; }
+.telegram-popup-dialog :focus-visible { outline: 2px solid #ddc663; outline-offset: 3px; }
 @media (max-width: 850px) {
   .member-dashboard-content { width: min(100% - 34px, 740px); padding-top: 25px; }
   .workspace-analytics-grid { grid-template-columns: 1fr; }
@@ -808,6 +836,10 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
   .deposit-status-pill { grid-column: 3; grid-row: 1; }
   .member-announcement { grid-template-columns: 1fr; gap: 6px; }
   .announcement-filter { overflow-x: auto; }
+  .admin-announcement-card-top { align-items: flex-start; }
+  .announcement-created { text-align: right; }
+  .telegram-popup-dialog { padding: 21px 18px; }
+  .telegram-popup-dialog > p { font-size: 12px; }
   .admin-announcements-page .workspace-heading { flex-direction: row; align-items: center; }
   .admin-access-mark { padding: 7px; font-size: 0; }
   .admin-access-mark svg { width: 16px; }
@@ -2026,6 +2058,12 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .member-shell[data-theme="light"] .created-code-result small { color: #697865; }
 .member-shell[data-theme="light"] .redeem-code-status { border-color: #d6cfaa; color: #776733; background: #f3efd9; }
 .member-shell[data-theme="light"] .redeem-code-status.redeemed { border-color: #c5d4c1; color: #567456; background: #edf3e9; }
+.member-shell[data-theme="light"] .telegram-popup-dialog { border-color: #d2d8cc; color: #30392f; background: linear-gradient(145deg, #fffefa, #f1f3eb); }
+.member-shell[data-theme="light"] .telegram-popup-dialog h2 { color: #30392f; }
+.member-shell[data-theme="light"] .telegram-popup-dialog > p { color: #667263; }
+.member-shell[data-theme="light"] .telegram-popup-label { color: #776733; }
+.member-shell[data-theme="light"] .telegram-popup-close { border-color: #d0d6ca; color: #596458; background: #f5f6f0; }
+.member-shell[data-theme="light"] .telegram-popup-secondary { color: #687465; }
 @media (max-width: 760px) {
   .redeem-create-form { grid-template-columns: 1fr; align-items: stretch; }
   .redeem-create-button { width: 100%; }

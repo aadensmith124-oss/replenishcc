@@ -12,6 +12,7 @@ import {
 import { Link, useLocation } from 'wouter';
 import { Brand } from './Brand';
 import { SiteFooter } from './SiteFooter';
+import { TelegramAnnouncementPopup } from './TelegramAnnouncementPopup';
 
 type MemberUser = NonNullable<AuthMeResponse['user']>;
 type WorkspaceTheme = 'dark' | 'light';
@@ -358,6 +359,7 @@ export function MemberShell({
         </header>
         <div className={`member-content fade-in${contentClassName ? ` ${contentClassName}` : ''}`}>{children}</div>
         <SiteFooter />
+        <TelegramAnnouncementPopup key={user.id} userId={user.id} />
       </main>
     </div>
   );

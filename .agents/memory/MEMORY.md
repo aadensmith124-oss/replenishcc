@@ -1,2 +1,3 @@
 - [Dashboard data integrity](dashboard-data-integrity.md) — Use real ReplenishCC data; adapt reference images without importing SpiderCC branding or payment details.
 - [Account management scope](account-management-scope.md) — Approved account deletion erases linked records; never fake email 2FA delivery.
+- [Telegram pop-up audience](telegram-popup-audience.md) — Admin-created Telegram pop-ups are only for signed-in members.

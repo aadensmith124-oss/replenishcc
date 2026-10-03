@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Archive, Check, CircleAlert, LoaderCircle, Megaphone, RotateCcw, Send, ShieldCheck } from 'lucide-react';
+import { Archive, Check, CircleAlert, ExternalLink, LoaderCircle, Megaphone, RotateCcw, Send, ShieldCheck } from 'lucide-react';
 import {
   getGetAdminAnnouncementsQueryKey, getGetAnnouncementsQueryKey, useCreateAnnouncement,
   useGetAdminAnnouncements, useGetAuthMe, useUpdateAnnouncement, type Announcement,
@@ -9,6 +9,15 @@ import { useLocation } from 'wouter';
 import { MemberShell } from '../components/MemberShell';
 
 const readableDate = (value: string) => new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+function isTelegramChannelUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.port === '' && !url.username && !url.password
+      && ['t.me', 'telegram.me'].includes(url.hostname.toLowerCase()) && url.pathname.length > 1;
+  } catch {
+    return false;
+  }
+}
 function messageFrom(error: unknown) {
   if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') return error.message;
   return 'The request could not be completed. Please try again.';
@@ -16,8 +25,9 @@ function messageFrom(error: unknown) {
 function AnnouncementCard({ item, onAction, busy }: { item: Announcement; onAction: (item: Announcement, action: 'archive' | 'restore') => void; busy: boolean }) {
   const archived = Boolean(item.archivedAt);
   return <article className={`admin-announcement-card${archived ? ' is-archived' : ''}`} data-testid={`card-announcement-${item.id}`}>
-    <div className="admin-announcement-card-top"><span className={archived ? 'publish-state archived' : 'publish-state'}><i />{archived ? 'Archived' : 'Published'}</span><span className="announcement-created">Created {readableDate(item.createdAt)}</span></div>
+    <div className="admin-announcement-card-top"><div className="announcement-card-badges"><span className={archived ? 'publish-state archived' : 'publish-state'}><i />{archived ? 'Archived' : 'Published'}</span>{item.showAsPopup && <span className="announcement-popup-badge">Telegram pop-up</span>}</div><span className="announcement-created">Created {readableDate(item.createdAt)}</span></div>
     <h3>{item.title}</h3><p>{item.body}</p>
+    {item.showAsPopup && item.telegramUrl && <a className="announcement-telegram-link" href={item.telegramUrl} target="_blank" rel="noopener noreferrer"><ExternalLink aria-hidden="true" /> Telegram channel link</a>}
     <div className="admin-announcement-card-foot"><span>{archived ? `Archived ${readableDate(item.archivedAt!)}` : `Published ${readableDate(item.publishedAt)}`}</span>
       <button type="button" className={archived ? 'admin-action-button restore-action' : 'admin-action-button'} disabled={busy} onClick={() => onAction(item, archived ? 'restore' : 'archive')} data-testid={`${archived ? 'button-restore' : 'button-archive'}-${item.id}`}>
         {busy ? <LoaderCircle className="spin" aria-hidden="true" /> : archived ? <RotateCcw aria-hidden="true" /> : <Archive aria-hidden="true" />}{archived ? 'Restore' : 'Archive'}
@@ -36,6 +46,8 @@ export function AdminAnnouncementsPage() {
   const update = useUpdateAnnouncement();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [showAsPopup, setShowAsPopup] = useState(false);
+  const [telegramUrl, setTelegramUrl] = useState('');
   const [notice, setNotice] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
   const [filter, setFilter] = useState<'all' | 'published' | 'archived'>('all');
   useEffect(() => { document.title = 'Announcements | ReplenishCC Admin'; }, []);
@@ -53,11 +65,16 @@ export function AdminAnnouncementsPage() {
       setNotice({ kind: 'error', text: 'Add a title and message before publishing.' });
       return;
     }
+    const cleanTelegramUrl = telegramUrl.trim();
+    if (showAsPopup && !isTelegramChannelUrl(cleanTelegramUrl)) {
+      setNotice({ kind: 'error', text: 'Enter a valid HTTPS Telegram channel link from t.me or telegram.me.' });
+      return;
+    }
     setNotice(null);
-    create.mutate({ data: { title: cleanTitle, body: cleanBody } }, {
+    create.mutate({ data: { title: cleanTitle, body: cleanBody, showAsPopup, telegramUrl: showAsPopup ? cleanTelegramUrl : null } }, {
       onSuccess: () => {
-        setTitle(''); setBody('');
-        setNotice({ kind: 'success', text: 'Announcement published. Members can now see this update.' });
+        setTitle(''); setBody(''); setShowAsPopup(false); setTelegramUrl('');
+        setNotice({ kind: 'success', text: showAsPopup ? 'Telegram pop-up published. Signed-in members will see it once until dismissed.' : 'Announcement published. Members can now see this update.' });
         void client.invalidateQueries({ queryKey: getGetAnnouncementsQueryKey() });
         void client.invalidateQueries({ queryKey: getGetAdminAnnouncementsQueryKey() });
       },
@@ -92,6 +109,15 @@ export function AdminAnnouncementsPage() {
             <input id="announcement-title" className="announcement-input" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} required placeholder="A concise update title" data-testid="input-announcement-title" />
             <label className="finance-label" htmlFor="announcement-body">Message <span>{body.length}/2000</span></label>
             <textarea id="announcement-body" className="announcement-input announcement-textarea" value={body} onChange={(event) => setBody(event.target.value)} maxLength={2000} required placeholder="Share the details members need to know." data-testid="input-announcement-body" />
+            <label className="announcement-popup-option">
+              <input type="checkbox" checked={showAsPopup} onChange={(event) => setShowAsPopup(event.target.checked)} data-testid="checkbox-announcement-popup" />
+              <span><strong>Show as a member pop-up</strong><small>Signed-in members see it once per browser until they dismiss it.</small></span>
+            </label>
+            {showAsPopup && <>
+              <label className="finance-label" htmlFor="announcement-telegram-url">Telegram channel URL</label>
+              <input id="announcement-telegram-url" className="announcement-input" type="url" value={telegramUrl} onChange={(event) => setTelegramUrl(event.target.value)} required maxLength={2048} placeholder="https://t.me/yourchannel" data-testid="input-announcement-telegram-url" />
+              <p className="announcement-popup-hint">Use a secure channel link on t.me or telegram.me.</p>
+            </>}
             <div className="compose-form-foot"><span>Posts publish immediately.</span><button type="submit" className="workspace-primary-button" disabled={create.isPending} data-testid="button-publish-announcement">{create.isPending ? <LoaderCircle className="spin" aria-hidden="true" /> : <Send aria-hidden="true" />}{create.isPending ? 'Publishing…' : 'Publish update'}</button></div>
           </form>
         </section>

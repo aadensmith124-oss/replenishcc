@@ -42,7 +42,25 @@ function serializeAnnouncement(announcement: AnnouncementRecord) {
     createdAt: announcement.createdAt,
     publishedAt: announcement.publishedAt,
     archivedAt: announcement.archivedAt,
+    showAsPopup: announcement.showAsPopup,
+    telegramUrl: announcement.telegramUrl,
   };
+}
+
+function isTelegramChannelUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" &&
+      url.port === "" &&
+      !url.username &&
+      !url.password &&
+      ["t.me", "telegram.me"].includes(url.hostname.toLowerCase()) &&
+      url.pathname.length > 1
+    );
+  } catch {
+    return false;
+  }
 }
 
 router.use((req, res, next) => {
@@ -125,16 +143,36 @@ router.post(
 
     const title = parsed.data.title.trim();
     const body = parsed.data.body.trim();
+    const showAsPopup = parsed.data.showAsPopup === true;
+    const telegramUrl =
+      typeof parsed.data.telegramUrl === "string"
+        ? parsed.data.telegramUrl.trim()
+        : null;
     if (!title || !body) {
       res.status(400).json({
         error: "Announcement title and message cannot be blank.",
       });
       return;
     }
+    if (
+      showAsPopup &&
+      (!telegramUrl || !isTelegramChannelUrl(telegramUrl))
+    ) {
+      res.status(400).json({
+        error: "Add a valid HTTPS Telegram channel link from t.me or telegram.me.",
+      });
+      return;
+    }
 
     const [created] = await db
       .insert(announcementsTable)
-      .values({ title, body, createdByUserId: user.id })
+      .values({
+        title,
+        body,
+        showAsPopup,
+        telegramUrl: showAsPopup ? telegramUrl : null,
+        createdByUserId: user.id,
+      })
       .returning();
     if (!created) {
       res.status(500).json({ error: "The announcement could not be saved." });
