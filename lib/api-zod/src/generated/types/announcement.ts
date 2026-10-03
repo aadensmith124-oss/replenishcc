@@ -16,4 +16,10 @@ export interface Announcement {
   publishedAt: Date;
   /** @nullable */
   archivedAt: Date | null;
+  showAsPopup: boolean;
+  /**
+     * @maxLength 2048
+     * @nullable
+     */
+  telegramUrl: string | null;
 }

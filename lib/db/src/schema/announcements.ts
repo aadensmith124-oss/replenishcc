@@ -6,6 +6,7 @@ import {
   timestamp,
   uuid,
   varchar,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 import { usersTable } from "./auth";
@@ -16,6 +17,8 @@ export const announcementsTable = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     title: varchar("title", { length: 120 }).notNull(),
     body: text("body").notNull(),
+    showAsPopup: boolean("show_as_popup").notNull().default(false),
+    telegramUrl: text("telegram_url"),
     createdByUserId: uuid("created_by_user_id").references(
       () => usersTable.id,
       { onDelete: "set null" },

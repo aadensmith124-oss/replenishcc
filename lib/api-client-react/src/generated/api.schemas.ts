@@ -43,6 +43,12 @@ export interface Announcement {
   publishedAt: string;
   /** @nullable */
   archivedAt: string | null;
+  showAsPopup: boolean;
+  /**
+     * @maxLength 2048
+     * @nullable
+     */
+  telegramUrl: string | null;
 }
 
 export interface AnnouncementListResponse {
@@ -78,6 +84,12 @@ export interface AnnouncementInput {
      * @maxLength 2000
      */
   body: string;
+  showAsPopup?: boolean;
+  /**
+     * @maxLength 2048
+     * @nullable
+     */
+  telegramUrl?: string | null;
 }
 
 export type AnnouncementStatusInputAction = typeof AnnouncementStatusInputAction[keyof typeof AnnouncementStatusInputAction];

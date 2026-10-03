@@ -17,4 +17,10 @@ export interface AnnouncementInput {
      * @maxLength 2000
      */
   body: string;
+  showAsPopup?: boolean;
+  /**
+     * @maxLength 2048
+     * @nullable
+     */
+  telegramUrl?: string | null;
 }

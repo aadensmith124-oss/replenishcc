@@ -726,7 +726,9 @@ components:
         createdAt: { type: string, format: date-time }
         publishedAt: { type: string, format: date-time }
         archivedAt: { type: ["string", "null"], format: date-time }
-      required: [id, title, body, createdAt, publishedAt, archivedAt]
+        showAsPopup: { type: boolean }
+        telegramUrl: { type: ["string", "null"], format: uri, maxLength: 2048 }
+      required: [id, title, body, createdAt, publishedAt, archivedAt, showAsPopup, telegramUrl]
     AnnouncementListResponse:
       type: object
       properties:
@@ -755,6 +757,8 @@ components:
       properties:
         title: { type: string, minLength: 1, maxLength: 120 }
         body: { type: string, minLength: 1, maxLength: 2000 }
+        showAsPopup: { type: boolean, default: false }
+        telegramUrl: { type: ["string", "null"], format: uri, maxLength: 2048 }
       required: [title, body]
     AnnouncementStatusInput:
       type: object

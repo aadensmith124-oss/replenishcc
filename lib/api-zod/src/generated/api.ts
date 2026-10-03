@@ -276,6 +276,8 @@ export const getAnnouncementsResponseAnnouncementsItemTitleMax = 120;
 
 export const getAnnouncementsResponseAnnouncementsItemBodyMax = 2000;
 
+export const getAnnouncementsResponseAnnouncementsItemTelegramUrlMax = 2048;
+
 
 
 export const GetAnnouncementsResponse = zod.object({
@@ -285,7 +287,9 @@ export const GetAnnouncementsResponse = zod.object({
   "body": zod.string().max(getAnnouncementsResponseAnnouncementsItemBodyMax),
   "createdAt": zod.coerce.date(),
   "publishedAt": zod.coerce.date(),
-  "archivedAt": zod.coerce.date().nullable()
+  "archivedAt": zod.coerce.date().nullable(),
+  "showAsPopup": zod.boolean(),
+  "telegramUrl": zod.string().url().max(getAnnouncementsResponseAnnouncementsItemTelegramUrlMax).nullable()
 }))
 })
 
@@ -319,6 +323,8 @@ export const getAdminAnnouncementsResponseAnnouncementsItemTitleMax = 120;
 
 export const getAdminAnnouncementsResponseAnnouncementsItemBodyMax = 2000;
 
+export const getAdminAnnouncementsResponseAnnouncementsItemTelegramUrlMax = 2048;
+
 
 
 export const GetAdminAnnouncementsResponse = zod.object({
@@ -328,7 +334,9 @@ export const GetAdminAnnouncementsResponse = zod.object({
   "body": zod.string().max(getAdminAnnouncementsResponseAnnouncementsItemBodyMax),
   "createdAt": zod.coerce.date(),
   "publishedAt": zod.coerce.date(),
-  "archivedAt": zod.coerce.date().nullable()
+  "archivedAt": zod.coerce.date().nullable(),
+  "showAsPopup": zod.boolean(),
+  "telegramUrl": zod.string().url().max(getAdminAnnouncementsResponseAnnouncementsItemTelegramUrlMax).nullable()
 }))
 })
 
@@ -340,16 +348,23 @@ export const createAnnouncementBodyTitleMax = 120;
 
 export const createAnnouncementBodyBodyMax = 2000;
 
+export const createAnnouncementBodyShowAsPopupDefault = false;
+export const createAnnouncementBodyTelegramUrlMax = 2048;
+
 
 
 export const CreateAnnouncementBody = zod.object({
   "title": zod.string().min(1).max(createAnnouncementBodyTitleMax),
-  "body": zod.string().min(1).max(createAnnouncementBodyBodyMax)
+  "body": zod.string().min(1).max(createAnnouncementBodyBodyMax),
+  "showAsPopup": zod.boolean().default(createAnnouncementBodyShowAsPopupDefault),
+  "telegramUrl": zod.string().url().max(createAnnouncementBodyTelegramUrlMax).nullish()
 })
 
 export const createAnnouncementResponseTitleMax = 120;
 
 export const createAnnouncementResponseBodyMax = 2000;
+
+export const createAnnouncementResponseTelegramUrlMax = 2048;
 
 
 
@@ -359,7 +374,9 @@ export const CreateAnnouncementResponse = zod.object({
   "body": zod.string().max(createAnnouncementResponseBodyMax),
   "createdAt": zod.coerce.date(),
   "publishedAt": zod.coerce.date(),
-  "archivedAt": zod.coerce.date().nullable()
+  "archivedAt": zod.coerce.date().nullable(),
+  "showAsPopup": zod.boolean(),
+  "telegramUrl": zod.string().url().max(createAnnouncementResponseTelegramUrlMax).nullable()
 })
 
 
@@ -378,6 +395,8 @@ export const updateAnnouncementResponseTitleMax = 120;
 
 export const updateAnnouncementResponseBodyMax = 2000;
 
+export const updateAnnouncementResponseTelegramUrlMax = 2048;
+
 
 
 export const UpdateAnnouncementResponse = zod.object({
@@ -386,7 +405,9 @@ export const UpdateAnnouncementResponse = zod.object({
   "body": zod.string().max(updateAnnouncementResponseBodyMax),
   "createdAt": zod.coerce.date(),
   "publishedAt": zod.coerce.date(),
-  "archivedAt": zod.coerce.date().nullable()
+  "archivedAt": zod.coerce.date().nullable(),
+  "showAsPopup": zod.boolean(),
+  "telegramUrl": zod.string().url().max(updateAnnouncementResponseTelegramUrlMax).nullable()
 })
 
 
