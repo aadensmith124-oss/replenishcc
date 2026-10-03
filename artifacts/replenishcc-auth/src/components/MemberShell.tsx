@@ -223,7 +223,7 @@ export function MemberShell({
         </div>}
         <Link href="/referrals" className={`nav-row${location === '/referrals' ? ' active' : ''}`} aria-current={location === '/referrals' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-referrals"><Gift aria-hidden="true" /><span>Referrals</span></Link>
         {user?.isDepositAdmin && <Link href="/admin/deposits" className={`nav-row${location === '/admin/deposits' ? ' active' : ''}`} aria-current={location === '/admin/deposits' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-admin-deposits"><ShieldCheck aria-hidden="true" /><span>Deposit review</span></Link>}
-        <UnavailableNav icon={<Gift />} label="Redeem Code" />
+        <Link href="/redeem-code" className={`nav-row${location === '/redeem-code' ? ' active' : ''}`} aria-current={location === '/redeem-code' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-redeem-code"><Gift aria-hidden="true" /><span>Redeem Code</span></Link>
         <UnavailableNav icon={<Crown />} label="VIP & Free CC" />
         <UnavailableNav icon={<Trophy />} label="Leaderboard" />
         <div className="nav-section-label">Shopping</div>

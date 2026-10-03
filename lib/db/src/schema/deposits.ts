@@ -11,6 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 import { usersTable } from "./auth";
+import { redeemCodesTable } from "./redeem_codes";
 
 export const depositSettingsTable = pgTable("deposit_settings", {
   id: integer("id").primaryKey().default(1),
@@ -75,9 +76,13 @@ export const accountLedgerTable = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => usersTable.id, { onDelete: "cascade" }),
-    depositId: uuid("deposit_id")
-      .notNull()
-      .references(() => depositsTable.id, { onDelete: "cascade" }),
+    depositId: uuid("deposit_id").references(() => depositsTable.id, {
+      onDelete: "cascade",
+    }),
+    redeemCodeId: uuid("redeem_code_id").references(
+      () => redeemCodesTable.id,
+      { onDelete: "restrict" },
+    ),
     entryType: varchar("entry_type", { length: 32 }).notNull(),
     amountCents: integer("amount_cents").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -92,6 +97,9 @@ export const accountLedgerTable = pgTable(
     uniqueIndex("account_ledger_deposit_entry_type_unique").on(
       table.depositId,
       table.entryType,
+    ),
+    uniqueIndex("account_ledger_redeem_code_id_unique").on(
+      table.redeemCodeId,
     ),
   ],
 );

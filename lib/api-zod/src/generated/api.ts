@@ -401,3 +401,66 @@ export const UpdateAdminDepositMethodsResponse = zod.object({
 })
 
 
+/**
+ * @summary List redemption codes for administrators
+ */
+export const GetAdminRedeemCodesResponse = zod.object({
+  "codes": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "code": zod.string(),
+  "amountCents": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "redeemedAt": zod.coerce.date().nullable(),
+  "redeemedByName": zod.string().nullable(),
+  "redeemedByEmail": zod.string().email().nullable()
+}))
+})
+
+
+/**
+ * @summary Create a one-time balance code
+ */
+export const createAdminRedeemCodeBodyCodeMax = 40;
+
+
+export const createAdminRedeemCodeBodyCodeRegExp = new RegExp('^[a-zA-Z0-9-]+$');
+export const createAdminRedeemCodeBodyAmountCentsMax = 2147483647;
+
+
+
+export const CreateAdminRedeemCodeBody = zod.object({
+  "code": zod.string().min(1).max(createAdminRedeemCodeBodyCodeMax).regex(createAdminRedeemCodeBodyCodeRegExp).optional(),
+  "amountCents": zod.number().int().min(1).max(createAdminRedeemCodeBodyAmountCentsMax)
+})
+
+export const CreateAdminRedeemCodeResponse = zod.object({
+  "id": zod.string().uuid(),
+  "code": zod.string(),
+  "amountCents": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "redeemedAt": zod.coerce.date().nullable(),
+  "redeemedByName": zod.string().nullable(),
+  "redeemedByEmail": zod.string().email().nullable()
+})
+
+
+/**
+ * @summary Redeem a code and credit the signed-in member's balance
+ */
+export const redeemCodeBodyCodeMax = 40;
+
+
+export const redeemCodeBodyCodeRegExp = new RegExp('^[a-zA-Z0-9-]+$');
+
+
+export const RedeemCodeBody = zod.object({
+  "code": zod.string().min(1).max(redeemCodeBodyCodeMax).regex(redeemCodeBodyCodeRegExp)
+})
+
+export const RedeemCodeResponse = zod.object({
+  "code": zod.string(),
+  "amountCents": zod.number().int(),
+  "balanceCents": zod.number().int()
+})
+
+

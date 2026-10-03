@@ -290,6 +290,52 @@ export interface AdminDepositsResponse {
   deposits: AdminDeposit[];
 }
 
+export interface AdminRedeemCode {
+  id: string;
+  code: string;
+  amountCents: number;
+  createdAt: string;
+  /** @nullable */
+  redeemedAt: string | null;
+  /** @nullable */
+  redeemedByName: string | null;
+  /** @nullable */
+  redeemedByEmail: string | null;
+}
+
+export interface AdminRedeemCodesResponse {
+  codes: AdminRedeemCode[];
+}
+
+export interface CreateRedeemCodeInput {
+  /**
+     * @minLength 1
+     * @maxLength 40
+     * @pattern ^[a-zA-Z0-9-]+$
+     */
+  code?: string;
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  amountCents: number;
+}
+
+export interface RedeemCodeInput {
+  /**
+     * @minLength 1
+     * @maxLength 40
+     * @pattern ^[a-zA-Z0-9-]+$
+     */
+  code: string;
+}
+
+export interface RedeemCodeResult {
+  code: string;
+  amountCents: number;
+  balanceCents: number;
+}
+
 export type DepositReviewInputAction = typeof DepositReviewInputAction[keyof typeof DepositReviewInputAction];
 
 

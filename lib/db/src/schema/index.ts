@@ -18,4 +18,5 @@
 //   export type Post = typeof postsTable.$inferSelect;
 
 export * from "./auth";
+export * from "./redeem_codes";
 export * from "./deposits";

@@ -3,15 +3,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowDownLeft, ArrowRight, Check, CheckCircle2, ChevronRight, ChevronLeft, CircleAlert, Clipboard, Menu,
   Clock3, Copy, ExternalLink, FileText, LockKeyhole, LogOut, RefreshCw, Search, ShieldCheck,
-  WalletCards, XCircle, Columns3,
+  WalletCards, XCircle, Columns3, Gift,
 } from 'lucide-react';
 import {
   getGetAdminDepositMethodsQueryKey, getGetAdminDepositsQueryKey, getGetDepositMethodsQueryKey,
-  getGetMyDepositsQueryKey, getGetMyReferralSummaryQueryKey, useCreateCryptoDeposit,
+  getGetAdminRedeemCodesQueryKey, getGetMyDepositsQueryKey, getGetMyReferralSummaryQueryKey, useCreateAdminRedeemCode, useGetAdminRedeemCodes, useCreateCryptoDeposit,
   useCreateManualDeposit, useGetAdminDepositMethods, useGetAdminDeposits, useGetAuthMe,
   useGetCryptoCurrencies, useGetDepositMethods, useGetMyDeposits, useGetMyReferralSummary,
   useReviewDeposit, useUpdateAdminDepositMethods,
-  type AdminDeposit, type Deposit,
+  type AdminDeposit, type AdminRedeemCode, type Deposit,
 } from '@workspace/api-client-react';
 import { Link } from 'wouter';
 import { MemberShell } from '../components/MemberShell';
@@ -361,6 +361,67 @@ export function ReferralsPage() {
   </PortalFrame>;
 }
 
+function AdminRedeemCodes() {
+  const client = useQueryClient();
+  const codesQuery = useGetAdminRedeemCodes({ query: { queryKey: getGetAdminRedeemCodesQueryKey() } });
+  const createCode = useCreateAdminRedeemCode();
+  const [amount, setAmount] = useState('');
+  const [code, setCode] = useState('');
+  const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
+  const [createdCode, setCreatedCode] = useState<AdminRedeemCode | null>(null);
+  const create = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setMessage(null);
+    setCreatedCode(null);
+    const value = Number(amount);
+    if (!Number.isFinite(value) || value <= 0 || Math.round(value * 100) < 1 || value > 21_474_836.47) {
+      setMessage({ kind: 'error', text: 'Enter a positive amount up to $21,474,836.47.' });
+      return;
+    }
+    const normalizedCode = code.trim().toUpperCase();
+    if (normalizedCode && !/^[A-Z0-9-]{1,40}$/.test(normalizedCode)) {
+      setMessage({ kind: 'error', text: 'A custom code can contain letters, numbers, and hyphens (up to 40 characters).' });
+      return;
+    }
+    createCode.mutate({ data: { amountCents: Math.round(value * 100), ...(normalizedCode ? { code: normalizedCode } : {}) } }, {
+      onSuccess: (created) => {
+        setCreatedCode(created);
+        setAmount('');
+        setCode('');
+        setMessage({ kind: 'success', text: 'Redeem code created. Share it securely; the first redemption receives the credit.' });
+        void client.invalidateQueries({ queryKey: getGetAdminRedeemCodesQueryKey() });
+      },
+      onError: (error) => setMessage({ kind: 'error', text: errorText(error) }),
+    });
+  };
+  const copyCode = async () => {
+    if (!createdCode) return;
+    try {
+      await navigator.clipboard.writeText(createdCode.code);
+      setMessage({ kind: 'success', text: 'Code copied to clipboard.' });
+    } catch {
+      setMessage({ kind: 'error', text: 'Clipboard unavailable. Select and copy the code manually.' });
+    }
+  };
+  return <section className="finance-panel redeem-admin-panel" aria-labelledby="admin-redeem-title">
+    <div className="redeem-admin-head"><div><div className="panel-overline">Member account credits</div><h2 id="admin-redeem-title">Redeem codes</h2><p>Create single-use codes while managing deposits. Each successful redemption is credited directly to the member balance.</p></div><span className="redeem-admin-mark"><Gift aria-hidden="true" /></span></div>
+    <form className="redeem-create-form" onSubmit={create} noValidate>
+      <div><label className="finance-label" htmlFor="admin-redeem-amount">Credit amount (USD)</label><div className="amount-input-wrap"><span>$</span><input id="admin-redeem-amount" type="number" min="0.01" max="21474836.47" step="0.01" inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="25.00" required data-testid="input-admin-redeem-amount" /></div></div>
+      <div><label className="finance-label" htmlFor="admin-redeem-code">Custom code <span className="optional-label">optional</span></label><input id="admin-redeem-code" className="field-input" value={code} onChange={(event) => setCode(event.target.value.toUpperCase())} maxLength={40} placeholder="Leave blank to generate" autoComplete="off" data-testid="input-admin-redeem-code" /><span className="field-assist">Letters, numbers, and hyphens only. Blank creates a unique code.</span></div>
+      <button className="primary-button redeem-create-button" type="submit" disabled={createCode.isPending} data-testid="button-create-redeem-code">{createCode.isPending ? 'Creating code…' : <>Create redeem code <ArrowRight aria-hidden="true" /></>}</button>
+    </form>
+    {message && <Alert kind={message.kind}>{message.text}</Alert>}
+    {createdCode && <div className="created-code-result" role="status" aria-live="polite" data-testid="status-admin-code-created">
+      <div><span>New code</span><strong data-testid="text-created-redeem-code">{createdCode.code}</strong><small>{dollars(createdCode.amountCents)} · Available until redeemed</small></div>
+      <button className="quiet-button" type="button" onClick={() => void copyCode()} data-testid="button-copy-created-redeem-code"><Copy aria-hidden="true" /> Copy</button>
+    </div>}
+    <div className="redeem-code-list-heading"><div><h3>Issued codes</h3><p>Current server record and redemption status.</p></div><button type="button" className="quiet-button" onClick={() => void codesQuery.refetch()} disabled={codesQuery.isFetching} data-testid="button-refresh-redeem-codes"><RefreshCw className={codesQuery.isFetching ? 'spin' : ''} /> Refresh</button></div>
+    {codesQuery.isLoading ? <LoadingBlock label="Loading issued redeem codes" /> : codesQuery.isError ? <QueryError error={codesQuery.error} retry={() => void codesQuery.refetch()} /> : !codesQuery.data?.codes.length ? <div className="finance-empty compact-empty" data-testid="empty-admin-redeem-codes"><span className="empty-mark"><Gift /></span><h3>No codes issued</h3><p>Codes you create will appear here with their live redemption status.</p></div> : <div className="redeem-code-table-wrap"><table className="deposit-table redeem-code-table"><thead><tr><th>Code</th><th>Credit</th><th>Status</th><th>Redeemed by</th><th>Created</th></tr></thead><tbody>
+      {codesQuery.data.codes.map((item) => <tr key={item.id} data-testid={`row-admin-redeem-code-${item.id}`}><td><strong className="admin-code-value">{item.code}</strong></td><td>{dollars(item.amountCents)}</td><td><span className={`redeem-code-status${item.redeemedAt ? ' redeemed' : ''}`} data-testid={`status-admin-redeem-code-${item.id}`}>{item.redeemedAt ? 'Redeemed' : 'Available'}</span>{item.redeemedAt && <small>{dateTime(item.redeemedAt)}</small>}</td><td>{item.redeemedByName || item.redeemedByEmail || (item.redeemedAt ? 'Member' : '—')}</td><td>{dateTime(item.createdAt)}</td></tr>)}
+    </tbody></table></div>}
+  </section>;
+}
+
 function Metric({ label, value, detail, emphasis = false }: { label: string; value: string | number; detail: string; emphasis?: boolean }) {
   return <article className={`referral-metric${emphasis ? ' metric-emphasis' : ''}`}><span>{label}</span><strong data-testid={`text-referral-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}>{value}</strong><small>{detail}</small></article>;
 }
@@ -436,5 +497,6 @@ export function AdminDepositsPage() {
         <button className="primary-button settings-save" type="submit" disabled={saveMethods.isPending || methods.isLoading} data-testid="button-save-recipient-settings">{saveMethods.isPending ? 'Saving…' : <>Save recipient settings <ArrowRight /></>}</button>
       </form>}
     </section>
+    <AdminRedeemCodes />
   </PortalFrame>;
 }

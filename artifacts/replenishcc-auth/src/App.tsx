@@ -59,6 +59,7 @@ import { SiteFooter } from './components/SiteFooter';
 import { Brand } from './components/Brand';
 import { MemberShell } from './components/MemberShell';
 import { AdminDepositsPage, DepositsPage, MyDepositsPage, ReferralsPage } from './pages/FinancePages';
+import { RedeemCodePage } from './pages/RedeemCodePage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -824,7 +825,7 @@ function DashboardPage() {
         </div>}
         <Link href="/referrals" className="nav-row" onClick={() => setMobileNavOpen(false)} data-testid="link-referrals"><Gift aria-hidden="true" /><span>Referrals</span></Link>
         {user?.isDepositAdmin && <Link href="/admin/deposits" className="nav-row" onClick={() => setMobileNavOpen(false)} data-testid="link-admin-deposits"><ShieldCheck aria-hidden="true" /><span>Deposit review</span></Link>}
-        <UnavailableNav icon={<Gift />} label="Redeem Code" />
+        <Link href="/redeem-code" className={`nav-row${window.location.pathname === '/redeem-code' ? ' active' : ''}`} aria-current={window.location.pathname === '/redeem-code' ? 'page' : undefined} onClick={() => setMobileNavOpen(false)} data-testid="link-redeem-code"><Gift aria-hidden="true" /><span>Redeem Code</span></Link>
         <UnavailableNav icon={<Crown />} label="VIP & Free CC" />
         <UnavailableNav icon={<Trophy />} label="Leaderboard" />
 
@@ -957,6 +958,7 @@ function Router() {
       <Route path="/deposits" component={DepositsPage} />
       <Route path="/my-deposits" component={MyDepositsPage} />
       <Route path="/referrals" component={ReferralsPage} />
+      <Route path="/redeem-code" component={RedeemCodePage} />
       <Route path="/admin/deposits" component={AdminDepositsPage} />
       <Route>
         <Frame>

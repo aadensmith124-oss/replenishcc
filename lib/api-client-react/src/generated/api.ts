@@ -21,8 +21,11 @@ import type {
 
 import type {
   AdminDepositsResponse,
+  AdminRedeemCode,
+  AdminRedeemCodesResponse,
   AuthMeResponse,
   AuthResponse,
+  CreateRedeemCodeInput,
   CryptoCurrenciesResponse,
   CryptoDepositInput,
   CryptoDepositResponse,
@@ -38,6 +41,8 @@ import type {
   MessageResponse,
   MyDepositsResponse,
   NowPaymentsWebhookInput,
+  RedeemCodeInput,
+  RedeemCodeResult,
   ReferralSummary,
   RegisterInput,
   ResetPasswordInput
@@ -1552,5 +1557,258 @@ export const useUpdateAdminDepositMethods = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getUpdateAdminDepositMethodsMutationOptions(options));
+    }
+
+export const getGetAdminRedeemCodesUrl = () => {
+
+
+
+
+  return `/api/admin/redeem-codes`
+}
+
+/**
+ * @summary List redemption codes for administrators
+ */
+export const getAdminRedeemCodes = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminRedeemCodesResponse> => {
+
+  return customFetch<AdminRedeemCodesResponse>(getGetAdminRedeemCodesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminRedeemCodesQueryKey = () => {
+    return [
+    `/api/admin/redeem-codes`
+    ] as const;
+    }
+
+
+export const getGetAdminRedeemCodesQueryOptions = <TData = Awaited<ReturnType<typeof getAdminRedeemCodes>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminRedeemCodes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminRedeemCodesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminRedeemCodes>>> = ({ signal }) => getAdminRedeemCodes({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminRedeemCodes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminRedeemCodesQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminRedeemCodes>>>
+export type GetAdminRedeemCodesQueryError = ErrorType<void>
+
+
+/**
+ * @summary List redemption codes for administrators
+ */
+
+export function useGetAdminRedeemCodes<TData = Awaited<ReturnType<typeof getAdminRedeemCodes>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminRedeemCodes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminRedeemCodesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateAdminRedeemCodeUrl = () => {
+
+
+
+
+  return `/api/admin/redeem-codes`
+}
+
+/**
+ * @summary Create a one-time balance code
+ */
+export const createAdminRedeemCode = async (createRedeemCodeInput: CreateRedeemCodeInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminRedeemCode> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AdminRedeemCode>(getCreateAdminRedeemCodeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createRedeemCodeInput)
+  }
+);}
+
+
+
+
+
+export const getCreateAdminRedeemCodeMutationKey = () => ['createAdminRedeemCode'] as const;
+
+export const getCreateAdminRedeemCodeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminRedeemCode>>, TError,CreateAdminRedeemCodeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAdminRedeemCode>>, TError,CreateAdminRedeemCodeMutationVariables, TContext> => {
+
+const mutationKey = getCreateAdminRedeemCodeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminRedeemCode>>, CreateAdminRedeemCodeMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAdminRedeemCode(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAdminRedeemCodeMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminRedeemCode>>>
+    export type CreateAdminRedeemCodeMutationBody = BodyType<CreateRedeemCodeInput>
+    export type CreateAdminRedeemCodeMutationError = ErrorType<void>
+    export type CreateAdminRedeemCodeMutationVariables = {data: BodyType<CreateRedeemCodeInput>}
+
+    /**
+ * @summary Create a one-time balance code
+ */
+export const useCreateAdminRedeemCode = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminRedeemCode>>, TError,CreateAdminRedeemCodeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAdminRedeemCode>>,
+        TError,
+        CreateAdminRedeemCodeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateAdminRedeemCodeMutationOptions(options));
+    }
+
+export const getRedeemCodeUrl = () => {
+
+
+
+
+  return `/api/redeem-codes/redeem`
+}
+
+/**
+ * @summary Redeem a code and credit the signed-in member's balance
+ */
+export const redeemCode = async (redeemCodeInput: RedeemCodeInput, options?: Parameters<typeof customFetch>[1]): Promise<RedeemCodeResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<RedeemCodeResult>(getRedeemCodeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(redeemCodeInput)
+  }
+);}
+
+
+
+
+
+export const getRedeemCodeMutationKey = () => ['redeemCode'] as const;
+
+export const getRedeemCodeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof redeemCode>>, TError,RedeemCodeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof redeemCode>>, TError,RedeemCodeMutationVariables, TContext> => {
+
+const mutationKey = getRedeemCodeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof redeemCode>>, RedeemCodeMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  redeemCode(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RedeemCodeMutationResult = NonNullable<Awaited<ReturnType<typeof redeemCode>>>
+    export type RedeemCodeMutationBody = BodyType<RedeemCodeInput>
+    export type RedeemCodeMutationError = ErrorType<void>
+    export type RedeemCodeMutationVariables = {data: BodyType<RedeemCodeInput>}
+
+    /**
+ * @summary Redeem a code and credit the signed-in member's balance
+ */
+export const useRedeemCode = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof redeemCode>>, TError,RedeemCodeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof redeemCode>>,
+        TError,
+        RedeemCodeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRedeemCodeMutationOptions(options));
     }
 

@@ -16,6 +16,8 @@ tags:
     description: Member deposits, balances, and referral rewards
   - name: depositAdmin
     description: Admin-only manual deposit approvals and payment settings
+  - name: redeemCodes
+    description: One-time balance redemption codes
 paths:
   /healthz:
     get:
@@ -364,6 +366,73 @@ paths:
           description: Sign-in required
         "403":
           description: Admin access required
+  /admin/redeem-codes:
+    get:
+      operationId: getAdminRedeemCodes
+      tags: [depositAdmin]
+      summary: List redemption codes for administrators
+      responses:
+        "200":
+          description: Created codes and their redemption status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminRedeemCodesResponse"
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+    post:
+      operationId: createAdminRedeemCode
+      tags: [depositAdmin]
+      summary: Create a one-time balance code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRedeemCodeInput"
+      responses:
+        "201":
+          description: Code created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminRedeemCode"
+        "400":
+          description: Invalid code or amount
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+        "409":
+          description: Code already exists
+        "503":
+          description: A unique code could not be generated
+  /redeem-codes/redeem:
+    post:
+      operationId: redeemCode
+      tags: [redeemCodes]
+      summary: Redeem a code and credit the signed-in member's balance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RedeemCodeInput"
+      responses:
+        "200":
+          description: Code redeemed and balance credited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RedeemCodeResult"
+        "400":
+          description: Code is invalid or has already been redeemed
+        "401":
+          description: Sign-in required
+        "429":
+          description: Too many redemption attempts
 components:
   schemas:
     HealthStatus:
@@ -598,6 +667,42 @@ components:
           type: array
           items: { $ref: "#/components/schemas/AdminDeposit" }
       required: [deposits]
+    AdminRedeemCode:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        amountCents: { type: integer }
+        createdAt: { type: string, format: date-time }
+        redeemedAt: { type: ["string", "null"], format: date-time }
+        redeemedByName: { type: ["string", "null"] }
+        redeemedByEmail: { type: ["string", "null"], format: email }
+      required: [id, code, amountCents, createdAt, redeemedAt, redeemedByName, redeemedByEmail]
+    AdminRedeemCodesResponse:
+      type: object
+      properties:
+        codes:
+          type: array
+          items: { $ref: "#/components/schemas/AdminRedeemCode" }
+      required: [codes]
+    CreateRedeemCodeInput:
+      type: object
+      properties:
+        code: { type: string, minLength: 1, maxLength: 40, pattern: "^[a-zA-Z0-9-]+$" }
+        amountCents: { type: integer, minimum: 1, maximum: 2147483647 }
+      required: [amountCents]
+    RedeemCodeInput:
+      type: object
+      properties:
+        code: { type: string, minLength: 1, maxLength: 40, pattern: "^[a-zA-Z0-9-]+$" }
+      required: [code]
+    RedeemCodeResult:
+      type: object
+      properties:
+        code: { type: string }
+        amountCents: { type: integer }
+        balanceCents: { type: integer }
+      required: [code, amountCents, balanceCents]
     DepositReviewInput:
       type: object
       properties:
