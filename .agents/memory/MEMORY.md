@@ -1,6 +1,6 @@
 - [Dashboard data integrity](dashboard-data-integrity.md) — Use real ReplenishCC data; adapt reference images without importing SpiderCC branding or payment details.
 - [Account management scope](account-management-scope.md) — Approved account deletion erases linked records; never fake email 2FA delivery.
-- [Telegram pop-up audience](telegram-popup-audience.md) — Admin-created Telegram pop-ups are only for signed-in members.
+- [Telegram announcement display](telegram-popup-audience.md) — Each announcement is either a signed-in Telegram pop-up or a dashboard banner, never both.
 - [Support ticket business rules](support-ticket-business-rules.md) — Orders are planned for later; current support refunds credit account balance and replacements are unavailable.
 - [License-key store scope](license-key-store-scope.md) — Members buy admin-listed license keys with account balance; admins create products and add stock.
 - [Coupon and deposit rules](coupon-and-deposit-rules.md) — Coupons discount balance-funded log orders; deposit minimums apply to manual and crypto deposits, not referrals.
