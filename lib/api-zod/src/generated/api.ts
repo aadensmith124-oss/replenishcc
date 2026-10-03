@@ -270,6 +270,105 @@ export const ReviewAccountDeletionRequestResponse = zod.object({
 
 
 /**
+ * @summary List published announcements for the signed-in member
+ */
+export const getAnnouncementsResponseAnnouncementsItemTitleMax = 120;
+
+export const getAnnouncementsResponseAnnouncementsItemBodyMax = 2000;
+
+
+
+export const GetAnnouncementsResponse = zod.object({
+  "announcements": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string().max(getAnnouncementsResponseAnnouncementsItemTitleMax),
+  "body": zod.string().max(getAnnouncementsResponseAnnouncementsItemBodyMax),
+  "createdAt": zod.coerce.date(),
+  "publishedAt": zod.coerce.date(),
+  "archivedAt": zod.coerce.date().nullable()
+}))
+})
+
+
+/**
+ * @summary List published and archived announcements
+ */
+export const getAdminAnnouncementsResponseAnnouncementsItemTitleMax = 120;
+
+export const getAdminAnnouncementsResponseAnnouncementsItemBodyMax = 2000;
+
+
+
+export const GetAdminAnnouncementsResponse = zod.object({
+  "announcements": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string().max(getAdminAnnouncementsResponseAnnouncementsItemTitleMax),
+  "body": zod.string().max(getAdminAnnouncementsResponseAnnouncementsItemBodyMax),
+  "createdAt": zod.coerce.date(),
+  "publishedAt": zod.coerce.date(),
+  "archivedAt": zod.coerce.date().nullable()
+}))
+})
+
+
+/**
+ * @summary Publish a member announcement
+ */
+export const createAnnouncementBodyTitleMax = 120;
+
+export const createAnnouncementBodyBodyMax = 2000;
+
+
+
+export const CreateAnnouncementBody = zod.object({
+  "title": zod.string().min(1).max(createAnnouncementBodyTitleMax),
+  "body": zod.string().min(1).max(createAnnouncementBodyBodyMax)
+})
+
+export const createAnnouncementResponseTitleMax = 120;
+
+export const createAnnouncementResponseBodyMax = 2000;
+
+
+
+export const CreateAnnouncementResponse = zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string().max(createAnnouncementResponseTitleMax),
+  "body": zod.string().max(createAnnouncementResponseBodyMax),
+  "createdAt": zod.coerce.date(),
+  "publishedAt": zod.coerce.date(),
+  "archivedAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Archive or restore an announcement
+ */
+export const UpdateAnnouncementParams = zod.object({
+  "announcementId": zod.coerce.string().uuid()
+})
+
+export const UpdateAnnouncementBody = zod.object({
+  "action": zod.enum(['archive', 'restore'])
+})
+
+export const updateAnnouncementResponseTitleMax = 120;
+
+export const updateAnnouncementResponseBodyMax = 2000;
+
+
+
+export const UpdateAnnouncementResponse = zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string().max(updateAnnouncementResponseTitleMax),
+  "body": zod.string().max(updateAnnouncementResponseBodyMax),
+  "createdAt": zod.coerce.date(),
+  "publishedAt": zod.coerce.date(),
+  "archivedAt": zod.coerce.date().nullable()
+})
+
+
+/**
  * @summary Get deposit methods and limits
  */
 export const GetDepositMethodsResponse = zod.object({

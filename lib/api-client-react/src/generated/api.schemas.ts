@@ -33,6 +33,47 @@ export interface MessageResponse {
   message: string;
 }
 
+export interface Announcement {
+  id: string;
+  /** @maxLength 120 */
+  title: string;
+  /** @maxLength 2000 */
+  body: string;
+  createdAt: string;
+  publishedAt: string;
+  /** @nullable */
+  archivedAt: string | null;
+}
+
+export interface AnnouncementListResponse {
+  announcements: Announcement[];
+}
+
+export interface AnnouncementInput {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  title: string;
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     */
+  body: string;
+}
+
+export type AnnouncementStatusInputAction = typeof AnnouncementStatusInputAction[keyof typeof AnnouncementStatusInputAction];
+
+
+export const AnnouncementStatusInputAction = {
+  archive: 'archive',
+  restore: 'restore',
+} as const;
+
+export interface AnnouncementStatusInput {
+  action: AnnouncementStatusInputAction;
+}
+
 export type AccountDeletionRequestStatus = typeof AccountDeletionRequestStatus[keyof typeof AccountDeletionRequestStatus];
 
 

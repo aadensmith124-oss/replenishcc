@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   ChevronDown, ChevronRight, CircleDollarSign, ClipboardList, CreditCard, Crown, FileText,
-  Gift, Headphones, Home, LoaderCircle, LockKeyhole, LogOut, Menu, MessageSquare, Moon,
+  Gift, Headphones, Home, LoaderCircle, LockKeyhole, LogOut, Menu, MessageSquare, Moon, Megaphone,
   Package, Settings2, ShieldCheck, ShoppingBag, Sparkles, Sun, Trophy, WalletCards, X,
 } from 'lucide-react';
 import {
@@ -98,7 +98,8 @@ export function MemberShell({
     query: {
       queryKey: getGetMyDepositsQueryKey(),
       enabled: Boolean(user),
-      refetchOnWindowFocus: true,
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60_000,
     },
   });
   const initials = user?.fullName.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'R';
@@ -223,6 +224,7 @@ export function MemberShell({
         </div>}
         <Link href="/referrals" className={`nav-row${location === '/referrals' ? ' active' : ''}`} aria-current={location === '/referrals' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-referrals"><Gift aria-hidden="true" /><span>Referrals</span></Link>
         {user?.isDepositAdmin && <Link href="/admin/deposits" className={`nav-row${location === '/admin/deposits' ? ' active' : ''}`} aria-current={location === '/admin/deposits' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-admin-deposits"><ShieldCheck aria-hidden="true" /><span>Deposit review</span></Link>}
+        {user?.isDepositAdmin && <Link href="/admin/announcements" className={`nav-row${location === '/admin/announcements' ? ' active' : ''}`} aria-current={location === '/admin/announcements' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-admin-announcements"><Megaphone aria-hidden="true" /><span>Announcements</span></Link>}
         {user?.isDepositAdmin && <Link href="/admin/account-deletion-requests" className={`nav-row${location === '/admin/account-deletion-requests' ? ' active' : ''}`} aria-current={location === '/admin/account-deletion-requests' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-admin-account-deletion"><ShieldCheck aria-hidden="true" /><span>Account deletion review</span></Link>}
         <Link href="/redeem-code" className={`nav-row${location === '/redeem-code' ? ' active' : ''}`} aria-current={location === '/redeem-code' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-redeem-code"><Gift aria-hidden="true" /><span>Redeem Code</span></Link>
         <UnavailableNav icon={<Crown />} label="VIP & Free CC" />

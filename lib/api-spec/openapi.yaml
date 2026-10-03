@@ -14,6 +14,10 @@ tags:
     description: Account registration, sessions, and password recovery
   - name: accountManagement
     description: Authenticated member account and security settings
+  - name: announcements
+    description: Published member announcements
+  - name: adminAnnouncements
+    description: Admin-only announcement publishing and archiving
   - name: deposits
     description: Member deposits, balances, and referral rewards
   - name: depositAdmin
@@ -278,6 +282,92 @@ paths:
           description: Admin access required
         "404":
           description: Request not found
+  /announcements:
+    get:
+      operationId: getAnnouncements
+      tags: [announcements]
+      summary: List published announcements for the signed-in member
+      responses:
+        "200":
+          description: Published announcements, newest first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnnouncementListResponse"
+        "401":
+          description: Sign-in required
+  /admin/announcements:
+    get:
+      operationId: getAdminAnnouncements
+      tags: [adminAnnouncements]
+      summary: List published and archived announcements
+      responses:
+        "200":
+          description: Announcements available to an administrator
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnnouncementListResponse"
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+    post:
+      operationId: createAnnouncement
+      tags: [adminAnnouncements]
+      summary: Publish a member announcement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnnouncementInput"
+      responses:
+        "201":
+          description: Announcement published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Announcement"
+        "400":
+          description: Invalid announcement details
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+  /admin/announcements/{announcementId}:
+    patch:
+      operationId: updateAnnouncement
+      tags: [adminAnnouncements]
+      summary: Archive or restore an announcement
+      parameters:
+        - name: announcementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnnouncementStatusInput"
+      responses:
+        "200":
+          description: Announcement status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Announcement"
+        "400":
+          description: Invalid announcement status
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+        "404":
+          description: Announcement not found
   /deposits/methods:
     get:
       operationId: getDepositMethods
@@ -611,6 +701,34 @@ components:
         message:
           type: string
       required: [message]
+    Announcement:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string, maxLength: 120 }
+        body: { type: string, maxLength: 2000 }
+        createdAt: { type: string, format: date-time }
+        publishedAt: { type: string, format: date-time }
+        archivedAt: { type: ["string", "null"], format: date-time }
+      required: [id, title, body, createdAt, publishedAt, archivedAt]
+    AnnouncementListResponse:
+      type: object
+      properties:
+        announcements:
+          type: array
+          items: { $ref: "#/components/schemas/Announcement" }
+      required: [announcements]
+    AnnouncementInput:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 120 }
+        body: { type: string, minLength: 1, maxLength: 2000 }
+      required: [title, body]
+    AnnouncementStatusInput:
+      type: object
+      properties:
+        action: { type: string, enum: [archive, restore] }
+      required: [action]
     AccountDeletionRequest:
       type: object
       properties:

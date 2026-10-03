@@ -61,6 +61,8 @@ import { MemberShell } from './components/MemberShell';
 import { AdminDepositsPage, DepositsPage, MyDepositsPage, ReferralsPage } from './pages/FinancePages';
 import { RedeemCodePage } from './pages/RedeemCodePage';
 import { AccountManagementPage, AdminAccountDeletionRequestsPage } from './pages/AccountManagementPages';
+import { DashboardWorkspacePage } from './pages/DashboardWorkspacePage';
+import { AdminAnnouncementsPage } from './pages/AdminAnnouncementsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -955,7 +957,8 @@ function Router() {
       <Route path="/reset-password/:token" component={ResetPasswordPage} />
       <Route path="/privacy"><LegalPage kind="privacy" /></Route>
       <Route path="/terms"><LegalPage kind="terms" /></Route>
-      <Route path="/dashboard" component={DashboardPage} />
+      <Route path="/dashboard" component={DashboardWorkspacePage} />
+      <Route path="/admin/announcements" component={AdminAnnouncementsPage} />
       <Route path="/deposits" component={DepositsPage} />
       <Route path="/my-deposits" component={MyDepositsPage} />
       <Route path="/referrals" component={ReferralsPage} />

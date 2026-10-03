@@ -4,6 +4,7 @@ import authRouter from "./auth";
 import depositsRouter from "./deposits";
 import redeemCodesRouter from "./redeem-codes";
 import accountManagementRouter from "./account-management";
+import announcementsRouter from "./announcements";
 
 const router: IRouter = Router();
 
@@ -12,5 +13,6 @@ router.use(authRouter);
 router.use(depositsRouter);
 router.use(redeemCodesRouter);
 router.use(accountManagementRouter);
+router.use(announcementsRouter);
 
 export default router;
