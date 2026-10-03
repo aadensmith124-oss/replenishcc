@@ -181,8 +181,8 @@
 }
 .brand-mark svg { width: 100%; height: 100%; }
 .brand-wordmark {
-  color: #eef6f3;
-  background: linear-gradient(100deg, #f5f8f7 2%, #c8eee6 54%, #39b7a6 100%);
+  color: #d5b44d;
+  background: linear-gradient(100deg, #e8cc68 2%, #d5b44d 54%, #b48a24 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -1610,7 +1610,7 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
   background: hsl(210 7% 8% / .42);
 }
 .topbar-brand-tools { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.topbar-context { color: #e0e3dc; font-size: 12px; font-weight: 600; letter-spacing: .035em; white-space: nowrap; }
+.topbar-context { color: #d5b44d; font-size: 12px; font-weight: 600; letter-spacing: .035em; white-space: nowrap; }
 .topbar-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 12px; margin-left: auto; }
 .topbar-balance {
   min-height: 40px;
@@ -1927,6 +1927,7 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .member-shell[data-theme="light"] .member-brand,
 .member-shell[data-theme="light"] .sidebar-foot { border-color: var(--line); }
 .member-shell[data-theme="light"] .member-brand .brand { color: #2e322b; }
+.member-shell[data-theme="light"] .brand-wordmark { color: #8a6817; background: none; -webkit-text-fill-color: currentColor; }
 .member-shell[data-theme="light"] .member-nav { scrollbar-color: #c4c6bb transparent; }
 .member-shell[data-theme="light"] .nav-section-label { color: #6f796f; }
 .member-shell[data-theme="light"] .nav-row { color: #505a51; }
@@ -1963,7 +1964,7 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .member-shell[data-theme="light"] .sidebar-account-menu { border-color: #d8d9ce; background: #fffefa; box-shadow: 0 16px 36px hsl(0 0% 0% / .16); }
 .member-shell[data-theme="light"] .sidebar-account-skeleton { background: linear-gradient(90deg, #e3e4dc, #f1f1e9, #e3e4dc); background-size: 200% 100%; }
 .member-shell[data-theme="light"] .member-topbar { background: hsl(0 0% 100% / .82); }
-.member-shell[data-theme="light"] .topbar-context { color: #31372f; }
+.member-shell[data-theme="light"] .topbar-context { color: #8a6817; }
 .member-shell[data-theme="light"] .theme-toggle { border-color: #d5d6ca; color: #4d554c; background: #fbfaf5; }
 .member-shell[data-theme="light"] .theme-toggle:hover { border-color: #b9a75f; color: #423919; background: #f0eedf; }
 .member-shell[data-theme="light"] .theme-toggle svg { color: #786323; }

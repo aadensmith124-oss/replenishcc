@@ -7,9 +7,9 @@ export function Brand({ href = '/login', label = 'ReplenishCC sign in' }: { href
         <svg viewBox="0 0 32 32" fill="none">
           <defs>
             <linearGradient id="replenish-brand-leaf" x1="8" y1="3" x2="27" y2="30" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#F5F8F7" />
-              <stop offset=".48" stopColor="#C8EEE6" />
-              <stop offset="1" stopColor="#29AE9C" />
+              <stop stopColor="#E8CC68" />
+              <stop offset=".48" stopColor="#D5B44D" />
+              <stop offset="1" stopColor="#B48A24" />
             </linearGradient>
           </defs>
           <path d="M16.2 1.8C13.8 8.5 5.3 14.5 5.3 22.5c0 5.7 4.4 9.7 10.7 9.7s10.7-4 10.7-9.7c0-7.4-7.7-14.8-10.5-20.7Z" fill="url(#replenish-brand-leaf)" />
