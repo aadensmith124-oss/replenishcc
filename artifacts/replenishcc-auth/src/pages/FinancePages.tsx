@@ -64,8 +64,8 @@ function PortalFrame({ title, children }: { title: string; children: ReactNode }
   return <MemberShell pageTitle={title} user={session.data.user} contentClassName="finance-content">{children}</MemberShell>;
 }
 
-function PageHeading({ eyebrow, title, copy, action }: { eyebrow: string; title: string; copy: string; action?: ReactNode }) {
-  return <div className="finance-heading"><div><div className="welcome-eyebrow">{eyebrow}</div><h1>{title}</h1><p>{copy}</p></div>{action}</div>;
+function PageHeading({ eyebrow, title, copy, action }: { eyebrow?: string; title: string; copy: string; action?: ReactNode }) {
+  return <div className="finance-heading"><div>{eyebrow && <div className="welcome-eyebrow">{eyebrow}</div>}<h1>{title}</h1><p>{copy}</p></div>{action}</div>;
 }
 
 function QueryError({ error, retry }: { error: unknown; retry: () => void }) {
@@ -330,6 +330,7 @@ export function ReferralsPage() {
     : '';
   const formattedRewardPercent = summary.data ? String(summary.data.rewardPercent) : '';
   return <PortalFrame title="Referrals">
+    <PageHeading title="Referral Program" copy="Invite friends and earn rewards" />
     {summary.isLoading ? <div className="referral-skeleton"><LoadingBlock label="Loading referral summary" /><div className="referral-loading-cards" aria-hidden="true"><span /><span /><span /><span /></div></div> : summary.isError ? <QueryError error={summary.error} retry={() => void summary.refetch()} /> : summary.data && <>
       <section className="referral-link-panel finance-panel" aria-label="Your share details">
         <div className="referral-share-intro"><span className="panel-overline">Make an introduction</span><h2>One link. Yours to share.</h2><p>Send your link directly. The referral code is also ready to copy on its own.</p></div>
