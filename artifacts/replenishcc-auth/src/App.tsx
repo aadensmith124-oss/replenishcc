@@ -58,19 +58,18 @@ import {
 import { SiteFooter } from './components/SiteFooter';
 import { Brand } from './components/Brand';
 import { MemberShell } from './components/MemberShell';
-import { AdminDepositsPage, DepositsPage, MyDepositsPage, ReferralsPage } from './pages/FinancePages';
+import { DepositsPage, MyDepositsPage, ReferralsPage } from './pages/FinancePages';
 import { RedeemCodePage } from './pages/RedeemCodePage';
-import { AccountManagementPage, AdminAccountDeletionRequestsPage } from './pages/AccountManagementPages';
+import { AccountManagementPage } from './pages/AccountManagementPages';
 import { DashboardWorkspacePage } from './pages/DashboardWorkspacePage';
 import { WeeklyLeaderboardPage } from './pages/WeeklyLeaderboardPage';
-import { AdminAnnouncementsPage } from './pages/AdminAnnouncementsPage';
-import { AdminLicenseProductsPage, LicenseOrdersPage, LicenseProductsPage } from './pages/LicensePages';
+import { LicenseOrdersPage, LicenseProductsPage } from './pages/LicensePages';
 import {
-  AdminSupportTicketsPage,
   CreateSupportTicketPage,
   MySupportTicketsPage,
   SupportTicketDetailPage,
 } from './pages/SupportPages';
+import { AdminDashboardPage } from './pages/AdminDashboard';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -835,7 +834,7 @@ function DashboardPage() {
           <Link href="/my-deposits" className="nav-row" onClick={() => setMobileNavOpen(false)} data-testid="link-my-deposits"><FileText aria-hidden="true" /><span>Deposit history</span></Link>
         </div>}
         <Link href="/referrals" className="nav-row" onClick={() => setMobileNavOpen(false)} data-testid="link-referrals"><Gift aria-hidden="true" /><span>Referrals</span></Link>
-        {user?.isDepositAdmin && <Link href="/admin/deposits" className="nav-row" onClick={() => setMobileNavOpen(false)} data-testid="link-admin-deposits"><ShieldCheck aria-hidden="true" /><span>Deposit review</span></Link>}
+        {user?.isDepositAdmin && <Link href="/admin/dashboard" className="nav-row" onClick={() => setMobileNavOpen(false)} data-testid="link-admin-dashboard"><ShieldCheck aria-hidden="true" /><span>Admin Dashboard</span></Link>}
         <Link href="/redeem-code" className={`nav-row${window.location.pathname === '/redeem-code' ? ' active' : ''}`} aria-current={window.location.pathname === '/redeem-code' ? 'page' : undefined} onClick={() => setMobileNavOpen(false)} data-testid="link-redeem-code"><Gift aria-hidden="true" /><span>Redeem Code</span></Link>
         <UnavailableNav icon={<Crown />} label="VIP & Free CC" />
         <Link href="/leaderboard" className={`nav-row${window.location.pathname === '/leaderboard' ? ' active' : ''}`} aria-current={window.location.pathname === '/leaderboard' ? 'page' : undefined} onClick={() => setMobileNavOpen(false)} data-testid="link-leaderboard"><Trophy aria-hidden="true" /><span>Leaderboard</span></Link>
@@ -967,23 +966,25 @@ function Router() {
       <Route path="/terms"><LegalPage kind="terms" /></Route>
       <Route path="/dashboard" component={DashboardWorkspacePage} />
       <Route path="/leaderboard" component={WeeklyLeaderboardPage} />
-      <Route path="/admin/announcements" component={AdminAnnouncementsPage} />
+      <Route path="/admin/dashboard" component={AdminDashboardPage} />
+      <Route path="/admin/dashboard/:section" component={AdminDashboardPage} />
+      <Route path="/admin/announcements" component={AdminDashboardPage} />
       <Route path="/buy-logs" component={LicenseProductsPage} />
       <Route path="/my-log-orders" component={LicenseOrdersPage} />
       <Route path="/license-products" component={LicenseProductsPage} />
       <Route path="/orders/license-keys" component={LicenseOrdersPage} />
-      <Route path="/admin/license-products" component={AdminLicenseProductsPage} />
+      <Route path="/admin/license-products" component={AdminDashboardPage} />
       <Route path="/support/create" component={CreateSupportTicketPage} />
       <Route path="/support/tickets" component={MySupportTicketsPage} />
       <Route path="/support/tickets/:ticketId" component={SupportTicketDetailPage} />
-      <Route path="/admin/support/tickets" component={AdminSupportTicketsPage} />
+      <Route path="/admin/support/tickets" component={AdminDashboardPage} />
       <Route path="/deposits" component={DepositsPage} />
       <Route path="/my-deposits" component={MyDepositsPage} />
       <Route path="/referrals" component={ReferralsPage} />
       <Route path="/redeem-code" component={RedeemCodePage} />
-      <Route path="/admin/deposits" component={AdminDepositsPage} />
+      <Route path="/admin/deposits" component={AdminDashboardPage} />
       <Route path="/account-management" component={AccountManagementPage} />
-      <Route path="/admin/account-deletion-requests" component={AdminAccountDeletionRequestsPage} />
+      <Route path="/admin/account-deletion-requests" component={AdminDashboardPage} />
       <Route>
         <Frame>
           <div className="legal-layout">

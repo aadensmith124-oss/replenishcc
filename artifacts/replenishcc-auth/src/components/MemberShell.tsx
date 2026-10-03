@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   ChevronDown, ChevronRight, CircleDollarSign, ClipboardList, CreditCard, Crown, FileText,
-  Gift, Headphones, Home, LoaderCircle, LockKeyhole, LogOut, Menu, MessageSquare, Moon, Megaphone,
+  Gift, Headphones, Home, LoaderCircle, LockKeyhole, LogOut, Menu, MessageSquare, Moon,
   Package, Settings2, ShieldCheck, ShoppingBag, Sparkles, Sun, Trophy, WalletCards, X,
 } from 'lucide-react';
 import {
@@ -61,12 +61,14 @@ export function MemberShell({
   children,
   loading = false,
   contentClassName = '',
+  shellMode = 'auto',
 }: {
   pageTitle: string;
   user: MemberUser | null;
   children?: ReactNode;
   loading?: boolean;
   contentClassName?: string;
+  shellMode?: 'auto' | 'force' | 'children';
 }) {
   const queryClient = useQueryClient();
   const logout = usePostAuthLogout();
@@ -88,6 +90,8 @@ export function MemberShell({
     support: true,
   });
   const [location, setLocation] = useLocation();
+  const adminSectionRoute = location.startsWith('/admin/dashboard')
+    || ['/admin/deposits', '/admin/announcements', '/admin/account-deletion-requests', '/admin/license-products', '/admin/support/tickets'].includes(location);
   const mobileSidebarRef = useRef<HTMLElement>(null);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileCloseButtonRef = useRef<HTMLButtonElement>(null);
@@ -207,6 +211,8 @@ export function MemberShell({
   const toggleGroup = (key: string) => setExpanded((current) => ({ ...current, [key]: !current[key] }));
   const closeMobileNav = () => setMobileNavOpen(false);
 
+  if (shellMode === 'children' || (shellMode === 'auto' && adminSectionRoute)) return <>{children}</>;
+
   const memberSidebar = (
     <>
       <div className="member-brand">
@@ -227,9 +233,7 @@ export function MemberShell({
           <Link href="/my-deposits" className={`nav-row${location === '/my-deposits' ? ' active' : ''}`} aria-current={location === '/my-deposits' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-my-deposits"><FileText aria-hidden="true" /><span>Deposit history</span></Link>
         </div>}
         <Link href="/referrals" className={`nav-row${location === '/referrals' ? ' active' : ''}`} aria-current={location === '/referrals' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-referrals"><Gift aria-hidden="true" /><span>Referrals</span></Link>
-        {user?.isDepositAdmin && <Link href="/admin/deposits" className={`nav-row${location === '/admin/deposits' ? ' active' : ''}`} aria-current={location === '/admin/deposits' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-admin-deposits"><ShieldCheck aria-hidden="true" /><span>Deposit review</span></Link>}
-        {user?.isDepositAdmin && <Link href="/admin/announcements" className={`nav-row${location === '/admin/announcements' ? ' active' : ''}`} aria-current={location === '/admin/announcements' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-admin-announcements"><Megaphone aria-hidden="true" /><span>Announcements</span></Link>}
-        {user?.isDepositAdmin && <Link href="/admin/account-deletion-requests" className={`nav-row${location === '/admin/account-deletion-requests' ? ' active' : ''}`} aria-current={location === '/admin/account-deletion-requests' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-admin-account-deletion"><ShieldCheck aria-hidden="true" /><span>Account deletion review</span></Link>}
+        {user?.isDepositAdmin && <Link href="/admin/dashboard" className={`nav-row${location.startsWith('/admin/') ? ' active' : ''}`} aria-current={location.startsWith('/admin/') ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-admin-dashboard"><ShieldCheck aria-hidden="true" /><span>Admin Dashboard</span></Link>}
         <Link href="/redeem-code" className={`nav-row${location === '/redeem-code' ? ' active' : ''}`} aria-current={location === '/redeem-code' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-redeem-code"><Gift aria-hidden="true" /><span>Redeem Code</span></Link>
         <UnavailableNav icon={<Crown />} label="VIP & Free CC" />
         <Link href="/leaderboard" className={`nav-row${location === '/leaderboard' ? ' active' : ''}`} aria-current={location === '/leaderboard' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-leaderboard"><Trophy aria-hidden="true" /><span>Leaderboard</span></Link>
@@ -250,7 +254,6 @@ export function MemberShell({
           <UnavailableNav icon={<CreditCard />} label="My Card Orders" />
           <UnavailableNav icon={<Package />} label="My Bulk Card Purchases" />
         </div>}
-        {user?.isDepositAdmin && <Link href="/admin/license-products" className={`nav-row${location === '/admin/license-products' ? ' active' : ''}`} aria-current={location === '/admin/license-products' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-admin-log-inventory"><ShieldCheck aria-hidden="true" /><span>Log inventory</span></Link>}
         <div className="nav-section-label">Support</div>
         <button className={`nav-row nav-group${isSupportPage ? ' active' : ''}`} type="button" onClick={() => toggleGroup('support')} aria-expanded={expanded.support} data-testid="button-toggle-support">
           <Headphones aria-hidden="true" /><span>Support</span><ChevronDown className={`nav-chevron${expanded.support ? ' is-open' : ''}`} aria-hidden="true" />
@@ -258,7 +261,6 @@ export function MemberShell({
         {expanded.support && <div className="nav-children">
           <Link href="/support/tickets" className={`nav-row${location === '/support/tickets' ? ' active' : ''}`} aria-current={location === '/support/tickets' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-my-support-tickets"><MessageSquare aria-hidden="true" /><span>My Tickets</span></Link>
           <Link href="/support/create" className={`nav-row${location === '/support/create' ? ' active' : ''}`} aria-current={location === '/support/create' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-create-support-ticket"><MessageSquare aria-hidden="true" /><span>Create Ticket</span></Link>
-          {user?.isDepositAdmin && <Link href="/admin/support/tickets" className={`nav-row${location === '/admin/support/tickets' ? ' active' : ''}`} aria-current={location === '/admin/support/tickets' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-admin-support-tickets"><ShieldCheck aria-hidden="true" /><span>Ticket Review</span></Link>}
         </div>}
         <div className="nav-section-label">Settings</div>
         <Link href="/account-management" className={`nav-row${location === '/account-management' ? ' active' : ''}`} aria-current={location === '/account-management' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-account-management"><Settings2 aria-hidden="true" /><span>Account management</span></Link>

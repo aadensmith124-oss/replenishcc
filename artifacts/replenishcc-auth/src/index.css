@@ -569,6 +569,48 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
 
+/* Admin operations: a single brass-marked control room with one persistent section rail. */
+.admin-dashboard-content { padding-top: 25px !important; }
+.admin-workspace { width: 100%; max-width: 1440px; margin: 0 auto; display: grid; gap: 20px; }
+.admin-workspace-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; padding: 5px 2px 18px; border-bottom: 1px solid #303433; }
+.admin-workspace-kicker { display: flex; align-items: center; gap: 8px; color: #c9b158; font-size: 10px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
+.admin-workspace-kicker svg { width: 15px; height: 15px; }
+.admin-workspace-head h1 { margin: 10px 0 5px; color: #efece3; font: 600 clamp(28px, 4vw, 38px)/1.08 var(--app-font-serif); letter-spacing: -.045em; }
+.admin-workspace-head p { margin: 0; color: #959c98; font-size: 12px; line-height: 1.6; }
+.admin-workspace-identity { display: grid; grid-template-columns: 8px auto; align-items: center; gap: 5px 9px; border: 1px solid #3b4038; border-radius: 8px; padding: 10px 13px; color: #9ba39a; background: #171c19; font-size: 9px; white-space: nowrap; }
+.admin-workspace-identity strong { grid-column: 2; color: #e1e4da; font-size: 11px; }
+.admin-status-dot { width: 7px; height: 7px; border-radius: 50%; background: #8db08a; }
+.admin-section-nav { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 7px; overflow-x: auto; padding: 2px 1px 4px; scrollbar-width: thin; }
+.admin-section-tab { position: relative; min-width: 140px; min-height: 67px; display: flex; align-items: center; gap: 10px; border: 1px solid #303632; border-radius: 8px; padding: 10px 12px; color: #969f96; background: #171b19; text-align: left; cursor: pointer; transition: background .16s ease, border-color .16s ease, color .16s ease; }
+.admin-section-tab:hover { border-color: #58553e; background: #1c211d; color: #e4e4da; }
+.admin-section-tab.active { border-color: #73643a; color: #e3d18b; background: linear-gradient(125deg,#28271f,#1b201c); box-shadow: inset 0 1px 0 hsl(0 0% 100% / .025); }
+.admin-section-tab > svg:first-child { width: 17px; height: 17px; flex: 0 0 auto; color: #a69b63; }
+.admin-section-tab span { min-width: 0; display: grid; gap: 4px; }
+.admin-section-tab strong { overflow: hidden; color: #d9ddd4; font-size: 10px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.admin-section-tab small { color: #818a82; font-size: 8px; white-space: nowrap; }
+.admin-section-tab.active strong { color: #efe5b8; }
+.admin-tab-current { width: 12px; height: 12px; margin-left: auto; flex: 0 0 auto; color: #cbb45e; }
+.admin-dashboard-panel { min-width: 0; border: 1px solid #303632; border-radius: 11px; padding: clamp(14px,2vw,23px); background: linear-gradient(145deg,#171b19,#141716 82%); box-shadow: 0 14px 38px hsl(0 0% 0% / .12); }
+.admin-dashboard-panel > .member-content,.admin-dashboard-panel .member-content { width: 100%; }
+.admin-workspace-foot { display: flex; align-items: center; gap: 8px; padding: 0 3px 12px; color: #737d75; font-size: 9px; letter-spacing: .025em; }
+.admin-workspace-foot svg { width: 13px; height: 13px; color: #9a8d54; }
+.admin-dashboard-panel .workspace-page { gap: 17px; }
+.admin-dashboard-panel .workspace-heading { margin-bottom: 0; }
+.admin-dashboard-panel .finance-heading { margin-bottom: 0; }
+.admin-dashboard-panel .support-page { gap: 16px; }
+@media (max-width: 850px) {
+  .admin-section-nav { grid-template-columns: repeat(5,minmax(145px,1fr)); }
+}
+@media (max-width: 680px) {
+  .admin-dashboard-content { padding-top: 15px !important; }
+  .admin-workspace { gap: 14px; }
+  .admin-workspace-head { align-items: flex-start; flex-direction: column; gap: 13px; padding-bottom: 14px; }
+  .admin-workspace-identity { grid-template-columns: 7px auto; }
+  .admin-section-nav { grid-template-columns: repeat(5,minmax(132px,1fr)); margin-right: -4px; padding-bottom: 7px; }
+  .admin-section-tab { min-width: 132px; min-height: 60px; padding: 9px; gap: 8px; }
+  .admin-dashboard-panel { border-radius: 9px; padding: 12px; }
+}
+
 /* License storefront: the existing evergreen and brass ledger language, tuned for quick, accountable checkout. */
 .license-page { gap: 20px; }
 .license-heading { align-items: flex-start; }
