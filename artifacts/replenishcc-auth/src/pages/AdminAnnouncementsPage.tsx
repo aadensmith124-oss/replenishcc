@@ -57,12 +57,12 @@ export function AdminAnnouncementsPage() {
     else if (!session.isLoading && user && !user.isDepositAdmin) setLocation('/dashboard');
   }, [session.data?.authenticated, session.isError, session.isLoading, setLocation, user]);
   const items = adminQuery.data?.announcements ?? [];
+  const showAsPopup = displayType === 'popup';
   const visibleItems = items.filter((item) => filter === 'all' || (filter === 'archived' ? Boolean(item.archivedAt) : !item.archivedAt));
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const cleanTitle = title.trim();
     const cleanBody = body.trim();
-    const showAsPopup = displayType === 'popup';
     if (!cleanTitle || !cleanBody) {
       setNotice({ kind: 'error', text: 'Add a title and message before publishing.' });
       return;
