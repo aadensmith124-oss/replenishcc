@@ -668,6 +668,11 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .announcement-date { color: #9c9867; font-size: 9px; }
 .member-announcement h3 { margin: 0 0 6px; color: #dfe4dc; font: 600 12px var(--app-font-serif); }
 .member-announcement p { margin: 0; color: #969f96; font-size: 10px; line-height: 1.65; white-space: pre-wrap; }
+.announcement-top-panel { border-color: #4a4936; border-left: 3px solid #cdb45d; padding: 15px 20px 6px; background: linear-gradient(108deg,#202720,#191f1b 72%,#22241d); }
+.announcement-top-head { align-items: center; }
+.announcement-top-panel .workspace-panel-head h2 { margin: 4px 0 3px; font-size: 17px; }
+.announcement-top-panel .announcement-list { margin-top: 9px; }
+.announcement-top-panel .member-announcement { padding: 11px 0; }
 .data-integrity-note { display: flex; align-items: center; gap: 7px; margin: 1px 0 0; color: #747f76; font-size: 9px; }
 .data-integrity-note svg { width: 13px; color: #899873; }
 .workspace-error,.inline-error,.announcement-query-error { display: flex; align-items: center; gap: 10px; border: 1px solid #5d4538; border-radius: 7px; padding: 11px 13px; color: #d6b29b; background: #28211d; font-size: 10px; }

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowDownToLine, CalendarDays, CheckCircle2, CircleAlert, Clock3, Download,
-  ExternalLink, FileText, RefreshCw, ShieldCheck, TrendingUp, WalletCards,
+  ExternalLink, FileText, Megaphone, RefreshCw, ShieldCheck, TrendingUp, WalletCards,
 } from 'lucide-react';
 import {
   getGetAnnouncementsQueryKey, getGetMyDepositsQueryKey, useGetAnnouncements,
@@ -146,6 +146,11 @@ export function DashboardWorkspacePage() {
   return (
     <MemberShell pageTitle="Dashboard" user={user} contentClassName="member-dashboard-content">
       <div className="workspace-page">
+        <section className="workspace-panel announcement-panel announcement-top-panel" aria-labelledby="dashboard-announcements-title">
+          <div className="workspace-panel-head announcement-top-head"><div><div className="section-kicker"><Megaphone aria-hidden="true" /> From ReplenishCC</div><h2 id="dashboard-announcements-title">Service announcements</h2><p>Updates from the team that matter to your account.</p></div><span className="announcement-count">{announcements.length} {announcements.length === 1 ? 'update' : 'updates'}</span></div>
+          {announcementsQuery.isLoading ? <div className="table-skeleton"><span /><span /></div> : announcementsQuery.isError ? <div className="inline-error" role="alert">Announcements are temporarily unavailable. <button type="button" onClick={() => void announcementsQuery.refetch()}>Retry</button></div> : announcements.length ? <div className="announcement-list">{announcements.slice(0, 3).map((item) => <article className="member-announcement" key={item.id}><div className="announcement-date">{dateLabel(item.publishedAt || item.createdAt)}</div><div><h3>{item.title}</h3><p>{item.body}</p></div></article>)}</div> : <div className="inline-empty">No service updates right now. Important announcements will be posted here.</div>}
+        </section>
+
         <header className="workspace-heading">
           <div><div className="section-kicker"><ShieldCheck aria-hidden="true" /> Member workspace · Secure session</div><h1>Good to see you, {user.fullName.split(/\s+/)[0]}.</h1><p>Your balance and deposit activity, in one clear view.</p></div>
           <div className="workspace-heading-actions">
@@ -193,10 +198,6 @@ export function DashboardWorkspacePage() {
           </div> : <div className="inline-empty">No deposit activity in the selected range.</div>}
         </section>
 
-        <section className="workspace-panel announcement-panel">
-          <div className="workspace-panel-head"><div><div className="section-kicker">From ReplenishCC</div><h2>Service announcements</h2><p>Updates from the team that matter to your account.</p></div><span className="announcement-count">{announcements.length} {announcements.length === 1 ? 'update' : 'updates'}</span></div>
-          {announcementsQuery.isLoading ? <div className="table-skeleton"><span /><span /></div> : announcementsQuery.isError ? <div className="inline-error" role="alert">Announcements are temporarily unavailable. <button type="button" onClick={() => void announcementsQuery.refetch()}>Retry</button></div> : announcements.length ? <div className="announcement-list">{announcements.slice(0, 3).map((item) => <article className="member-announcement" key={item.id}><div className="announcement-date">{dateLabel(item.publishedAt || item.createdAt)}</div><div><h3>{item.title}</h3><p>{item.body}</p></div></article>)}</div> : <div className="inline-empty">No service updates right now. Important announcements will be posted here.</div>}
-        </section>
         <p className="data-integrity-note"><ShieldCheck aria-hidden="true" /> Account figures reflect your authenticated deposit records. No purchase or order totals are included.</p>
       </div>
     </MemberShell>
