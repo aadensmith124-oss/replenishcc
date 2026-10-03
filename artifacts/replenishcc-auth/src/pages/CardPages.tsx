@@ -72,7 +72,7 @@ export function BuyCardsPage() {
   const [baseId, setBaseId] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [faceValueFilter, setFaceValueFilter] = useState('all');
-  const [stockFilter, setStockFilter] = useState<'all' | 'low'>('all');
+  const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all');
   const [priceFilter, setPriceFilter] = useState<CatalogPriceFilter>('all');
   const [visibleColumns, setVisibleColumns] = useState<CatalogColumn[]>(readCatalogColumns);
   const infoProduct = products.find((product) => product.id === infoProductId) ?? null;
@@ -99,7 +99,9 @@ export function BuyCardsPage() {
       || product.name.toLowerCase().includes(normalizedSearch)
       || product.description.toLowerCase().includes(normalizedSearch);
     const matchesFaceValue = faceValueFilter === 'all' || product.faceValueCents === Number(faceValueFilter);
-    const matchesStock = stockFilter === 'all' || product.availableCount <= 5;
+    const matchesStock = stockFilter === 'all'
+      || (stockFilter === 'low' && product.availableCount > 0 && product.availableCount <= 5)
+      || (stockFilter === 'out' && product.availableCount === 0);
     const matchesPrice = priceFilter === 'all'
       || (priceFilter === 'under-25' && product.priceCents < 2500)
       || (priceFilter === '25-50' && product.priceCents >= 2500 && product.priceCents < 5000)
@@ -130,19 +132,22 @@ export function BuyCardsPage() {
       <Link className="gift-orders-link" href="/my-card-orders" data-testid="link-card-order-history"><Clipboard /> My card orders <ArrowRight /></Link>
     </header>
     {notice && <div className="gift-notice" role="status" data-testid="status-card-purchase">{notice}<Link href="/my-card-orders">View order history</Link><button aria-label="Dismiss purchase notice" onClick={() => setNotice('')} data-testid="button-dismiss-purchase-notice">×</button></div>}
+    <section className="gift-catalog-base-panel" aria-label="Bases" data-testid="section-card-catalog-bases">
+      <div className="gift-catalog-control-title"><CreditCard /><span>Bases</span><small>Choose a listing; count shows stock</small></div>
+      <div className="gift-catalog-base-options">
+        <button type="button" disabled={productsQuery.isLoading || productsQuery.isError || products.length === 0} className={`gift-catalog-base-button${baseId === 'all' ? ' is-active' : ''}`} aria-pressed={baseId === 'all'} onClick={() => setBaseId('all')} data-testid="button-card-base-all">All listings <span>{products.length}</span></button>
+        {products.map((product) => <button type="button" key={product.id} className={`gift-catalog-base-button${baseId === product.id ? ' is-active' : ''}`} aria-pressed={baseId === product.id} onClick={() => setBaseId(product.id)} data-testid={`button-card-base-${product.id}`}>{product.name}<span>{product.availableCount}</span></button>)}
+        {productsQuery.isLoading && <p className="gift-bases-empty" role="status">Loading bases…</p>}
+        {productsQuery.isError && products.length === 0 && <p className="gift-bases-empty" role="status">Bases couldn’t be loaded.</p>}
+        {!productsQuery.isLoading && !productsQuery.isError && products.length === 0 && <p className="gift-bases-empty" role="status">No card listings have been added yet.</p>}
+      </div>
+    </section>
     {productsQuery.isLoading ? <div className="gift-grid" aria-label="Loading card listings" data-testid="loading-card-products">{[1,2,3].map((i) => <div className="gift-product-skeleton" key={i}><i/><i/><i/><i/></div>)}</div>
       : productsQuery.isError ? <div className="gift-query-error" role="alert" data-testid="error-card-products">Catalog couldn’t be loaded. <button onClick={() => void productsQuery.refetch()} data-testid="button-retry-card-products"><RefreshCw /> Try again</button></div>
-      : products.length === 0 ? <div className="gift-empty" data-testid="empty-card-catalog"><CreditCard /><h2>No cards are available right now</h2><p>Inventory is checked live. Please return later to see the next verified listing.</p></div>
+      : products.length === 0 ? <div className="gift-empty" data-testid="empty-card-catalog"><CreditCard /><h2>No card listings yet</h2><p>Once a listing is added, it will appear here along with its base and filters.</p></div>
       : <>
-        <section className="gift-catalog-base-panel" aria-label="Bases">
-          <div className="gift-catalog-control-title"><CreditCard /><span>Bases</span><small>Choose a listing to narrow the catalog</small></div>
-          <div className="gift-catalog-base-options">
-            <button type="button" className={`gift-catalog-base-button${baseId === 'all' ? ' is-active' : ''}`} aria-pressed={baseId === 'all'} onClick={() => setBaseId('all')} data-testid="button-card-base-all">All listings <span>{products.length}</span></button>
-            {products.map((product) => <button type="button" key={product.id} className={`gift-catalog-base-button${baseId === product.id ? ' is-active' : ''}`} aria-pressed={baseId === product.id} onClick={() => setBaseId(product.id)} data-testid={`button-card-base-${product.id}`}>{product.name}</button>)}
-          </div>
-        </section>
         <section className="gift-catalog-filter-panel" aria-label="Catalog filters">
-          <div className="gift-catalog-control-title"><SlidersHorizontal /><span>Filters</span><small>Search and narrow available listings</small></div>
+            <div className="gift-catalog-control-title"><SlidersHorizontal /><span>Filters</span><small>Search and narrow catalog listings</small></div>
           <div className="gift-catalog-toolbar">
             <label className="gift-catalog-filter-field gift-catalog-search-field">
               <span>Search listings</span>
@@ -157,8 +162,8 @@ export function BuyCardsPage() {
             </label>
             <label className="gift-catalog-filter-field">
               <span>Stock</span>
-              <select value={stockFilter} onChange={(event) => setStockFilter(event.target.value as typeof stockFilter)} aria-label="Filter by available stock" data-testid="select-card-stock-filter">
-                <option value="all">All available</option><option value="low">Low stock (5 or fewer)</option>
+              <select value={stockFilter} onChange={(event) => setStockFilter(event.target.value as typeof stockFilter)} aria-label="Filter by stock status" data-testid="select-card-stock-filter">
+                <option value="all">All listings</option><option value="low">Low stock (1–5)</option><option value="out">Out of stock</option>
               </select>
             </label>
             <label className="gift-catalog-filter-field">
@@ -180,19 +185,19 @@ export function BuyCardsPage() {
           </div>
         </section>
         <div className="gift-catalog-results" role="status" data-testid="text-card-catalog-results">
-          Showing <strong>{filteredProducts.length}</strong> of {products.length} available listings
+          Showing <strong>{filteredProducts.length}</strong> of {products.length} listings
           {(normalizedSearch || baseId !== 'all' || faceValueFilter !== 'all' || stockFilter !== 'all' || priceFilter !== 'all') && <button type="button" onClick={resetFilters} data-testid="button-clear-card-filters"><RotateCcw /> Clear filters</button>}
         </div>
         {filteredProducts.length === 0 ? <div className="gift-empty gift-filter-empty" data-testid="empty-filtered-card-catalog"><Search /><h2>No matching listings</h2><p>Try changing the search text or filters.</p><button type="button" className="gift-primary-link" onClick={resetFilters} data-testid="button-reset-card-filters">Reset filters <RotateCcw /></button></div>
           : <>
-            <div className="gift-catalog-table-wrap" role="region" aria-label="Available card listings" tabIndex={0}>
+            <div className="gift-catalog-table-wrap" role="region" aria-label="Card listings" tabIndex={0}>
               <table className="gift-catalog-table">
                 <thead><tr><th scope="col">Card / listing</th>{visibleColumns.map((column) => <th scope="col" key={column}>{catalogColumns.find((item) => item.id === column)?.label}</th>)}<th scope="col">Actions</th></tr></thead>
                 <tbody>{filteredProducts.map((product) => <tr key={product.id} data-testid={`row-gift-product-${product.id}`}>
                   <td><div className="gift-catalog-product"><span className="gift-product-mark"><CreditCard /></span><div><strong data-testid={`text-gift-product-name-${product.id}`}>{product.name}</strong></div></div></td>
                   {visibleColumns.includes('description') && <td className="gift-catalog-description">{product.description || 'Authorized card listing'}</td>}
                   {visibleColumns.includes('faceValue') && <td className="gift-catalog-face" data-testid={`text-gift-face-value-${product.id}`}>{money(product.faceValueCents)}</td>}
-                  {visibleColumns.includes('availability') && <td><span className={`gift-stock${product.availableCount <= 5 ? ' is-low' : ''}`}><i />{product.availableCount} available</span></td>}
+                  {visibleColumns.includes('availability') && <td><span className={`gift-stock${product.availableCount === 0 ? ' is-out' : product.availableCount <= 5 ? ' is-low' : ''}`}><i />{product.availableCount} available</span></td>}
                   {visibleColumns.includes('price') && <td className="gift-catalog-price" data-testid={`text-gift-member-price-${product.id}`}>{money(product.priceCents)}</td>}
                   <td><div className="gift-catalog-actions">
                     <button className="gift-info-button" type="button" onClick={() => setInfoProductId(product.id)} data-testid={`button-info-card-${product.id}`}><Info /> Info</button>
@@ -206,7 +211,7 @@ export function BuyCardsPage() {
               <div className="gift-mobile-fields">
                 {visibleColumns.includes('description') && <p className="gift-mobile-description">{product.description || 'Authorized card listing'}</p>}
                 {visibleColumns.includes('faceValue') && <span>Face value <strong>{money(product.faceValueCents)}</strong></span>}
-                {visibleColumns.includes('availability') && <span>Available <strong className={product.availableCount <= 5 ? 'is-low' : ''}>{product.availableCount}</strong></span>}
+                {visibleColumns.includes('availability') && <span>Available <strong className={product.availableCount === 0 ? 'is-out' : product.availableCount <= 5 ? 'is-low' : ''}>{product.availableCount}</strong></span>}
                 {visibleColumns.includes('price') && <span>Member price <strong className="gift-mobile-price">{money(product.priceCents)}</strong></span>}
               </div>
               <div className="gift-mobile-actions">

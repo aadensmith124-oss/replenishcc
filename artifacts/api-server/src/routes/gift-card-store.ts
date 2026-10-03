@@ -31,7 +31,7 @@ import {
 
 const router: IRouter = Router();
 
-async function listProducts(admin: boolean) {
+async function listProducts() {
   const availableCount = count(giftCardInventoryTable.id);
   const products = await db
     .select({
@@ -54,12 +54,10 @@ async function listProducts(admin: boolean) {
     .groupBy(giftCardProductsTable.id)
     .orderBy(desc(giftCardProductsTable.createdAt));
 
-  return products
-    .filter((product) => admin || product.availableCount > 0)
-    .map((product) => ({
-      ...product,
-      createdAt: product.createdAt.toISOString(),
-    }));
+  return products.map((product) => ({
+    ...product,
+    createdAt: product.createdAt.toISOString(),
+  }));
 }
 
 function normalizeCredential(
@@ -91,7 +89,7 @@ router.get("/gift-card-products", async (req, res): Promise<void> => {
     res.status(401).json({ error: "Sign in to browse gift cards." });
     return;
   }
-  const products = await listProducts(false);
+  const products = await listProducts();
   res.json(GetGiftCardProductsResponse.parse({ products }));
 });
 
@@ -297,7 +295,7 @@ router.get("/admin/gift-card-products", async (req, res): Promise<void> => {
     return;
   }
 
-  const products = await listProducts(true);
+  const products = await listProducts();
   res.json(GetAdminGiftCardProductsResponse.parse({ products }));
 });
 
