@@ -4,12 +4,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
-import { ArrowRight, Check, Clipboard, CreditCard, Info, LockKeyhole, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
+import { ArrowRight, Check, ChevronRight, Clipboard, Columns3, CreditCard, Info, LockKeyhole, RefreshCw, RotateCcw, Search, ShieldCheck, SlidersHorizontal, Trash2 } from 'lucide-react';
 import {
-  getGetAdminGiftCardProductsQueryKey, getGetGiftCardProductsQueryKey, getGetMyGiftCardOrdersQueryKey, getGetMyDepositsQueryKey,
+  getGetAdminGiftCardProductsQueryKey, getGetGiftCardProductsQueryKey, getGetMyGiftCardOrdersQueryKey,
   useAddAdminGiftCardStock, useCreateAdminGiftCardProduct, useDeleteAdminGiftCardProduct,
   useGetAdminGiftCardProducts, useGetAuthMe, useGetGiftCardProducts, useGetMyGiftCardOrders,
-  usePurchaseGiftCard,
   type AuthMeResponse,
   type GiftCardCredential,
 } from '@workspace/api-client-react';
@@ -29,6 +28,30 @@ const cardSchema = z.object({
 });
 type CardForm = z.infer<typeof cardSchema>;
 
+type CatalogColumn = 'description' | 'faceValue' | 'availability' | 'price';
+type CatalogPriceFilter = 'all' | 'under-25' | '25-50' | '50-100' | '100-plus';
+const catalogColumns: { id: CatalogColumn; label: string }[] = [
+  { id: 'description', label: 'Description' },
+  { id: 'faceValue', label: 'Face value' },
+  { id: 'availability', label: 'Available stock' },
+  { id: 'price', label: 'Member price' },
+];
+const catalogColumnStorageKey = 'replenishcc-card-catalog-columns';
+const defaultCatalogColumns = catalogColumns.map((column) => column.id);
+
+function readCatalogColumns(): CatalogColumn[] {
+  if (typeof window === 'undefined') return defaultCatalogColumns;
+  try {
+    const stored = window.localStorage.getItem(catalogColumnStorageKey);
+    if (stored === null) return defaultCatalogColumns;
+    const parsed: unknown = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return defaultCatalogColumns;
+    return catalogColumns.filter((column) => parsed.includes(column.id)).map((column) => column.id);
+  } catch {
+    return defaultCatalogColumns;
+  }
+}
+
 function MemberGuard({ children, title }: { children: (user: NonNullable<AuthMeResponse['user']>) => ReactNode; title: string }) {
   const session = useGetAuthMe();
   const [, setLocation] = useLocation();
@@ -40,59 +63,136 @@ function MemberGuard({ children, title }: { children: (user: NonNullable<AuthMeR
 }
 
 export function BuyCardsPage() {
-  const queryClient = useQueryClient();
   const productsQuery = useGetGiftCardProducts({ query: { queryKey: getGetGiftCardProductsQueryKey() } });
-  const purchase = usePurchaseGiftCard();
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const [notice, setNotice] = useState('');
+  const products = useMemo(() => productsQuery.data?.products ?? [], [productsQuery.data?.products]);
   const [infoProductId, setInfoProductId] = useState<string | null>(null);
-  const products = productsQuery.data?.products ?? [];
+  const [baseId, setBaseId] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [faceValueFilter, setFaceValueFilter] = useState('all');
+  const [stockFilter, setStockFilter] = useState<'all' | 'low'>('all');
+  const [priceFilter, setPriceFilter] = useState<CatalogPriceFilter>('all');
+  const [visibleColumns, setVisibleColumns] = useState<CatalogColumn[]>(readCatalogColumns);
   const infoProduct = products.find((product) => product.id === infoProductId) ?? null;
-  const buy = (productId: string, quantity: number) => purchase.mutate({ data: { productId, quantity } }, {
-    onSuccess: (result) => {
-      setNotice(`${result.order.quantity} ${result.order.productName} card${result.order.quantity > 1 ? 's' : ''} purchased for ${money(result.order.totalCents)}.`);
-      void queryClient.invalidateQueries({ queryKey: getGetGiftCardProductsQueryKey() });
-      void queryClient.invalidateQueries({ queryKey: getGetMyGiftCardOrdersQueryKey() });
-      void queryClient.invalidateQueries({ queryKey: getGetMyDepositsQueryKey() });
-    },
-    onError: () => setNotice('Purchase could not be completed. Check your balance and available inventory, then try again.'),
-  });
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const faceValues = useMemo(
+    () => [...new Set(products.map((product) => product.faceValueCents))].sort((left, right) => left - right),
+    [products],
+  );
+  const filteredProducts = useMemo(() => products.filter((product) => {
+    const matchesBase = baseId === 'all' || product.id === baseId;
+    const matchesSearch = !normalizedSearch
+      || product.name.toLowerCase().includes(normalizedSearch)
+      || product.description.toLowerCase().includes(normalizedSearch);
+    const matchesFaceValue = faceValueFilter === 'all' || product.faceValueCents === Number(faceValueFilter);
+    const matchesStock = stockFilter === 'all' || product.availableCount <= 5;
+    const matchesPrice = priceFilter === 'all'
+      || (priceFilter === 'under-25' && product.priceCents < 2500)
+      || (priceFilter === '25-50' && product.priceCents >= 2500 && product.priceCents < 5000)
+      || (priceFilter === '50-100' && product.priceCents >= 5000 && product.priceCents < 10000)
+      || (priceFilter === '100-plus' && product.priceCents >= 10000);
+    return matchesBase && matchesSearch && matchesFaceValue && matchesStock && matchesPrice;
+  }), [products, baseId, normalizedSearch, faceValueFilter, stockFilter, priceFilter]);
+  const toggleColumn = (columnId: CatalogColumn) => {
+    setVisibleColumns((current) => current.includes(columnId)
+      ? current.filter((column) => column !== columnId)
+      : [...current, columnId]);
+  };
+  const resetFilters = () => {
+    setBaseId('all');
+    setSearchTerm('');
+    setFaceValueFilter('all');
+    setStockFilter('all');
+    setPriceFilter('all');
+  };
+  useEffect(() => {
+    try { window.localStorage.setItem(catalogColumnStorageKey, JSON.stringify(visibleColumns)); }
+    catch { /* Column preferences remain usable for this visit when browser storage is unavailable. */ }
+  }, [visibleColumns]);
   useEffect(() => { document.title = 'Cards | ReplenishCC'; }, []);
   return <MemberGuard title="Card catalog">{() => <section className="gift-page">
     <header className="gift-heading">
       <div><div className="gift-eyebrow"><span className="gift-live-dot" /> Authorized inventory</div><h1>Cards</h1><p>Browse listings by denomination, availability, and member price.</p></div>
       <Link className="gift-orders-link" href="/my-card-orders" data-testid="link-card-order-history"><Clipboard /> My card orders <ArrowRight /></Link>
     </header>
-    {notice && <div className="gift-notice" role="status" data-testid="status-card-purchase">{notice}<Link href="/my-card-orders">View order history</Link><button aria-label="Dismiss purchase notice" onClick={() => setNotice('')} data-testid="button-dismiss-purchase-notice">×</button></div>}
     {productsQuery.isLoading ? <div className="gift-grid" aria-label="Loading card listings" data-testid="loading-card-products">{[1,2,3].map((i) => <div className="gift-product-skeleton" key={i}><i/><i/><i/><i/></div>)}</div>
       : productsQuery.isError ? <div className="gift-query-error" role="alert" data-testid="error-card-products">Catalog couldn’t be loaded. <button onClick={() => void productsQuery.refetch()} data-testid="button-retry-card-products"><RefreshCw /> Try again</button></div>
       : products.length === 0 ? <div className="gift-empty" data-testid="empty-card-catalog"><CreditCard /><h2>No cards are available right now</h2><p>Inventory is checked live. Please return later to see the next verified listing.</p></div>
       : <>
-        <div className="gift-catalog-table-wrap"><table className="gift-catalog-table">
-          <thead><tr><th>Card / listing</th><th>Face value</th><th>Available</th><th>Member price</th><th>Actions</th></tr></thead>
-          <tbody>{products.map((product) => {
-            const quantity = Math.max(1, Math.min(50, product.availableCount, quantities[product.id] ?? 1));
-            return <tr key={product.id} data-testid={`row-gift-product-${product.id}`}>
-              <td><div className="gift-catalog-product"><span className="gift-product-mark"><CreditCard /></span><div><strong data-testid={`text-gift-product-name-${product.id}`}>{product.name}</strong><small>{product.description || 'Authorized card listing'}</small></div></div></td>
-              <td className="gift-catalog-face" data-testid={`text-gift-face-value-${product.id}`}>{money(product.faceValueCents)}</td>
-              <td><span className="gift-stock"><i />{product.availableCount} available</span></td>
-              <td className="gift-catalog-price" data-testid={`text-gift-member-price-${product.id}`}>{money(product.priceCents)}</td>
-              <td><div className="gift-catalog-actions">
-                <button className="gift-info-button" type="button" onClick={() => setInfoProductId(product.id)} data-testid={`button-info-card-${product.id}`}><Info /> Info</button>
-                <label className="gift-table-quantity"><span className="sr-only">Quantity for {product.name}</span><input aria-label={`Quantity for ${product.name}`} type="number" min={1} max={Math.min(50, product.availableCount)} value={quantity} onChange={(event) => setQuantities((old) => ({ ...old, [product.id]: Math.max(1, Math.min(50, product.availableCount, Number(event.target.value) || 1)) }))} data-testid={`input-card-quantity-${product.id}`} /></label>
-                <button className="gift-table-purchase" type="button" disabled={purchase.isPending || product.availableCount < 1} onClick={() => buy(product.id, quantity)} data-testid={`button-purchase-card-${product.id}`}>{purchase.isPending ? 'Working…' : 'Purchase'} <ArrowRight /></button>
-              </div></td>
-            </tr>;
-          })}</tbody>
-        </table></div>
-        <div className="gift-catalog-mobile">{products.map((product) => {
-        const quantity = Math.max(1, Math.min(50, product.availableCount, quantities[product.id] ?? 1));
-        return <article className="gift-mobile-row" key={product.id} data-testid={`card-gift-product-${product.id}`}>
-          <div className="gift-mobile-row-head"><span className="gift-product-mark"><CreditCard /></span><div><strong>{product.name}</strong><small>{product.availableCount} available</small></div><strong className="gift-mobile-price">{money(product.priceCents)}</strong></div>
-          <div className="gift-mobile-value"><span>Face value <strong>{money(product.faceValueCents)}</strong></span><span>Member price <strong>{money(product.priceCents)}</strong></span></div>
-          <div className="gift-mobile-actions"><button className="gift-info-button" type="button" onClick={() => setInfoProductId(product.id)} data-testid={`button-info-card-mobile-${product.id}`}><Info /> Info</button><label><span className="sr-only">Quantity for {product.name}</span><input aria-label={`Quantity for ${product.name}`} type="number" min={1} max={Math.min(50, product.availableCount)} value={quantity} onChange={(event) => setQuantities((old) => ({ ...old, [product.id]: Math.max(1, Math.min(50, product.availableCount, Number(event.target.value) || 1)) }))} data-testid={`input-card-quantity-mobile-${product.id}`} /></label><button className="gift-table-purchase" type="button" disabled={purchase.isPending || product.availableCount < 1} onClick={() => buy(product.id, quantity)} data-testid={`button-purchase-card-mobile-${product.id}`}>{purchase.isPending ? 'Working…' : 'Purchase'} <ArrowRight /></button></div>
-        </article>;
-      })}</div>
+        <section className="gift-catalog-base-panel" aria-label="Bases">
+          <div className="gift-catalog-control-title"><CreditCard /><span>Bases</span><small>Choose a listing to narrow the catalog</small></div>
+          <div className="gift-catalog-base-options">
+            <button type="button" className={`gift-catalog-base-button${baseId === 'all' ? ' is-active' : ''}`} aria-pressed={baseId === 'all'} onClick={() => setBaseId('all')} data-testid="button-card-base-all">All listings <span>{products.length}</span></button>
+            {products.map((product) => <button type="button" key={product.id} className={`gift-catalog-base-button${baseId === product.id ? ' is-active' : ''}`} aria-pressed={baseId === product.id} onClick={() => setBaseId(product.id)} data-testid={`button-card-base-${product.id}`}>{product.name}</button>)}
+          </div>
+        </section>
+        <section className="gift-catalog-filter-panel" aria-label="Catalog filters">
+          <div className="gift-catalog-control-title"><SlidersHorizontal /><span>Filters</span><small>Search and narrow available listings</small></div>
+          <div className="gift-catalog-toolbar">
+            <label className="gift-catalog-filter-field gift-catalog-search-field">
+              <span>Search listings</span>
+              <span className="gift-catalog-search-input"><Search aria-hidden="true" /><input type="search" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Name or description" aria-label="Search card listings" data-testid="input-card-catalog-search" /></span>
+            </label>
+            <label className="gift-catalog-filter-field">
+              <span>Face value</span>
+              <select value={faceValueFilter} onChange={(event) => setFaceValueFilter(event.target.value)} aria-label="Filter by face value" data-testid="select-card-face-value-filter">
+                <option value="all">Any denomination</option>
+                {faceValues.map((value) => <option key={value} value={value}>{money(value)}</option>)}
+              </select>
+            </label>
+            <label className="gift-catalog-filter-field">
+              <span>Stock</span>
+              <select value={stockFilter} onChange={(event) => setStockFilter(event.target.value as typeof stockFilter)} aria-label="Filter by available stock" data-testid="select-card-stock-filter">
+                <option value="all">All available</option><option value="low">Low stock (5 or fewer)</option>
+              </select>
+            </label>
+            <label className="gift-catalog-filter-field">
+              <span>Member price</span>
+              <select value={priceFilter} onChange={(event) => setPriceFilter(event.target.value as CatalogPriceFilter)} aria-label="Filter by member price" data-testid="select-card-price-filter">
+                <option value="all">Any price</option><option value="under-25">Under $25</option><option value="25-50">$25 to under $50</option><option value="50-100">$50 to under $100</option><option value="100-plus">$100 and up</option>
+              </select>
+            </label>
+            <details className="column-chooser gift-column-chooser">
+              <summary className="quiet-button" data-testid="button-choose-card-columns"><Columns3 /> Columns <ChevronRight className="chooser-chevron" /></summary>
+              <div className="column-chooser-menu" role="group" aria-label="Choose visible card listing columns">
+                <p className="gift-column-note">Listing name and Info stay visible. Credentials are never catalog columns.</p>
+                {catalogColumns.map((column) => <label key={column.id} className="column-choice">
+                  <input type="checkbox" checked={visibleColumns.includes(column.id)} onChange={() => toggleColumn(column.id)} data-testid={`checkbox-card-column-${column.id}`} />
+                  <span>{column.label}</span>
+                </label>)}
+              </div>
+            </details>
+          </div>
+        </section>
+        <div className="gift-catalog-results" role="status" data-testid="text-card-catalog-results">
+          Showing <strong>{filteredProducts.length}</strong> of {products.length} available listings
+          {(normalizedSearch || baseId !== 'all' || faceValueFilter !== 'all' || stockFilter !== 'all' || priceFilter !== 'all') && <button type="button" onClick={resetFilters} data-testid="button-clear-card-filters"><RotateCcw /> Clear filters</button>}
+        </div>
+        {filteredProducts.length === 0 ? <div className="gift-empty gift-filter-empty" data-testid="empty-filtered-card-catalog"><Search /><h2>No matching listings</h2><p>Try changing the search text or filters.</p><button type="button" className="gift-primary-link" onClick={resetFilters} data-testid="button-reset-card-filters">Reset filters <RotateCcw /></button></div>
+          : <>
+            <div className="gift-catalog-table-wrap" role="region" aria-label="Available card listings" tabIndex={0}>
+              <table className="gift-catalog-table">
+                <thead><tr><th scope="col">Card / listing</th>{visibleColumns.map((column) => <th scope="col" key={column}>{catalogColumns.find((item) => item.id === column)?.label}</th>)}<th scope="col"><span className="sr-only">Details</span></th></tr></thead>
+                <tbody>{filteredProducts.map((product) => <tr key={product.id} data-testid={`row-gift-product-${product.id}`}>
+                  <td><div className="gift-catalog-product"><span className="gift-product-mark"><CreditCard /></span><div><strong data-testid={`text-gift-product-name-${product.id}`}>{product.name}</strong></div></div></td>
+                  {visibleColumns.includes('description') && <td className="gift-catalog-description">{product.description || 'Authorized card listing'}</td>}
+                  {visibleColumns.includes('faceValue') && <td className="gift-catalog-face" data-testid={`text-gift-face-value-${product.id}`}>{money(product.faceValueCents)}</td>}
+                  {visibleColumns.includes('availability') && <td><span className={`gift-stock${product.availableCount <= 5 ? ' is-low' : ''}`}><i />{product.availableCount} available</span></td>}
+                  {visibleColumns.includes('price') && <td className="gift-catalog-price" data-testid={`text-gift-member-price-${product.id}`}>{money(product.priceCents)}</td>}
+                  <td><button className="gift-info-button" type="button" onClick={() => setInfoProductId(product.id)} data-testid={`button-info-card-${product.id}`}><Info /> Info</button></td>
+                </tr>)}</tbody>
+              </table>
+            </div>
+            <div className="gift-catalog-mobile">{filteredProducts.map((product) => <article className="gift-mobile-row" key={product.id} data-testid={`card-gift-product-${product.id}`}>
+              <div className="gift-mobile-row-head"><span className="gift-product-mark"><CreditCard /></span><div><strong>{product.name}</strong></div></div>
+              <div className="gift-mobile-fields">
+                {visibleColumns.includes('description') && <p className="gift-mobile-description">{product.description || 'Authorized card listing'}</p>}
+                {visibleColumns.includes('faceValue') && <span>Face value <strong>{money(product.faceValueCents)}</strong></span>}
+                {visibleColumns.includes('availability') && <span>Available <strong className={product.availableCount <= 5 ? 'is-low' : ''}>{product.availableCount}</strong></span>}
+                {visibleColumns.includes('price') && <span>Member price <strong className="gift-mobile-price">{money(product.priceCents)}</strong></span>}
+              </div>
+              <button className="gift-info-button" type="button" onClick={() => setInfoProductId(product.id)} data-testid={`button-info-card-mobile-${product.id}`}><Info /> Info</button>
+            </article>)}</div>
+          </>}
       </>}
     <Dialog open={!!infoProduct} onOpenChange={(open) => { if (!open) setInfoProductId(null); }}>
       {infoProduct && <DialogContent className="gift-info-dialog" data-testid={`dialog-card-info-${infoProduct.id}`}>
