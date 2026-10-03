@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, isNull, sql, sum } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, sum } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import {
   AddAdminLicenseStockBody,
@@ -60,7 +60,7 @@ async function listProducts(admin: boolean) {
 router.get("/license-products", async (req, res): Promise<void> => {
   const user = await getCurrentUser(req);
   if (!user) {
-    res.status(401).json({ error: "Sign in to browse license products." });
+    res.status(401).json({ error: "Sign in to browse log products." });
     return;
   }
 
@@ -123,7 +123,7 @@ router.get("/orders/license-keys", async (req, res): Promise<void> => {
 router.post("/orders/license-keys", async (req, res): Promise<void> => {
   const user = await getCurrentUser(req);
   if (!user) {
-    res.status(401).json({ error: "Sign in to purchase a license." });
+    res.status(401).json({ error: "Sign in to buy a log." });
     return;
   }
 
@@ -279,13 +279,20 @@ router.post("/admin/license-products", async (req, res): Promise<void> => {
     res.status(400).json({ error: "Enter valid product details." });
     return;
   }
+  const name = parsed.data.name.trim();
+  const description = parsed.data.description.trim();
+  const category = parsed.data.category.trim();
+  if (!name || !category) {
+    res.status(400).json({ error: "Product name and category cannot be blank." });
+    return;
+  }
 
   const [created] = await db
     .insert(licenseProductsTable)
     .values({
-      name: parsed.data.name.trim(),
-      description: parsed.data.description.trim(),
-      category: parsed.data.category.trim(),
+      name,
+      description,
+      category,
       priceCents: parsed.data.priceCents,
       createdByUserId: user.id,
     })

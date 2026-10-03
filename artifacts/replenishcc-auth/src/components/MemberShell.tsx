@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   ChevronDown, ChevronRight, CircleDollarSign, ClipboardList, CreditCard, Crown, FileText,
   Gift, Headphones, Home, LoaderCircle, LockKeyhole, LogOut, Menu, MessageSquare, Moon, Megaphone,
-  Package, Settings2, ShieldCheck, ShoppingBag, Sparkles, Sun, Trophy, WalletCards, X, KeyRound,
+  Package, Settings2, ShieldCheck, ShoppingBag, Sparkles, Sun, Trophy, WalletCards, X,
 } from 'lucide-react';
 import {
   getGetAuthMeQueryKey, getGetMyDepositsQueryKey, useGetMyDeposits, usePostAuthLogout,
@@ -105,6 +105,8 @@ export function MemberShell({
   });
   const initials = user?.fullName.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'R';
   const isDepositPage = location === '/deposits' || location === '/my-deposits';
+  const isBuyLogsPage = location === '/buy-logs' || location === '/license-products';
+  const isMyLogOrdersPage = location === '/my-log-orders' || location === '/orders/license-keys';
   const isSupportPage = location.startsWith('/support/') || location.startsWith('/admin/support/');
 
   useEffect(() => {
@@ -232,25 +234,23 @@ export function MemberShell({
         <UnavailableNav icon={<Crown />} label="VIP & Free CC" />
         <Link href="/leaderboard" className={`nav-row${location === '/leaderboard' ? ' active' : ''}`} aria-current={location === '/leaderboard' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-leaderboard"><Trophy aria-hidden="true" /><span>Leaderboard</span></Link>
         <div className="nav-section-label">Shopping</div>
-        <button className="nav-row nav-group" type="button" onClick={() => toggleGroup('shop')} aria-expanded={expanded.shop} data-testid="button-toggle-shop">
+        <button className={`nav-row nav-group${isBuyLogsPage ? ' active' : ''}`} type="button" onClick={() => toggleGroup('shop')} aria-expanded={expanded.shop} data-testid="button-toggle-shop">
           <ShoppingBag aria-hidden="true" /><span>Shop</span><ChevronDown className={`nav-chevron${expanded.shop ? ' is-open' : ''}`} aria-hidden="true" />
         </button>
         {expanded.shop && <div className="nav-children">
-          <Link href="/license-products" className={`nav-row${location === '/license-products' ? ' active' : ''}`} aria-current={location === '/license-products' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-license-products"><KeyRound aria-hidden="true" /><span>License keys</span></Link>
+          <Link href="/buy-logs" className={`nav-row${isBuyLogsPage ? ' active' : ''}`} aria-current={isBuyLogsPage ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-buy-logs"><ClipboardList aria-hidden="true" /><span>Buy Logs</span></Link>
           <UnavailableNav icon={<CreditCard />} label="Buy Cards" />
           <UnavailableNav icon={<Package />} label="Bulk Cards" />
-          <UnavailableNav icon={<ClipboardList />} label="Buy Logs" />
         </div>}
-        <button className="nav-row nav-group" type="button" onClick={() => toggleGroup('orders')} aria-expanded={expanded.orders} data-testid="button-toggle-orders">
+        <button className={`nav-row nav-group${isMyLogOrdersPage ? ' active' : ''}`} type="button" onClick={() => toggleGroup('orders')} aria-expanded={expanded.orders} data-testid="button-toggle-orders">
           <Package aria-hidden="true" /><span>My Orders</span><ChevronDown className={`nav-chevron${expanded.orders ? ' is-open' : ''}`} aria-hidden="true" />
         </button>
         {expanded.orders && <div className="nav-children">
-          <Link href="/orders/license-keys" className={`nav-row${location === '/orders/license-keys' ? ' active' : ''}`} aria-current={location === '/orders/license-keys' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-license-orders"><KeyRound aria-hidden="true" /><span>License orders</span></Link>
+          <Link href="/my-log-orders" className={`nav-row${isMyLogOrdersPage ? ' active' : ''}`} aria-current={isMyLogOrdersPage ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-my-log-orders"><ClipboardList aria-hidden="true" /><span>My Log Orders</span></Link>
           <UnavailableNav icon={<CreditCard />} label="My Card Orders" />
-          <UnavailableNav icon={<ClipboardList />} label="My Log Orders" />
           <UnavailableNav icon={<Package />} label="My Bulk Card Purchases" />
         </div>}
-        {user?.isDepositAdmin && <Link href="/admin/license-products" className={`nav-row${location === '/admin/license-products' ? ' active' : ''}`} aria-current={location === '/admin/license-products' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-admin-license-products"><ShieldCheck aria-hidden="true" /><span>License inventory</span></Link>}
+        {user?.isDepositAdmin && <Link href="/admin/license-products" className={`nav-row${location === '/admin/license-products' ? ' active' : ''}`} aria-current={location === '/admin/license-products' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-admin-log-inventory"><ShieldCheck aria-hidden="true" /><span>Log inventory</span></Link>}
         <div className="nav-section-label">Support</div>
         <button className={`nav-row nav-group${isSupportPage ? ' active' : ''}`} type="button" onClick={() => toggleGroup('support')} aria-expanded={expanded.support} data-testid="button-toggle-support">
           <Headphones aria-hidden="true" /><span>Support</span><ChevronDown className={`nav-chevron${expanded.support ? ' is-open' : ''}`} aria-hidden="true" />

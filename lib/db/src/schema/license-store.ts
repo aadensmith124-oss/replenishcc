@@ -71,7 +71,7 @@ export const licenseInventoryTable = pgTable(
     keyHash: varchar("key_hash", { length: 64 }).notNull(),
     status: varchar("status", { length: 16 }).notNull().default("available"),
     orderId: uuid("order_id").references(() => licenseOrdersTable.id, {
-      onDelete: "set null",
+      onDelete: "cascade",
     }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

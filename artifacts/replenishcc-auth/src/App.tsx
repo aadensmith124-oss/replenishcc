@@ -845,16 +845,16 @@ function DashboardPage() {
           <ShoppingBag aria-hidden="true" /><span>Shop</span><ChevronDown className={`nav-chevron${expanded.shop ? ' is-open' : ''}`} aria-hidden="true" />
         </button>
         {expanded.shop && <div className="nav-children">
+          <Link href="/buy-logs" className="nav-row" onClick={() => setMobileNavOpen(false)} data-testid="link-buy-logs"><ClipboardList aria-hidden="true" /><span>Buy Logs</span></Link>
           <UnavailableNav icon={<CreditCard />} label="Buy Cards" />
           <UnavailableNav icon={<Package />} label="Bulk Cards" />
-          <UnavailableNav icon={<ClipboardList />} label="Buy Logs" />
         </div>}
         <button className="nav-row nav-group" type="button" onClick={() => toggleGroup('orders')} aria-expanded={expanded.orders} data-testid="button-toggle-orders">
           <Package aria-hidden="true" /><span>My Orders</span><ChevronDown className={`nav-chevron${expanded.orders ? ' is-open' : ''}`} aria-hidden="true" />
         </button>
         {expanded.orders && <div className="nav-children">
+          <Link href="/my-log-orders" className="nav-row" onClick={() => setMobileNavOpen(false)} data-testid="link-my-log-orders"><ClipboardList aria-hidden="true" /><span>My Log Orders</span></Link>
           <UnavailableNav icon={<CreditCard />} label="My Card Orders" />
-          <UnavailableNav icon={<ClipboardList />} label="My Log Orders" />
           <UnavailableNav icon={<Package />} label="My Bulk Card Purchases" />
         </div>}
 
@@ -968,6 +968,8 @@ function Router() {
       <Route path="/dashboard" component={DashboardWorkspacePage} />
       <Route path="/leaderboard" component={WeeklyLeaderboardPage} />
       <Route path="/admin/announcements" component={AdminAnnouncementsPage} />
+      <Route path="/buy-logs" component={LicenseProductsPage} />
+      <Route path="/my-log-orders" component={LicenseOrdersPage} />
       <Route path="/license-products" component={LicenseProductsPage} />
       <Route path="/orders/license-keys" component={LicenseOrdersPage} />
       <Route path="/admin/license-products" component={AdminLicenseProductsPage} />
