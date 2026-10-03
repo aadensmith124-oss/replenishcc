@@ -262,8 +262,7 @@ function LoginPage() {
 
   return (
     <Frame>
-      <div className="auth-layout">
-        <Story mode="login" />
+      <div className="auth-layout auth-layout-single">
         <section className="form-card fade-in" aria-labelledby="signin-title">
           <div className="eyebrow">Member access</div>
           <h2 id="signin-title">Welcome back</h2>
@@ -291,8 +290,6 @@ function LoginPage() {
 }
 
 function RegisterPage() {
-  const [fullName, setFullName] = useState('');
-  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -313,16 +310,11 @@ function RegisterPage() {
     event.preventDefault();
     if (register.isPending) return;
     setError('');
-    if (fullName.trim().length === 0) return setError('Enter your full name to continue.');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setError('Enter a valid email address.');
     if (password.length < 10) return setError('Your password must contain at least 10 characters.');
     if (password !== confirmPassword) return setError('Your passwords do not match.');
-    if (username.trim() && !/^[a-zA-Z0-9_]{3,24}$/.test(username.trim())) {
-      return setError('Username must be 3–24 characters using letters, numbers, or underscores.');
-    }
     const input: RegisterInput = {
-      fullName: fullName.trim(),
-      ...(username.trim() ? { username: username.trim() } : {}),
+      fullName: displayNameFromEmail(email.trim()),
       email: email.trim(),
       password,
       confirmPassword,
@@ -338,16 +330,13 @@ function RegisterPage() {
 
   return (
     <Frame>
-      <div className="auth-layout">
-        <Story mode="register" />
+      <div className="auth-layout auth-layout-single">
         <section className="form-card fade-in" aria-labelledby="register-title">
           <div className="eyebrow">Start here</div>
           <h2 id="register-title">Create your account</h2>
           <p className="form-intro">A few details are all it takes to get started.</p>
           {error && <FormMessage>{error}</FormMessage>}
           <form onSubmit={submit} noValidate>
-            <Field id="full-name" label="Full name" value={fullName} onChange={setFullName} placeholder="Your full name" autoComplete="name" maxLength={100} />
-            <Field id="username" label="Username" value={username} onChange={setUsername} placeholder="Choose a username" autoComplete="username" required={false} maxLength={24} />
             <Field id="email" label="Email address" type="email" value={email} onChange={setEmail} placeholder="you@example.com" autoComplete="email" maxLength={254} />
             <PasswordInput id="password" label="Password" value={password} onChange={setPassword} autoComplete="new-password" />
             <div className="password-strength" aria-live="polite">
@@ -367,6 +356,12 @@ function RegisterPage() {
       </div>
     </Frame>
   );
+}
+
+function displayNameFromEmail(email: string): string {
+  const localPart = email.slice(0, email.lastIndexOf('@')).split('+')[0] ?? '';
+  const words = localPart.replace(/[._-]+/g, ' ').trim().split(/\s+/).filter(Boolean);
+  return words.map((word) => word[0].toUpperCase() + word.slice(1)).join(' ') || 'Member';
 }
 
 function ForgotPasswordPage() {

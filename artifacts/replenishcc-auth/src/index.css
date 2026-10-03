@@ -205,6 +205,11 @@
   gap: clamp(44px, 8vw, 120px);
   padding: 48px 0 58px;
 }
+.auth-layout-single {
+  display: flex;
+  justify-content: center;
+}
+.auth-layout-single > .form-card { width: min(100%, 480px); }
 .story {
   position: relative;
   min-height: 390px;
@@ -507,6 +512,7 @@
   .topbar { height: 70px; }
   .secure-label { font-size: 9px; }
   .auth-layout { display: block; padding: 32px 0 42px; }
+  .auth-layout.auth-layout-single { display: flex; justify-content: center; }
   .story { min-height: 0; padding: 10px 1px 25px; }
   .story-kicker { font-size: 9px; }
   .story h1 { max-width: 450px; margin: 15px 0 9px; font-size: clamp(37px, 11vw, 54px); }
