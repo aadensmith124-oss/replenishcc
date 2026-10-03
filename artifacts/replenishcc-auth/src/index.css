@@ -465,23 +465,6 @@
 .footer-links a { color: #9b9e9c; text-decoration: none; }
 .footer-links a:hover { color: #ddc25e; }
 .site-footer-copyright { color: #737a75; font-size: 11px; }
-.site-footer-home {
-  min-height: 48px;
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  border: 1px solid #343a35;
-  border-radius: 999px;
-  padding: 0 17px;
-  color: #d1d5ce;
-  background: #151816;
-  font-size: 12px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: border-color .18s ease, background .18s ease, color .18s ease;
-}
-.site-footer-home:hover { border-color: #8d7a43; color: #e7d28a; background: #1d201b; }
-.site-footer-home-mark { width: 23px; height: 23px; display: grid; place-items: center; border: 1px solid #78683a; border-radius: 7px 2px 7px 2px; color: #d6bd62; font: 600 12px var(--app-font-serif); }
 .legal-layout {
   width: min(100%, 790px);
   margin: 0 auto;
@@ -507,6 +490,7 @@
 .legal-section p { margin: 0; color: #a1a5a4; font-size: 14px; line-height: 1.85; }
 .legal-back { display: inline-flex; align-items: center; gap: 8px; margin-top: 25px; color: #dfc251; text-decoration: none; font-size: 13px; }
 .legal-back svg { width: 16px; }
+button.legal-back { border: 0; padding: 0; background: transparent; font: inherit; cursor: pointer; }
 .dashboard-wrap {
   flex: 1;
   display: flex;
@@ -1354,9 +1338,6 @@
 .member-shell[data-theme="light"] .footer-links a { color: #586359; }
 .member-shell[data-theme="light"] .footer-links a:hover { color: #806b2c; }
 .member-shell[data-theme="light"] .site-footer-copyright { color: #687268; }
-.member-shell[data-theme="light"] .site-footer-home { border-color: #d4d5ca; color: #454d44; background: #f5f4ec; }
-.member-shell[data-theme="light"] .site-footer-home:hover { border-color: #b8a563; color: #6f5c24; background: #eeecdf; }
-.member-shell[data-theme="light"] .site-footer-home-mark { border-color: #c8bd8d; color: #78662d; }
 .member-shell[data-theme="light"] .topbar-balance { border-color: #d6d2bd; color: #42483d; background: #f4f0df; }
 .member-shell[data-theme="light"] .topbar-balance:hover { border-color: #a78d42; background: #ece6cf; }
 .member-shell[data-theme="light"] .topbar-balance-label { color: #727665; }

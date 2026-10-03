@@ -898,56 +898,8 @@ function DashboardPage() {
   }
 
   return (
-    <div className={`member-shell${mobileNavOpen ? ' mobile-nav-open' : ''}`} data-theme={theme}>
-      <aside
-        ref={mobileSidebarRef}
-        id="member-navigation"
-        className="member-sidebar"
-        role={mobileNavOpen ? 'dialog' : undefined}
-        aria-modal={mobileNavOpen || undefined}
-        aria-label={mobileNavOpen ? 'Member navigation' : undefined}
-      >{memberSidebar}</aside>
-      {mobileNavOpen && <button className="member-scrim" type="button" aria-label="Close navigation menu" onClick={() => setMobileNavOpen(false)} data-testid="button-navigation-backdrop" />}
-      <main className="member-main">
-        <header className="member-topbar">
-          <button ref={mobileMenuButtonRef} type="button" className="mobile-menu-button" onClick={() => { setAccountOpen(false); setMobileNavOpen(true); }} aria-label="Open navigation" aria-expanded={mobileNavOpen} aria-controls="member-navigation" data-testid="button-open-navigation"><Menu /></button>
-          <div className="topbar-brand-tools">
-            <div className="topbar-context">ReplenishCC</div>
-          </div>
-          <div className="topbar-actions">
-            <WorkspaceThemeToggle theme={theme} onToggle={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')} />
-            <Link
-              href="/my-deposits"
-              className="topbar-balance"
-              aria-label={accountBalance.data ? `Available balance ${formatBalance(accountBalance.data.balanceCents)}. View deposit history.` : 'Balance unavailable. View deposit history.'}
-              title="View deposit history"
-              data-testid="link-topbar-balance"
-            >
-              <span className="topbar-balance-label">Balance</span>
-              {accountBalance.isLoading
-                ? <span className="skeleton topbar-balance-value-skeleton" aria-label="Loading available balance" />
-                : accountBalance.data
-                  ? <strong data-testid="text-topbar-balance">{formatBalance(accountBalance.data.balanceCents)}</strong>
-                  : <span className="topbar-balance-unavailable" data-testid="text-topbar-balance-unavailable">Unavailable</span>}
-            </Link>
-            <div ref={accountControlRef} className="account-control">
-              <button ref={accountTriggerRef} type="button" className="account-trigger" onClick={() => setAccountOpen((open) => !open)} aria-expanded={accountOpen} aria-controls="account-popover" data-testid="button-account-menu">
-                <span className="account-avatar">{initials}</span><span className="account-trigger-name">{user.fullName}</span><ChevronDown aria-hidden="true" />
-              </button>
-              {accountOpen && <div id="account-popover" className="account-popover" role="region" aria-label="Account options">
-                <div className="account-popover-head"><div className="account-avatar large">{initials}</div><div><strong data-testid="text-account-name">{user.fullName}</strong><span data-testid="text-account-email">{user.email}</span></div></div>
-                {user.username && <div className="account-username" data-testid="text-account-username">Username <strong>@{user.username}</strong></div>}
-                <div className="account-menu-note"><LockKeyhole aria-hidden="true" /> Account management is not available yet</div>
-                {logoutError && <div className="account-error" role="alert">{logoutError}</div>}
-                <button type="button" className="account-logout" onClick={signOut} disabled={logout.isPending} data-testid="button-logout">
-                  {logout.isPending ? <LoaderCircle className="spin" aria-hidden="true" /> : <LogOut aria-hidden="true" />}
-                  {logout.isPending ? 'Signing out…' : 'Log out'}
-                </button>
-              </div>}
-            </div>
-          </div>
-        </header>
-        <section className="member-content fade-in" aria-labelledby="member-welcome">
+    <MemberShell pageTitle="Your account" user={user}>
+      <section className="fade-in" aria-labelledby="member-welcome">
           <div className="welcome-eyebrow"><Sparkles aria-hidden="true" size={14} /> Your account</div>
           <div className="welcome-heading-row">
             <div>
@@ -974,10 +926,8 @@ function DashboardPage() {
             </div>
           </div>
           <div className="home-footnote"><ShieldCheck aria-hidden="true" /> ReplenishCC keeps this workspace tied to your authenticated session.</div>
-        </section>
-        <SiteFooter homeHref="/dashboard" />
-      </main>
-    </div>
+      </section>
+    </MemberShell>
   );
 }
 
