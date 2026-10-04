@@ -126,6 +126,7 @@ async function listProducts({
               'cardType', ${cardTypeMetadata},
               'issuer', ${issuerMetadata},
               'brand', ${brandMetadata},
+              'cardholderName', null,
               'city', COALESCE(${giftCardInventoryTable.publicCity}, ${giftCardProductsTable.city}),
               'state', COALESCE(${giftCardInventoryTable.publicState}, ${giftCardProductsTable.state}),
               'regionZip', COALESCE(${giftCardInventoryTable.publicRegionZip}, ${giftCardProductsTable.regionZip}),
@@ -161,6 +162,7 @@ async function listProducts({
   const cardIdentifiers = new Map<string, {
     bin: string | null;
     lastFour: string | null;
+    cardholderName: string | null;
   }>();
   if (includeBins) {
     const inventoryIds = products.flatMap((product) =>
@@ -181,6 +183,7 @@ async function listProducts({
         cardIdentifiers.set(credential.id, {
           bin: getGiftCardBinPrefix(card.cardNumber),
           lastFour: getGiftCardLastFour(card.cardNumber),
+          cardholderName: card.cardholderName?.trim() || null,
         });
       }
     }
@@ -217,6 +220,7 @@ async function listProducts({
                 ...card,
                 bin: cardIdentifiers.get(card.inventoryId)?.bin ?? null,
                 lastFour: cardIdentifiers.get(card.inventoryId)?.lastFour ?? null,
+                cardholderName: cardIdentifiers.get(card.inventoryId)?.cardholderName ?? null,
               }),
             ),
           }

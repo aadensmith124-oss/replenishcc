@@ -1365,6 +1365,8 @@ export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemIs
 
 export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBrandMax = 80;
 
+export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemCardholderNameMax = 120;
+
 export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemRegionZipMax = 10;
 
 
@@ -1390,6 +1392,7 @@ export const GetGiftCardProductsResponse = zod.object({
   "cardType": zod.string().max(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemCardTypeMax),
   "issuer": zod.string().max(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemIssuerMax),
   "brand": zod.string().max(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBrandMax),
+  "cardholderName": zod.string().max(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemCardholderNameMax).nullable(),
   "city": zod.string(),
   "state": zod.string(),
   "regionZip": zod.string().max(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemRegionZipMax).nullable(),

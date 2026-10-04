@@ -28,6 +28,11 @@ export interface AvailableGiftCardLocation {
   issuer: string;
   /** @maxLength 80 */
   brand: string;
+  /**
+     * @maxLength 120
+     * @nullable
+     */
+  cardholderName: string | null;
   city: string;
   state: string;
   /**

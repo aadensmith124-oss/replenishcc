@@ -19,9 +19,9 @@ The member catalog's Card column displays only the card number's last four digit
 
 Keep the member catalog's Name, Base, and City fields distinct: Name is the cardholder's name, Base is the product/base name, and City is the card's city.
 
-**Why:** The user clarified that the Name category means the person's name, not the base name, and that names must not appear under City.
+**Why:** The user clarified that the Name category means the person's name, not the base name, and explicitly approved showing and filtering it for signed-in buyers before purchase.
 
-**How to apply:** Keep cardholder name, base name, and per-card city separate in imports, encrypted storage, admin previews, and post-purchase delivery; confirm before exposing names in the pre-purchase member catalog.
+**How to apply:** Keep cardholder name, base name, and per-card city separate in imports, encrypted storage, admin previews, the pre-purchase member catalog, and post-purchase delivery; keep full card credentials private until purchase.
 
 **Why:** The user confirmed the inventory is authorized prepaid Visa gift cards and required credentials and actual contact values to stay private until purchase. They requested public per-card location fields, reiterated that street addresses must not appear in member-facing views, and required city/state/ZIP to remain visible while stored/admin address data is preserved. They chose per-card type, issuer, and brand lookup so mixed-prefix batches work, repeated uploads to active bases, a 1,000-card per-base cap, and reversible archiving. The member BIN uses six digits; metadata lookup uses eight. The user also requested a last-four-only member display; full card numbers must never reach member browsers.
 

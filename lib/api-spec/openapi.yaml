@@ -2172,12 +2172,13 @@ components:
         cardType: { type: string, maxLength: 80 }
         issuer: { type: string, maxLength: 80 }
         brand: { type: string, maxLength: 80 }
+        cardholderName: { type: ["string", "null"], maxLength: 120 }
         city: { type: string }
         state: { type: string }
         regionZip: { type: ["string", "null"], maxLength: 10 }
         hasEmail: { type: boolean }
         hasPhone: { type: boolean }
-      required: [inventoryId, bin, lastFour, cardType, issuer, brand, city, state, regionZip, hasEmail, hasPhone]
+      required: [inventoryId, bin, lastFour, cardType, issuer, brand, cardholderName, city, state, regionZip, hasEmail, hasPhone]
     GiftCardProductsResponse:
       type: object
       properties:
