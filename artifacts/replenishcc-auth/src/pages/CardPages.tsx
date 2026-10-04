@@ -144,6 +144,28 @@ export function BuyCardsPage() {
   const [priceFilter, setPriceFilter] = useState<CatalogPriceFilter>('all');
   const [visibleColumns, setVisibleColumns] = useState<CatalogColumn[]>(readCatalogColumns);
   const infoProduct = products.find((product) => product.id === infoProductId) ?? null;
+  const cardInfoFacts = infoProduct ? [
+    { label: 'City', value: infoProduct.city || 'Not specified', testId: `text-card-info-city-${infoProduct.id}` },
+    { label: 'ZIP', value: infoProduct.regionZip || 'Not specified', testId: `text-card-info-region-zip-${infoProduct.id}` },
+    { label: 'Brand', value: infoProduct.brand || 'Not specified' },
+    { label: 'Type', value: infoProduct.cardType || 'Not specified' },
+    { label: 'State', value: infoProduct.state || 'Not specified', testId: `text-card-info-state-${infoProduct.id}` },
+    { label: 'Issuer', value: infoProduct.issuer || 'Not specified' },
+    { label: 'Address', value: infoProduct.address || 'Not specified', testId: `text-card-info-address-${infoProduct.id}` },
+    { label: 'Base', value: infoProduct.name },
+    { label: 'Face value', value: money(infoProduct.faceValueCents), testId: `text-card-info-value-${infoProduct.id}` },
+    { label: 'Available stock', value: `${infoProduct.availableCount} cards`, testId: `text-card-info-stock-${infoProduct.id}` },
+    { label: 'Price', value: money(infoProduct.priceCents), testId: `text-card-info-price-${infoProduct.id}` },
+  ] : [];
+  const cardInfoFeatures = infoProduct ? [
+    { label: 'Email address', available: infoProduct.hasEmail, testId: `text-card-info-email-${infoProduct.id}` },
+    {
+      label: 'Address details',
+      available: Boolean(infoProduct.address || infoProduct.city || infoProduct.state || infoProduct.regionZip),
+      testId: `text-card-info-address-availability-${infoProduct.id}`,
+    },
+    { label: 'Phone number', available: infoProduct.hasPhone, testId: `text-card-info-phone-${infoProduct.id}` },
+  ] : [];
   const purchaseOne = (productId: string) => {
     setNotice('');
     purchase.mutate({ data: { productId, quantity: 1 } }, {
@@ -288,32 +310,29 @@ export function BuyCardsPage() {
         {filteredProducts.length > 0 && <p className="gift-catalog-scroll-note">Swipe to browse columns. Info and Buy 1 stay visible.</p>}
       </>}
     <Dialog open={!!infoProduct} onOpenChange={(open) => { if (!open) setInfoProductId(null); }}>
-      {infoProduct && <DialogContent className="gift-info-dialog" data-testid={`dialog-card-info-${infoProduct.id}`}>
-        <DialogHeader className="gift-info-dialog-head"><div><DialogTitle>{infoProduct.name}</DialogTitle><DialogDescription>Authorized gift-card listing</DialogDescription></div></DialogHeader>
-        <p className="gift-info-description" data-testid={`text-card-info-description-${infoProduct.id}`}>{infoProduct.description || 'No additional description provided.'}</p>
-        <dl className="gift-info-facts">
-          <div><dt>Base</dt><dd>{infoProduct.name}</dd></div>
-          <div><dt>Address</dt><dd data-testid={`text-card-info-address-${infoProduct.id}`}>{infoProduct.address || 'Not specified'}</dd></div>
-          <div><dt>State</dt><dd data-testid={`text-card-info-state-${infoProduct.id}`}>{infoProduct.state || 'Not specified'}</dd></div>
-          <div><dt>City</dt><dd data-testid={`text-card-info-city-${infoProduct.id}`}>{infoProduct.city || 'Not specified'}</dd></div>
-          <div><dt>ZIP</dt><dd data-testid={`text-card-info-region-zip-${infoProduct.id}`}>{infoProduct.regionZip || 'Not specified'}</dd></div>
-          <div><dt>Card type</dt><dd>{infoProduct.cardType || 'Not specified'}</dd></div>
-          <div><dt>Issuer</dt><dd>{infoProduct.issuer || 'Not specified'}</dd></div>
-          <div><dt>Brand</dt><dd>{infoProduct.brand || 'Not specified'}</dd></div>
-          <div><dt>Face value</dt><dd data-testid={`text-card-info-value-${infoProduct.id}`}>{money(infoProduct.faceValueCents)}</dd></div>
-          <div><dt>Email in stock</dt><dd data-testid={`text-card-info-email-${infoProduct.id}`}><ContactIndicator available={infoProduct.hasEmail} label="Email" /></dd></div>
-          <div><dt>Phone in stock</dt><dd data-testid={`text-card-info-phone-${infoProduct.id}`}><ContactIndicator available={infoProduct.hasPhone} label="Phone" /></dd></div>
-          <div><dt>Available stock</dt><dd data-testid={`text-card-info-stock-${infoProduct.id}`}>{infoProduct.availableCount} cards</dd></div>
+      {infoProduct && <DialogContent className="card-detail-dialog" data-testid={`dialog-card-info-${infoProduct.id}`}>
+        <DialogHeader className="card-detail-heading">
+          <span className="card-detail-eyebrow">CARD DETAILS</span>
+          <DialogTitle>{infoProduct.name}</DialogTitle>
+          <DialogDescription data-testid={`text-card-info-description-${infoProduct.id}`}>{infoProduct.description || 'Authorized gift-card listing'}</DialogDescription>
+        </DialogHeader>
+        <dl className="card-detail-facts">
+          {cardInfoFacts.map((fact) => <div key={fact.label}><dt>{fact.label}</dt><dd data-testid={fact.testId}>{fact.value}</dd></div>)}
         </dl>
-        <section className="gift-info-features" aria-label="Purchase details">
-          <h3>Purchase details</h3>
+        <section className="card-detail-features" aria-labelledby={`card-info-features-${infoProduct.id}`}>
+          <h3 id={`card-info-features-${infoProduct.id}`}>Available Features</h3>
           <ul>
-            <li><Check aria-hidden="true" /> One card per order</li>
-            <li><Check aria-hidden="true" /> Checkout uses account balance</li>
-            <li><Check aria-hidden="true" /> Card details appear in your private order history</li>
+            {cardInfoFeatures.map((feature) => <li className="card-detail-feature" key={feature.label}>
+              <span>{feature.label}</span>
+              <span className={`card-detail-status${feature.available ? ' is-available' : ''}`} data-testid={feature.testId}>
+                {feature.available && <span className="card-detail-status-icon"><Check aria-hidden="true" /></span>}
+                <span>{feature.available ? 'Available' : 'Not included'}</span>
+              </span>
+            </li>)}
           </ul>
-          <p className="gift-info-private-note"><LockKeyhole aria-hidden="true" /> Full card credentials are only available to the purchaser after checkout.</p>
         </section>
+        <p className="card-detail-purchase-summary"><Check aria-hidden="true" /> One card per order · paid from account balance · details delivered to private order history.</p>
+        <p className="card-detail-private-note"><LockKeyhole aria-hidden="true" /> Full card credentials are only available to the purchaser after checkout.</p>
       </DialogContent>}
     </Dialog>
   </section>}</MemberGuard>;
