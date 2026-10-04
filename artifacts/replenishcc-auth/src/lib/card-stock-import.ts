@@ -350,25 +350,36 @@ function rawFromColumns(
     !(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(value))
     && !(emailContact.phone && value.includes(emailContact.phone)),
   );
-  const stateEntry = locationEntries.find(({ value }) => isStateValue(value));
+  const stateEntry = [...locationEntries].reverse().find(({ value }) => isStateValue(value));
   const zipEntry = [...locationEntries].reverse().find(({ value, index }) =>
     zipPattern.test(value)
     && !looksLikeAddress(value)
     && !locationEntries.some((entry) => entry.index > index && isStateValue(entry.value))
-    && locationEntries.some((entry) => entry.index < index && !isStateValue(entry.value) && !zipPattern.test(entry.value)),
+    && (locationEntries.length === 1
+      || locationEntries.some((entry) => entry.index < index && !zipPattern.test(entry.value))),
   );
   const otherLocationEntries = locationEntries.filter((entry) =>
     entry !== stateEntry && entry !== zipEntry,
   );
-  const addressEntry = otherLocationEntries.find(({ value }) => looksLikeAddress(value))
+  const streetEntries = otherLocationEntries.filter(({ value }) => looksLikeAddress(value));
+  const addressEntry = streetEntries[0]
     ?? (otherLocationEntries.length >= 2 || (otherLocationEntries.length === 1 && /^\s*\d{1,6}\s*$/.test(otherLocationEntries[0]!.value))
       ? otherLocationEntries[0]
       : undefined);
+  const addressEntries = addressEntry
+    ? [
+        ...(streetEntries.length ? streetEntries : [addressEntry]).filter((entry) => entry !== addressEntry),
+        ...(addressEntry.index > 0
+          ? otherLocationEntries.filter((entry) => entry.index === addressEntry.index - 1 && /^\s*\d{1,6}\s*$/.test(entry.value))
+          : []),
+        addressEntry,
+      ].sort((left, right) => left.index - right.index)
+    : [];
   const cityEntry = otherLocationEntries.find((entry) =>
-    entry !== addressEntry && /[A-Za-z]/.test(entry.value),
+    !addressEntries.includes(entry) && /[A-Za-z]/.test(entry.value),
   );
 
-  if (addressEntry) setRawValue(raw, 'address', addressEntry.value);
+  if (addressEntries.length) setRawValue(raw, 'address', addressEntries.map((entry) => entry.value).join(' '));
   if (stateEntry) setRawValue(raw, 'state', stateEntry.value);
   if (cityEntry) setRawValue(raw, 'city', cityEntry.value);
   if (zipEntry) setRawValue(raw, 'regionZip', zipEntry.value);

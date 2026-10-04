@@ -667,7 +667,7 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
   .catalog-primary-controls { grid-template-columns:minmax(0,1fr); gap:12px; margin-top:-7px; }
   .catalog-primary-controls .gift-catalog-search-input,
   .catalog-primary-controls .gift-catalog-filter-field select { height:48px; font-size:13px; }
-  .gift-catalog-controls .gift-filter-trigger { width:100%; min-height:48px; }
+  .gift-catalog-controls .gift-filter-trigger { width:auto; min-width:180px; min-height:48px; margin-inline:auto; }
   .catalog-columns-after { width:100%; }
   .catalog-columns-after .column-chooser { width:100%; }
   .catalog-columns-after .column-chooser summary.quiet-button { width:100%; justify-content:center; min-height:48px; }
@@ -810,6 +810,16 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .gift-stock-preview-row .ready { color:#90bd83; }
 .gift-stock-preview-row .needs-review { color:#dfa08c; }
 .gift-stock-preview-more { padding-top:3px; }
+.gift-stock-preview-table-wrap { max-width:100%; overflow-x:auto; border:1px solid #30362f; border-radius:5px; }
+.gift-stock-preview-table { width:100%; min-width:930px; border-collapse:collapse; text-align:left; }
+.gift-stock-preview-table th { border-bottom:1px solid #394038; padding:8px 9px; color:#b7beb1; font-size:8px; font-weight:600; white-space:nowrap; }
+.gift-stock-preview-table td { border-bottom:1px solid #2c322d; padding:8px 9px; color:#d0d5ca; font-size:8px; vertical-align:top; white-space:nowrap; }
+.gift-stock-preview-table tbody tr:last-child td { border-bottom:0; }
+.gift-stock-preview-table th:first-child,.gift-stock-preview-table td:first-child { position:sticky; left:0; min-width:42px; background:#171b18; }
+.gift-stock-preview-table td:nth-child(2),.gift-stock-preview-table td:nth-child(3),.gift-stock-preview-table td:nth-child(6),.gift-stock-preview-table td:nth-child(7) { font-variant-numeric:tabular-nums; }
+.gift-stock-preview-table td:nth-child(4),.gift-stock-preview-table td:nth-child(5),.gift-stock-preview-table td:last-child { max-width:220px; white-space:normal; overflow-wrap:anywhere; }
+.gift-stock-preview-table .ready { color:#90bd83; }
+.gift-stock-preview-table .needs-review { color:#dfa08c; }
 .gift-inventory-panel > header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
 .gift-inventory-panel > header button { width:31px;height:31px;display:grid;place-items:center;border:1px solid #40463c;border-radius:5px;color:#c8b45d;background:#20241e;cursor:pointer; }
 .gift-inventory-panel > header button svg { width:14px; }
@@ -919,7 +929,7 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .gift-catalog-base-button.is-active { border-color:#887746; color:#e8d88d; background:#28271d; }
 .gift-catalog-base-button span { min-width:17px; border-radius:10px; padding:2px 5px; color:#aeb7a4; background:#34382d; text-align:center; font-size:8px; font-variant-numeric:tabular-nums; }
 .gift-bases-empty { margin:0; align-self:center; color:#858e82; font-size:9px; }
-.gift-catalog-controls { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-top:2px; }
+.gift-catalog-controls { display:flex; align-items:center; justify-content:center; gap:16px; margin-top:2px; }
 .gift-column-control { display:grid; gap:7px; }
 .gift-column-visibility-label { color:#d9dbd2; font-size:12px; font-weight:600; }
 .gift-column-chooser { justify-self:start; }
@@ -943,7 +953,7 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .gift-catalog-results button svg { width:12px; height:12px; }
 .gift-filter-empty { min-height:210px; }
 .gift-catalog-table-wrap { width:100%; overflow-x:auto; border-top:1px solid #343833; border-bottom:1px solid #343833; background:transparent; }
-.gift-catalog-table { width:100%; min-width:850px; border-collapse:collapse; text-align:left; }
+.gift-catalog-table { width:100%; min-width:1050px; border-collapse:collapse; text-align:left; }
 .gift-catalog-table th { height:48px; border-bottom:1px solid #383d38; padding:0 14px; color:#c7cbc2; font-size:10px; font-weight:600; white-space:nowrap; }
 .gift-catalog-table td { height:64px; border-bottom:1px solid #2d322e; padding:9px 14px; color:#d8dbd2; font-size:11px; }
 .gift-catalog-table tbody tr:last-child td { border-bottom:0; }
@@ -956,7 +966,8 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .gift-catalog-description { min-width:160px; max-width:360px; color:#969e94 !important; font-size:10px !important; line-height:1.5; }
 .gift-catalog-face { color:#e6e6dc !important; font:600 14px var(--app-font-serif); font-variant-numeric:tabular-nums; white-space:nowrap; }
 .gift-catalog-price { color:#dfcf7d !important; font:600 14px var(--app-font-serif); font-variant-numeric:tabular-nums; white-space:nowrap; }
-.gift-catalog-actions { display:flex; align-items:center; gap:7px; }
+.gift-catalog-table th.catalog-actions-cell,.gift-catalog-table td.catalog-actions-cell { width:166px; min-width:166px; white-space:nowrap; }
+.gift-catalog-actions { display:flex; align-items:center; flex-wrap:nowrap; gap:7px; }
 .gift-info-button { min-height:34px; display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid #484b43; border-radius:5px; padding:0 10px; color:#d8dbd1; background:#20231f; font-size:10px; font-weight:600; cursor:pointer; white-space:nowrap; }
 .gift-info-button:hover { border-color:#81754c; color:#e5d789; background:#292a22; }
 .gift-info-button svg { width:13px; height:13px; }
@@ -1068,10 +1079,9 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
   .gift-catalog-search-field { grid-column:1/-1; }
   .gift-column-chooser { justify-self:start; }
   .gift-column-chooser .column-chooser-menu { right:auto; left:0; }
-  .gift-catalog-table { min-width:720px; }
+  .gift-catalog-table { min-width:1050px; }
   .gift-catalog-product { min-width:110px; }
-  .gift-catalog-table th.catalog-actions-cell,.gift-catalog-table td.catalog-actions-cell { position:sticky; z-index:2; right:0; min-width:146px; background:#111411; box-shadow:-10px 0 14px #0b0d0d; }
-  .gift-catalog-table thead th.catalog-actions-cell { z-index:3; background:#151815; }
+  .gift-catalog-table th.catalog-actions-cell,.gift-catalog-table td.catalog-actions-cell { position:static; min-width:166px; background:transparent; box-shadow:none; }
   .gift-catalog-actions { gap:3px; }
   .gift-info-button,.gift-purchase-button { min-height:30px; gap:3px; padding:0 6px; font-size:8px; }
   .gift-info-button svg,.gift-purchase-button svg { width:12px; height:12px; }
