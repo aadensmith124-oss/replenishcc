@@ -750,7 +750,7 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .gift-order-description { padding:12px 0; line-height:1.6; }
 .gift-delivery-head { display:flex; justify-content:space-between; padding:10px 0; color:#bcbfae; font-size:9px; font-weight:600; }
 .gift-delivery-head span:last-child { color:#8b968a; font-weight:400; }
-.gift-credentials { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+.gift-credentials { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; }
 .gift-credential { min-width:0; border:1px solid #3b413a; border-radius:6px; padding:12px; background:#141815; }
 .gift-credential-head { display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #303730; padding-bottom:9px; color:#d7d9ce; font-size:9px; }
 .gift-credential-head button { border:1px solid #45493a; border-radius:4px; padding:5px 8px; color:#d4c36f; background:#24251d; font-size:8px; cursor:pointer; }
