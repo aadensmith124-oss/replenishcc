@@ -1031,11 +1031,6 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .license-order-head h2 { margin: 6px 0 0; color: #e8ebe4; font: 600 19px var(--app-font-serif); }
 .license-order-total { color: #e0d38d; font: 600 19px var(--app-font-serif); font-variant-numeric: tabular-nums; }
 .license-order-coupon { margin: 7px 0 0; color: #aebd9b; font-size: 9px; }
-.license-coupon-entry { display: grid; grid-template-columns: minmax(150px,.4fr) minmax(220px,.7fr); gap: 6px 12px; align-items: center; max-width: 560px; margin: 0 0 16px; border: 1px solid #344238; border-radius: 8px; padding: 12px; background: #19211b; }
-.license-coupon-entry label { color: #d0d8cc; font-size: 10px; font-weight: 600; }
-.license-coupon-entry label span { color: #879287; font-weight: 400; }
-.license-coupon-entry input { min-height: 38px; border: 1px solid #354139; border-radius: 6px; padding: 8px 10px; color: #e0e6dc; background: #121814; font-size: 11px; text-transform: uppercase; }
-.license-coupon-entry p { grid-column: 1 / -1; margin: 0; color: #89958a; font-size: 9px; }
 .license-order-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 11px; color: #8e998f; font-size: 9px; }
 .license-order-meta span { display: inline-flex; align-items: center; gap: 5px; }.license-order-meta svg { width: 12px; height: 12px; }
 .license-order-description { color: #a0a99f; font-size: 10px; line-height: 1.6; }
@@ -2619,8 +2614,6 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
   .coupon-admin-layout { grid-template-columns: 1fr; }
 }
 @media (max-width: 760px) {
-  .license-coupon-entry { grid-template-columns: 1fr; }
-  .license-coupon-entry p { grid-column: auto; }
   .admin-product-actions { gap: 7px; }
   .redeem-batch-form { grid-template-columns: 1fr; align-items: stretch; }
   .redeem-batch-heading { grid-column: auto; }

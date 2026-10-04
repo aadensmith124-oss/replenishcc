@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
-import { ArrowRight, Check, ChevronRight, Clipboard, Columns3, CreditCard, Info, LockKeyhole, Pencil, RefreshCw, RotateCcw, Search, ShieldCheck, ShoppingCart, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { ArrowRight, Check, ChevronRight, Clipboard, Columns3, CreditCard, Download, Info, LockKeyhole, Pencil, RefreshCw, RotateCcw, Search, ShieldCheck, ShoppingCart, SlidersHorizontal, Trash2 } from 'lucide-react';
 import {
   getGetAdminGiftCardProductsQueryKey, getGetGiftCardProductsQueryKey, getGetMyGiftCardOrdersQueryKey, getGetMyDepositsQueryKey,
   useAddAdminGiftCardStock, useCreateAdminGiftCardProduct, useDeleteAdminGiftCardProduct,
@@ -17,6 +17,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { downloadTextFile, plainTextLine } from '../lib/download-text-file';
 
 const money = (cents: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 const date = (value: string) => new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
@@ -37,7 +38,8 @@ function detectStockContactFields(contactField: string) {
     phone = labelledPhone[1]?.trim() ?? null;
     remaining = remaining.replace(labelledPhone[0], ' ');
   }
-  const phoneCandidate = (remaining.match(/\+?\d[\d\s().-]{7,}\d/g) ?? []).find((candidate) => {
+  const phoneCandidates: string[] = remaining.match(/\+?\d[\d\s().-]{7,}\d/g) ?? [];
+  const phoneCandidate = phoneCandidates.find((candidate: string) => {
     const digits = candidate.replace(/\D/g, '').length;
     return digits >= 10 && digits <= 15;
   });
@@ -326,13 +328,50 @@ export function MyCardOrdersPage() {
     try { await navigator.clipboard.writeText(value); setCopied(key); window.setTimeout(() => setCopied(''), 1800); }
     catch { setCopied(`failed-${key}`); }
   };
+  const orders = ordersQuery.data?.orders ?? [];
+  const exportOrders = () => {
+    if (orders.length === 0) return;
+    const orderSections = orders.map((order, orderIndex) => [
+      `Order ${orderIndex + 1}`,
+      `ID: ${plainTextLine(order.id)}`,
+      `Purchased: ${date(order.createdAt)}`,
+      `Listing: ${plainTextLine(order.productName)}`,
+      `Description: ${plainTextLine(order.description)}`,
+      `Quantity: ${order.quantity}`,
+      `Face value: ${money(order.faceValueCents)}`,
+      `Unit price: ${money(order.unitPriceCents)}`,
+      `Total paid: ${money(order.totalCents)}`,
+      `Delivered cards (${order.deliveredCards.length}):`,
+      ...(order.deliveredCards.length
+        ? order.deliveredCards.flatMap((card, cardIndex) => [
+          `Card ${cardIndex + 1}`,
+          `Card number: ${plainTextLine(card.cardNumber)}`,
+          `Expiration: ${plainTextLine(card.expiration)}`,
+          `Security code: ${plainTextLine(card.securityCode)}`,
+          ...(card.email ? [`Email: ${plainTextLine(card.email)}`] : []),
+          ...(card.phone ? [`Phone: ${plainTextLine(card.phone)}`] : []),
+        ])
+        : ['None']),
+    ].join('\n'));
+    const fileDate = new Date().toISOString().slice(0, 10);
+    downloadTextFile(
+      `replenishcc-card-orders-${fileDate}.txt`,
+      [
+        'ReplenishCC — My Card Orders',
+        `Exported: ${date(new Date().toISOString())}`,
+        'Contains full card credentials in plain text. Store this file securely.',
+        '',
+        orderSections.join('\n\n'),
+      ].join('\n'),
+    );
+  };
   return <MemberGuard title="My card orders">{() => <section className="gift-page">
-    <header className="gift-heading"><div><div className="gift-eyebrow">Private delivery ledger</div><h1>Your card <em>orders.</em></h1><p>Complete credentials for cards purchased by this account. Keep these details private.</p></div><Link className="gift-orders-link" href="/buy-cards" data-testid="link-back-to-card-catalog"><CreditCard /> Browse cards <ArrowRight /></Link></header>
+    <header className="gift-heading"><div><div className="gift-eyebrow">Private delivery ledger</div><h1>Your card <em>orders.</em></h1><p>Complete credentials for cards purchased by this account. Keep these details private.</p></div><div className="workspace-heading-actions"><button type="button" className="workspace-secondary-button" onClick={exportOrders} disabled={orders.length === 0} title="Downloads full card credentials in plain text. Store the file securely." data-testid="button-export-card-orders"><Download aria-hidden="true" /> Export .txt</button><Link className="gift-orders-link" href="/buy-cards" data-testid="link-back-to-card-catalog"><CreditCard /> Browse cards <ArrowRight /></Link></div></header>
     <div className="gift-assurance"><span><LockKeyhole /> Visible to account owner</span><span><ShieldCheck /> Secure delivery record</span></div>
     {ordersQuery.isLoading ? <div className="gift-orders-loading" data-testid="loading-card-orders">{[1,2].map((n) => <div className="gift-order-skeleton" key={n}/>)}</div>
       : ordersQuery.isError ? <div className="gift-query-error" role="alert" data-testid="error-card-orders">Order history couldn’t be loaded. <button onClick={() => void ordersQuery.refetch()} data-testid="button-retry-card-orders"><RefreshCw /> Try again</button></div>
-      : (ordersQuery.data?.orders ?? []).length === 0 ? <div className="gift-empty" data-testid="empty-card-orders"><Clipboard /><h2>Your delivery ledger is empty</h2><p>After a purchase, the full card details will appear here for this account only.</p><Link href="/buy-cards" className="gift-primary-link" data-testid="link-shop-first-card">Browse available cards <ArrowRight /></Link></div>
-      : <div className="gift-orders-list">{(ordersQuery.data?.orders ?? []).map((order) => <article className="gift-order" key={order.id} data-testid={`card-order-${order.id}`}>
+      : orders.length === 0 ? <div className="gift-empty" data-testid="empty-card-orders"><Clipboard /><h2>Your delivery ledger is empty</h2><p>After a purchase, the full card details will appear here for this account only.</p><Link href="/buy-cards" className="gift-primary-link" data-testid="link-shop-first-card">Browse available cards <ArrowRight /></Link></div>
+      : <div className="gift-orders-list">{orders.map((order) => <article className="gift-order" key={order.id} data-testid={`card-order-${order.id}`}>
         <header><div><span className="gift-order-label">ORDER · {order.id.slice(0, 8).toUpperCase()}</span><h2>{order.productName}</h2><p>{date(order.createdAt)} · {order.quantity} card{order.quantity !== 1 ? 's' : ''}</p></div><div className="gift-order-total"><small>Paid</small><strong>{money(order.totalCents)}</strong></div></header>
         <p className="gift-order-description">{order.description}</p>
         <div className="gift-delivery-head"><span>Delivered credentials</span><span>{order.deliveredCards.length} of {order.quantity}</span></div>
