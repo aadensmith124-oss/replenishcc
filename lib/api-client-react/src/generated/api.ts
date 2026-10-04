@@ -31,6 +31,7 @@ import type {
   AdminBalanceAdjustmentResponse,
   AdminCoupon,
   AdminCouponsResponse,
+  AdminDashboardOverviewResponse,
   AdminDepositsResponse,
   AdminGiftCardProduct,
   AdminGiftCardProductsResponse,
@@ -74,6 +75,8 @@ import type {
   LicenseProductsResponse,
   LoginInput,
   ManualDepositInput,
+  MemberPageVisibilityResponse,
+  MemberPageVisibilityUpdate,
   MessageResponse,
   MyAccountDeletionRequestResponse,
   MyDepositsResponse,
@@ -5408,5 +5411,247 @@ export const useCreateAdminCoupon = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getCreateAdminCouponMutationOptions(options));
+    }
+
+export const getGetAdminDashboardOverviewUrl = () => {
+
+
+
+
+  return `/api/admin/dashboard/overview`
+}
+
+/**
+ * @summary Get real account, sales, and available-stock totals
+ */
+export const getAdminDashboardOverview = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminDashboardOverviewResponse> => {
+
+  return customFetch<AdminDashboardOverviewResponse>(getGetAdminDashboardOverviewUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminDashboardOverviewQueryKey = () => {
+    return [
+    `/api/admin/dashboard/overview`
+    ] as const;
+    }
+
+
+export const getGetAdminDashboardOverviewQueryOptions = <TData = Awaited<ReturnType<typeof getAdminDashboardOverview>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminDashboardOverview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminDashboardOverviewQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminDashboardOverview>>> = ({ signal }) => getAdminDashboardOverview({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminDashboardOverview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminDashboardOverviewQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminDashboardOverview>>>
+export type GetAdminDashboardOverviewQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get real account, sales, and available-stock totals
+ */
+
+export function useGetAdminDashboardOverview<TData = Awaited<ReturnType<typeof getAdminDashboardOverview>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminDashboardOverview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminDashboardOverviewQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetMemberPageVisibilityUrl = () => {
+
+
+
+
+  return `/api/member/page-visibility`
+}
+
+/**
+ * @summary Get member-facing page visibility settings
+ */
+export const getMemberPageVisibility = async ( options?: Parameters<typeof customFetch>[1]): Promise<MemberPageVisibilityResponse> => {
+
+  return customFetch<MemberPageVisibilityResponse>(getGetMemberPageVisibilityUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMemberPageVisibilityQueryKey = () => {
+    return [
+    `/api/member/page-visibility`
+    ] as const;
+    }
+
+
+export const getGetMemberPageVisibilityQueryOptions = <TData = Awaited<ReturnType<typeof getMemberPageVisibility>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMemberPageVisibility>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMemberPageVisibilityQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMemberPageVisibility>>> = ({ signal }) => getMemberPageVisibility({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMemberPageVisibility>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMemberPageVisibilityQueryResult = NonNullable<Awaited<ReturnType<typeof getMemberPageVisibility>>>
+export type GetMemberPageVisibilityQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get member-facing page visibility settings
+ */
+
+export function useGetMemberPageVisibility<TData = Awaited<ReturnType<typeof getMemberPageVisibility>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMemberPageVisibility>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMemberPageVisibilityQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateAdminMemberPageVisibilityUrl = () => {
+
+
+
+
+  return `/api/admin/member-page-visibility`
+}
+
+/**
+ * @summary Update which member pages are visible and accessible
+ */
+export const updateAdminMemberPageVisibility = async (memberPageVisibilityUpdate: MemberPageVisibilityUpdate, options?: Parameters<typeof customFetch>[1]): Promise<MemberPageVisibilityResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<MemberPageVisibilityResponse>(getUpdateAdminMemberPageVisibilityUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(memberPageVisibilityUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateAdminMemberPageVisibilityMutationKey = () => ['updateAdminMemberPageVisibility'] as const;
+
+export const getUpdateAdminMemberPageVisibilityMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminMemberPageVisibility>>, TError,UpdateAdminMemberPageVisibilityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminMemberPageVisibility>>, TError,UpdateAdminMemberPageVisibilityMutationVariables, TContext> => {
+
+const mutationKey = getUpdateAdminMemberPageVisibilityMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminMemberPageVisibility>>, UpdateAdminMemberPageVisibilityMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateAdminMemberPageVisibility(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAdminMemberPageVisibilityMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminMemberPageVisibility>>>
+    export type UpdateAdminMemberPageVisibilityMutationBody = BodyType<MemberPageVisibilityUpdate>
+    export type UpdateAdminMemberPageVisibilityMutationError = ErrorType<void>
+    export type UpdateAdminMemberPageVisibilityMutationVariables = {data: BodyType<MemberPageVisibilityUpdate>}
+
+    /**
+ * @summary Update which member pages are visible and accessible
+ */
+export const useUpdateAdminMemberPageVisibility = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminMemberPageVisibility>>, TError,UpdateAdminMemberPageVisibilityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminMemberPageVisibility>>,
+        TError,
+        UpdateAdminMemberPageVisibilityMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateAdminMemberPageVisibilityMutationOptions(options));
     }
 

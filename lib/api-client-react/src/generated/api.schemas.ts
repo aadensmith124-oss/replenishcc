@@ -35,6 +35,38 @@ export interface AdminUsersResponse {
   users: AdminUser[];
 }
 
+export interface AdminDashboardOverviewResponse {
+  /** @minimum 0 */
+  totalUsers: number;
+  /** @minimum 0 */
+  totalSalesCents: number;
+  /** @minimum 0 */
+  stockWorthCents: number;
+}
+
+export interface MemberPageVisibilityPages {
+  deposits: boolean;
+  depositHistory: boolean;
+  referrals: boolean;
+  redeemCode: boolean;
+  leaderboard: boolean;
+  buyLogs: boolean;
+  buyCards: boolean;
+  myLogOrders: boolean;
+  myCardOrders: boolean;
+  support: boolean;
+  accountManagement: boolean;
+}
+
+export interface MemberPageVisibilityResponse {
+  pages: MemberPageVisibilityPages;
+  updatedAt: string;
+}
+
+export interface MemberPageVisibilityUpdate {
+  pages: MemberPageVisibilityPages;
+}
+
 export interface AdminUserAccessInput {
   isAdmin: boolean;
   /**

@@ -10,6 +10,7 @@ import supportRouter from "./support";
 import licenseStoreRouter from "./license-store";
 import giftCardStoreRouter from "./gift-card-store";
 import adminUsersRouter from "./admin-users";
+import adminDashboardRouter from "./admin-dashboard";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(supportRouter);
 router.use(licenseStoreRouter);
 router.use(giftCardStoreRouter);
 router.use(adminUsersRouter);
+router.use(adminDashboardRouter);
 
 export default router;

@@ -1427,6 +1427,60 @@ paths:
           description: Coupon code already exists
         "503":
           description: A unique coupon code could not be generated
+  /admin/dashboard/overview:
+    get:
+      operationId: getAdminDashboardOverview
+      tags: [adminDashboard]
+      summary: Get real account, sales, and available-stock totals
+      responses:
+        "200":
+          description: Current totals from member accounts, completed orders, and available inventory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboardOverviewResponse"
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+  /member/page-visibility:
+    get:
+      operationId: getMemberPageVisibility
+      tags: [memberPages]
+      summary: Get member-facing page visibility settings
+      responses:
+        "200":
+          description: Current page settings; all pages are visible by default
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberPageVisibilityResponse"
+        "401":
+          description: Sign-in required
+  /admin/member-page-visibility:
+    put:
+      operationId: updateAdminMemberPageVisibility
+      tags: [adminDashboard]
+      summary: Update which member pages are visible and accessible
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberPageVisibilityUpdate"
+      responses:
+        "200":
+          description: Saved page visibility settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberPageVisibilityResponse"
+        "400":
+          description: Invalid page visibility settings
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
 components:
   schemas:
     HealthStatus:
@@ -1474,6 +1528,50 @@ components:
           type: array
           items: { $ref: "#/components/schemas/AdminUser" }
       required: [users]
+    AdminDashboardOverviewResponse:
+      type: object
+      properties:
+        totalUsers: { type: integer, minimum: 0 }
+        totalSalesCents: { type: integer, minimum: 0 }
+        stockWorthCents: { type: integer, minimum: 0 }
+      required: [totalUsers, totalSalesCents, stockWorthCents]
+    MemberPageVisibilityPages:
+      type: object
+      properties:
+        deposits: { type: boolean }
+        depositHistory: { type: boolean }
+        referrals: { type: boolean }
+        redeemCode: { type: boolean }
+        leaderboard: { type: boolean }
+        buyLogs: { type: boolean }
+        buyCards: { type: boolean }
+        myLogOrders: { type: boolean }
+        myCardOrders: { type: boolean }
+        support: { type: boolean }
+        accountManagement: { type: boolean }
+      required:
+        - deposits
+        - depositHistory
+        - referrals
+        - redeemCode
+        - leaderboard
+        - buyLogs
+        - buyCards
+        - myLogOrders
+        - myCardOrders
+        - support
+        - accountManagement
+    MemberPageVisibilityResponse:
+      type: object
+      properties:
+        pages: { $ref: "#/components/schemas/MemberPageVisibilityPages" }
+        updatedAt: { type: string, format: date-time }
+      required: [pages, updatedAt]
+    MemberPageVisibilityUpdate:
+      type: object
+      properties:
+        pages: { $ref: "#/components/schemas/MemberPageVisibilityPages" }
+      required: [pages]
     AdminUserAccessInput:
       type: object
       properties:

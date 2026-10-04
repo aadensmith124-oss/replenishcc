@@ -1897,3 +1897,79 @@ export const CreateAdminCouponResponse = zod.object({
 })
 
 
+/**
+ * @summary Get real account, sales, and available-stock totals
+ */
+export const getAdminDashboardOverviewResponseTotalUsersMin = 0;
+
+export const getAdminDashboardOverviewResponseTotalSalesCentsMin = 0;
+
+export const getAdminDashboardOverviewResponseStockWorthCentsMin = 0;
+
+
+
+export const GetAdminDashboardOverviewResponse = zod.object({
+  "totalUsers": zod.number().int().min(getAdminDashboardOverviewResponseTotalUsersMin),
+  "totalSalesCents": zod.number().int().min(getAdminDashboardOverviewResponseTotalSalesCentsMin),
+  "stockWorthCents": zod.number().int().min(getAdminDashboardOverviewResponseStockWorthCentsMin)
+})
+
+
+/**
+ * @summary Get member-facing page visibility settings
+ */
+export const GetMemberPageVisibilityResponse = zod.object({
+  "pages": zod.object({
+  "deposits": zod.boolean(),
+  "depositHistory": zod.boolean(),
+  "referrals": zod.boolean(),
+  "redeemCode": zod.boolean(),
+  "leaderboard": zod.boolean(),
+  "buyLogs": zod.boolean(),
+  "buyCards": zod.boolean(),
+  "myLogOrders": zod.boolean(),
+  "myCardOrders": zod.boolean(),
+  "support": zod.boolean(),
+  "accountManagement": zod.boolean()
+}),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update which member pages are visible and accessible
+ */
+export const UpdateAdminMemberPageVisibilityBody = zod.object({
+  "pages": zod.object({
+  "deposits": zod.boolean(),
+  "depositHistory": zod.boolean(),
+  "referrals": zod.boolean(),
+  "redeemCode": zod.boolean(),
+  "leaderboard": zod.boolean(),
+  "buyLogs": zod.boolean(),
+  "buyCards": zod.boolean(),
+  "myLogOrders": zod.boolean(),
+  "myCardOrders": zod.boolean(),
+  "support": zod.boolean(),
+  "accountManagement": zod.boolean()
+})
+})
+
+export const UpdateAdminMemberPageVisibilityResponse = zod.object({
+  "pages": zod.object({
+  "deposits": zod.boolean(),
+  "depositHistory": zod.boolean(),
+  "referrals": zod.boolean(),
+  "redeemCode": zod.boolean(),
+  "leaderboard": zod.boolean(),
+  "buyLogs": zod.boolean(),
+  "buyCards": zod.boolean(),
+  "myLogOrders": zod.boolean(),
+  "myCardOrders": zod.boolean(),
+  "support": zod.boolean(),
+  "accountManagement": zod.boolean()
+}),
+  "updatedAt": zod.coerce.date()
+})
+
+
