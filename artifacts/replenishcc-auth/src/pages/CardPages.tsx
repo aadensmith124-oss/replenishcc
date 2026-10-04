@@ -40,7 +40,7 @@ const baseSchema = z.object({
 });
 type BaseForm = z.infer<typeof baseSchema>;
 
-type CatalogColumn = 'address' | 'state' | 'city' | 'regionZip' | 'cardType' | 'issuer' | 'brand' | 'price' | 'actions';
+type CatalogColumn = 'state' | 'city' | 'regionZip' | 'cardType' | 'issuer' | 'brand' | 'price' | 'actions';
 type CatalogPriceFilter = 'all' | 'under-25' | '25-50' | '50-100' | '100-plus';
 type CatalogPresenceFilter = 'all' | 'yes' | 'no';
 type CatalogFilters = {
@@ -57,6 +57,7 @@ type CatalogFilters = {
 };
 type PublicCardLocation = {
   inventoryId: string;
+  bin: string | null;
   address: string;
   city: string;
   state: string;
@@ -89,7 +90,6 @@ const catalogColumns: { id: CatalogColumn; label: string }[] = [
   { id: 'brand', label: 'Brand' },
   { id: 'cardType', label: 'Type' },
   { id: 'issuer', label: 'Issuer' },
-  { id: 'address', label: 'Address' },
   { id: 'city', label: 'City' },
   { id: 'state', label: 'State' },
   { id: 'regionZip', label: 'ZIP' },
@@ -127,7 +127,7 @@ function readCatalogColumns(): CatalogColumn[] {
     const parsed: unknown = JSON.parse(preferenceValue);
     if (!Array.isArray(parsed)) return defaultCatalogColumns;
     const newMetadataColumns: CatalogColumn[] = migratingPreferences
-      ? ['address', 'state', 'city', 'regionZip', 'cardType', 'issuer', 'brand', 'actions']
+      ? ['state', 'city', 'regionZip', 'cardType', 'issuer', 'brand', 'actions']
       : [];
     return catalogColumns.filter((column) => parsed.includes(column.id) || newMetadataColumns.includes(column.id)).map((column) => column.id);
   } catch {
@@ -457,17 +457,17 @@ export function BuyCardsPage() {
           : <div className="gift-empty gift-filter-empty" data-testid="empty-filtered-card-catalog"><Search /><h2>No matching cards</h2><p>Try changing the search text or filters.</p><button type="button" className="gift-primary-link" onClick={resetFilters} data-testid="button-reset-card-filters">Reset filters <RotateCcw /></button></div>
           : <div className="gift-catalog-table-wrap" role="region" aria-label="Card listings" tabIndex={0}>
             <table className="gift-catalog-table">
-              <thead><tr><th scope="col" className="catalog-select-cell"><input type="checkbox" aria-label="Select one available card from each visible base" checked={allVisibleSelected} disabled={!filteredCardRows.length} onChange={toggleAllVisible} /></th><th scope="col">Card / Base</th>{visibleColumns.map((column) => <th scope="col" key={column} className={column === 'actions' ? 'catalog-actions-cell' : undefined}>{catalogColumns.find((item) => item.id === column)?.label}</th>)}</tr></thead>
+              <thead><tr><th scope="col" className="catalog-select-cell"><input type="checkbox" aria-label="Select one available card from each visible base" checked={allVisibleSelected} disabled={!filteredCardRows.length} onChange={toggleAllVisible} /></th><th scope="col">Card / Base</th><th scope="col">BIN</th>{visibleColumns.map((column) => <th scope="col" key={column} className={column === 'actions' ? 'catalog-actions-cell' : undefined}>{catalogColumns.find((item) => item.id === column)?.label}</th>)}</tr></thead>
               <tbody>{filteredCardRows.map(({ product, card, cardNumber }) => {
                 const isSelected = selectedIds.includes(card.inventoryId);
                 const anotherCardFromBaseSelected = selectedCardRows.some((row) => row.product.id === product.id && row.card.inventoryId !== card.inventoryId);
                 return <tr key={card.inventoryId} data-testid={`row-gift-product-${product.id}-${card.inventoryId}`}>
                 <td className="catalog-select-cell"><input type="checkbox" aria-label={`Select card ${cardNumber} from ${product.name}`} checked={isSelected} disabled={anotherCardFromBaseSelected || (selectedIds.length >= 50 && !isSelected)} onChange={() => toggleSelection({ product, card, cardNumber })} data-testid={`checkbox-select-card-${card.inventoryId}`} /></td>
                 <td><div className="gift-catalog-product"><div><strong data-testid={`text-gift-product-name-${product.id}-${card.inventoryId}`}>Card {cardNumber}</strong><small>{product.name}</small></div></div></td>
+                <td data-testid={`text-gift-card-bin-${card.inventoryId}`}>{card.bin || '—'}</td>
                 {visibleColumns.includes('brand') && <td data-testid={`text-gift-card-brand-${card.inventoryId}`}>{product.brand || '—'}</td>}
                 {visibleColumns.includes('cardType') && <td data-testid={`text-gift-card-type-${card.inventoryId}`}>{product.cardType || '—'}</td>}
                 {visibleColumns.includes('issuer') && <td data-testid={`text-gift-card-issuer-${card.inventoryId}`}>{product.issuer || '—'}</td>}
-                {visibleColumns.includes('address') && <td data-testid={`text-gift-address-${card.inventoryId}`}>{card.address || '—'}</td>}
                 {visibleColumns.includes('city') && <td data-testid={`text-gift-city-${card.inventoryId}`}>{card.city || '—'}</td>}
                 {visibleColumns.includes('state') && <td data-testid={`text-gift-state-${card.inventoryId}`}>{card.state || '—'}</td>}
                 {visibleColumns.includes('regionZip') && <td data-testid={`text-gift-region-zip-${card.inventoryId}`}>{card.regionZip || '—'}</td>}

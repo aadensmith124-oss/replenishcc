@@ -1015,6 +1015,13 @@ export interface LicenseOrderPurchaseResult {
 
 export interface AvailableGiftCardLocation {
   inventoryId: string;
+  /**
+     * @minLength 8
+     * @maxLength 8
+     * @nullable
+     * @pattern ^[0-9]{8}$
+     */
+  bin: string | null;
   address: string;
   city: string;
   state: string;

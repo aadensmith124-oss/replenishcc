@@ -1351,6 +1351,11 @@ export const getGiftCardProductsResponseProductsItemIssuerMax = 80;
 
 export const getGiftCardProductsResponseProductsItemBrandMax = 80;
 
+export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBinMin = 8;
+export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBinMax = 8;
+
+
+export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBinRegExp = new RegExp('^[0-9]{8}$');
 export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemRegionZipMax = 10;
 
 
@@ -1372,6 +1377,7 @@ export const GetGiftCardProductsResponse = zod.object({
   "availableCount": zod.number().int(),
   "availableCardLocations": zod.array(zod.object({
   "inventoryId": zod.string().uuid(),
+  "bin": zod.string().min(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBinMin).max(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBinMax).regex(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBinRegExp).nullable(),
   "address": zod.string(),
   "city": zod.string(),
   "state": zod.string(),
@@ -1604,6 +1610,11 @@ export const createAdminGiftCardProductResponseIssuerMax = 80;
 
 export const createAdminGiftCardProductResponseBrandMax = 80;
 
+export const createAdminGiftCardProductResponseAvailableCardLocationsItemBinMin = 8;
+export const createAdminGiftCardProductResponseAvailableCardLocationsItemBinMax = 8;
+
+
+export const createAdminGiftCardProductResponseAvailableCardLocationsItemBinRegExp = new RegExp('^[0-9]{8}$');
 export const createAdminGiftCardProductResponseAvailableCardLocationsItemRegionZipMax = 10;
 
 
@@ -1624,6 +1635,7 @@ export const CreateAdminGiftCardProductResponse = zod.object({
   "availableCount": zod.number().int(),
   "availableCardLocations": zod.array(zod.object({
   "inventoryId": zod.string().uuid(),
+  "bin": zod.string().min(createAdminGiftCardProductResponseAvailableCardLocationsItemBinMin).max(createAdminGiftCardProductResponseAvailableCardLocationsItemBinMax).regex(createAdminGiftCardProductResponseAvailableCardLocationsItemBinRegExp).nullable(),
   "address": zod.string(),
   "city": zod.string(),
   "state": zod.string(),

@@ -33,6 +33,7 @@ import { getCurrentUser, isDepositAdmin } from "../lib/auth";
 import {
   decryptGiftCardCredential,
   encryptGiftCardCredential,
+  getGiftCardBinPrefix,
   hashGiftCardCredential,
   type GiftCardCredential,
 } from "../lib/gift-card-credentials";
@@ -45,9 +46,11 @@ class DuplicateGiftCardBatchError extends Error {}
 async function listProducts({
   includeStockEligibility = false,
   includeArchived = false,
+  includeBins = false,
 }: {
   includeStockEligibility?: boolean;
   includeArchived?: boolean;
+  includeBins?: boolean;
 } = {}) {
   const availableCount = count(giftCardInventoryTable.id);
   const products = await db
@@ -66,7 +69,7 @@ async function listProducts({
       priceCents: giftCardProductsTable.priceCents,
       isArchived: giftCardProductsTable.isArchived,
       availableCount,
-      availableCardLocations: sql<AvailableGiftCardLocation[]>`
+      availableCardLocations: sql<Omit<AvailableGiftCardLocation, "bin">[]>`
         COALESCE(
           json_agg(
             json_build_object(
@@ -104,6 +107,27 @@ async function listProducts({
     .orderBy(desc(giftCardProductsTable.createdAt));
 
   const productIds = products.map((product) => product.id);
+  const cardBins = new Map<string, string | null>();
+  if (includeBins) {
+    const inventoryIds = products.flatMap((product) =>
+      product.availableCardLocations.map((card) => card.inventoryId),
+    );
+    if (inventoryIds.length > 0) {
+      const inventoryCredentials = await db
+        .select({
+          id: giftCardInventoryTable.id,
+          credentialCiphertext: giftCardInventoryTable.credentialCiphertext,
+          credentialIv: giftCardInventoryTable.credentialIv,
+          credentialTag: giftCardInventoryTable.credentialTag,
+        })
+        .from(giftCardInventoryTable)
+        .where(inArray(giftCardInventoryTable.id, inventoryIds));
+      for (const credential of inventoryCredentials) {
+        const card = decryptGiftCardCredential(credential);
+        cardBins.set(credential.id, getGiftCardBinPrefix(card.cardNumber));
+      }
+    }
+  }
   const [inventoryHistory, orderHistory] =
     includeStockEligibility && productIds.length
       ? await Promise.all([
@@ -126,6 +150,16 @@ async function listProducts({
     const { isArchived, ...visibleProduct } = product;
     return {
       ...visibleProduct,
+      ...(includeBins
+        ? {
+            availableCardLocations: visibleProduct.availableCardLocations.map(
+              (card) => ({
+                ...card,
+                bin: cardBins.get(card.inventoryId) ?? null,
+              }),
+            ),
+          }
+        : {}),
       ...(includeStockEligibility
         ? {
             canReceiveStock:
@@ -238,7 +272,7 @@ router.get("/gift-card-products", async (req, res): Promise<void> => {
     res.status(401).json({ error: "Sign in to browse gift cards." });
     return;
   }
-  const products = await listProducts();
+  const products = await listProducts({ includeBins: true });
   res.json(GetGiftCardProductsResponse.parse({ products }));
 });
 
@@ -736,6 +770,7 @@ router.post("/admin/gift-card-products", async (req, res): Promise<void> => {
       faceValueCents: created.faceValueCents,
       priceCents: created.priceCents,
       availableCount: 0,
+      availableCardLocations: [],
       hasEmail: false,
       hasPhone: false,
       createdAt: created.createdAt.toISOString(),

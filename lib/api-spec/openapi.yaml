@@ -2145,13 +2145,14 @@ components:
       type: object
       properties:
         inventoryId: { type: string, format: uuid }
+        bin: { type: ["string", "null"], minLength: 8, maxLength: 8, pattern: "^[0-9]{8}$" }
         address: { type: string }
         city: { type: string }
         state: { type: string }
         regionZip: { type: ["string", "null"], maxLength: 10 }
         hasEmail: { type: boolean }
         hasPhone: { type: boolean }
-      required: [inventoryId, address, city, state, regionZip, hasEmail, hasPhone]
+      required: [inventoryId, bin, address, city, state, regionZip, hasEmail, hasPhone]
     GiftCardProductsResponse:
       type: object
       properties:

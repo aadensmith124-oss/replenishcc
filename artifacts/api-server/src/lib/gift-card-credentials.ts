@@ -14,6 +14,11 @@ export type GiftCardCredential = {
   phone?: string | null;
 };
 
+export function getGiftCardBinPrefix(cardNumber: string): string | null {
+  const digits = cardNumber.replace(/\D/g, "");
+  return digits.length >= 8 ? digits.slice(0, 8) : null;
+}
+
 function sessionSecret(): string {
   const secret = process.env.SESSION_SECRET;
   if (!secret) throw new Error("SESSION_SECRET must be configured.");
