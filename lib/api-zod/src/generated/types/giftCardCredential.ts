@@ -10,8 +10,6 @@ export interface GiftCardCredential {
   cardNumber: string;
   expiration: string;
   securityCode: string;
-  /** @nullable */
-  pin: string | null;
   /**
      * @maxLength 320
      * @nullable

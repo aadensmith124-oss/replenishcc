@@ -903,6 +903,12 @@ export interface GiftCardProduct {
   id: string;
   name: string;
   description: string;
+  /** @maxLength 255 */
+  address: string;
+  /** @maxLength 80 */
+  state: string;
+  /** @maxLength 120 */
+  city: string;
   /**
      * @maxLength 10
      * @nullable
@@ -931,6 +937,12 @@ export interface AdminGiftCardProduct {
   id: string;
   name: string;
   description: string;
+  /** @maxLength 255 */
+  address: string;
+  /** @maxLength 80 */
+  state: string;
+  /** @maxLength 120 */
+  city: string;
   /**
      * @maxLength 10
      * @nullable
@@ -964,6 +976,12 @@ export interface CreateGiftCardProductInput {
   name: string;
   /** @maxLength 1000 */
   description: string;
+  /** @maxLength 255 */
+  address?: string;
+  /** @maxLength 80 */
+  state?: string;
+  /** @maxLength 120 */
+  city?: string;
   /**
      * @maxLength 10
      * @nullable
@@ -995,6 +1013,12 @@ export interface UpdateGiftCardProductMetadataInput {
      * @pattern ^[0-9]{5}(-[0-9]{4})?$
      */
   regionZip: string | null;
+  /** @maxLength 255 */
+  address: string;
+  /** @maxLength 80 */
+  state: string;
+  /** @maxLength 120 */
+  city: string;
   /**
      * @minLength 1
      * @maxLength 80
@@ -1031,11 +1055,6 @@ export interface GiftCardCredentialInput {
      */
   securityCode: string;
   /**
-     * @maxLength 16
-     * @nullable
-     */
-  pin: string | null;
-  /**
      * @maxLength 320
      * @nullable
      */
@@ -1054,6 +1073,12 @@ export interface AddGiftCardStockInput {
      * @pattern ^[0-9]{5}(-[0-9]{4})?$
      */
   redemptionRegionZip?: string | null;
+  /** @maxLength 255 */
+  address?: string;
+  /** @maxLength 80 */
+  state?: string;
+  /** @maxLength 120 */
+  city?: string;
   /**
      * @minItems 1
      * @maxItems 1
@@ -1066,14 +1091,13 @@ export interface AddGiftCardStockResponse {
   availableCount: number;
   binMetadataApplied: boolean;
   redemptionZipApplied: boolean;
+  locationMetadataApplied: boolean;
 }
 
 export interface GiftCardCredential {
   cardNumber: string;
   expiration: string;
   securityCode: string;
-  /** @nullable */
-  pin: string | null;
   /**
      * @maxLength 320
      * @nullable

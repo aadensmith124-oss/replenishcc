@@ -14,6 +14,12 @@ export interface CreateGiftCardProductInput {
   name: string;
   /** @maxLength 1000 */
   description: string;
+  /** @maxLength 255 */
+  address?: string;
+  /** @maxLength 80 */
+  state?: string;
+  /** @maxLength 120 */
+  city?: string;
   /**
      * @maxLength 10
      * @nullable

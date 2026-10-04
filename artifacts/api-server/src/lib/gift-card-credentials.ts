@@ -10,7 +10,6 @@ export type GiftCardCredential = {
   cardNumber: string;
   expiration: string;
   securityCode: string;
-  pin: string | null;
   email?: string | null;
   phone?: string | null;
 };

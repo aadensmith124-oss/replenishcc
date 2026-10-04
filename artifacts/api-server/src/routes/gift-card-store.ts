@@ -40,6 +40,9 @@ async function listProducts(includeStockEligibility = false) {
       id: giftCardProductsTable.id,
       name: giftCardProductsTable.name,
       description: giftCardProductsTable.description,
+      address: giftCardProductsTable.address,
+      state: giftCardProductsTable.state,
+      city: giftCardProductsTable.city,
       regionZip: giftCardProductsTable.regionZip,
       cardType: giftCardProductsTable.cardType,
       issuer: giftCardProductsTable.issuer,
@@ -96,7 +99,6 @@ function normalizeCredential(
   const cardNumber = card.cardNumber.replace(/\s/g, "");
   const expiration = card.expiration.trim().replace("-", "/");
   const expirationMatch = /^(0[1-9]|1[0-2])\/(\d{2}|\d{4})$/.exec(expiration);
-  const pin = card.pin?.trim() || null;
   const email = card.email?.trim() || null;
   const phone = card.phone?.trim() || null;
   const phoneDigits = phone?.replace(/\D/g, "") ?? "";
@@ -104,7 +106,6 @@ function normalizeCredential(
     !/^\d{13,19}$/.test(cardNumber) ||
     !expirationMatch ||
     !/^\d{3,4}$/.test(card.securityCode) ||
-    (pin !== null && !/^\d{3,16}$/.test(pin)) ||
     (email !== null &&
       (email.length > 320 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) ||
     (phone !== null &&
@@ -119,7 +120,6 @@ function normalizeCredential(
     cardNumber,
     expiration,
     securityCode: card.securityCode,
-    pin,
     email,
     phone,
   };
@@ -420,6 +420,9 @@ router.post("/admin/gift-card-products", async (req, res): Promise<void> => {
   }
   const name = parsed.data.name.trim();
   const description = parsed.data.description.trim();
+  const address = parsed.data.address?.trim() ?? "";
+  const state = parsed.data.state?.trim() ?? "";
+  const city = parsed.data.city?.trim() ?? "";
   const cardType = parsed.data.cardType?.trim() ?? "";
   const issuer = parsed.data.issuer?.trim() ?? "";
   const brand = parsed.data.brand?.trim() ?? "";
@@ -435,6 +438,9 @@ router.post("/admin/gift-card-products", async (req, res): Promise<void> => {
     .values({
       name,
       description,
+      address,
+      state,
+      city,
       regionZip: parsed.data.regionZip,
       cardType,
       issuer,
@@ -451,6 +457,9 @@ router.post("/admin/gift-card-products", async (req, res): Promise<void> => {
       id: created.id,
       name: created.name,
       description: created.description,
+      address: created.address,
+      state: created.state,
+      city: created.city,
       regionZip: created.regionZip,
       cardType: created.cardType,
       issuer: created.issuer,
@@ -489,6 +498,9 @@ router.patch(
     const cardType = parsed.data.cardType.trim();
     const issuer = parsed.data.issuer.trim();
     const brand = parsed.data.brand.trim();
+    const address = parsed.data.address.trim();
+    const state = parsed.data.state.trim();
+    const city = parsed.data.city.trim();
     if (!cardType || !issuer || !brand) {
       res.status(400).json({
         error: "Card type, issuer, and brand cannot be blank.",
@@ -499,6 +511,9 @@ router.patch(
     const [updated] = await db
       .update(giftCardProductsTable)
       .set({
+        address,
+        state,
+        city,
         regionZip: parsed.data.regionZip,
         cardType,
         issuer,
@@ -597,7 +612,7 @@ router.post(
     if (cards.some((card) => card === null)) {
       res.status(400).json({
         error:
-          "Check each card's number, expiration (MM/YY), security code, and optional numeric PIN.",
+          "Check each card's number, expiration (MM/YY), security code, and optional email or phone.",
       });
       return;
     }
@@ -617,6 +632,9 @@ router.post(
       return;
     }
 
+    const address = parsed.data.address?.trim() ?? null;
+    const state = parsed.data.state?.trim() ?? null;
+    const city = parsed.data.city?.trim() ?? null;
     const redemptionRegionZip = parsed.data.redemptionRegionZip ?? null;
     const values = credentials.map((credential) => ({
       productId: params.data.productId,
@@ -692,11 +710,17 @@ router.post(
       );
     }
     const metadataChanges: {
+      address?: string;
+      state?: string;
+      city?: string;
       regionZip?: string;
       cardType?: string;
       issuer?: string;
       brand?: string;
     } = {};
+    if (address) metadataChanges.address = address;
+    if (state) metadataChanges.state = state;
+    if (city) metadataChanges.city = city;
     if (redemptionRegionZip) metadataChanges.regionZip = redemptionRegionZip;
     if (binLookup.kind === "found") {
       if (binLookup.metadata.cardType) {
@@ -728,6 +752,8 @@ router.post(
         availableCount: stockResult.availableCount,
         binMetadataApplied: metadataSaved && binLookup.kind === "found",
         redemptionZipApplied: metadataSaved && redemptionRegionZip !== null,
+        locationMetadataApplied:
+          metadataSaved && Boolean(address || state || city),
       }),
     );
   },

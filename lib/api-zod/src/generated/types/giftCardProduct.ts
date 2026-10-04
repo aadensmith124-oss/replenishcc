@@ -10,6 +10,12 @@ export interface GiftCardProduct {
   id: string;
   name: string;
   description: string;
+  /** @maxLength 255 */
+  address: string;
+  /** @maxLength 80 */
+  state: string;
+  /** @maxLength 120 */
+  city: string;
   /**
      * @maxLength 10
      * @nullable

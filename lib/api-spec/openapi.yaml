@@ -1881,6 +1881,9 @@ components:
         id: { type: string, format: uuid }
         name: { type: string }
         description: { type: string }
+        address: { type: string, maxLength: 255 }
+        state: { type: string, maxLength: 80 }
+        city: { type: string, maxLength: 120 }
         regionZip: { type: ["string", "null"], maxLength: 10, pattern: "^[0-9]{5}(-[0-9]{4})?$" }
         cardType: { type: string, maxLength: 80 }
         issuer: { type: string, maxLength: 80 }
@@ -1891,7 +1894,7 @@ components:
         hasEmail: { type: boolean }
         hasPhone: { type: boolean }
         createdAt: { type: string, format: date-time }
-      required: [id, name, description, regionZip, cardType, issuer, brand, faceValueCents, priceCents, availableCount, hasEmail, hasPhone, createdAt]
+      required: [id, name, description, address, state, city, regionZip, cardType, issuer, brand, faceValueCents, priceCents, availableCount, hasEmail, hasPhone, createdAt]
     GiftCardProductsResponse:
       type: object
       properties:
@@ -1905,6 +1908,9 @@ components:
         id: { type: string, format: uuid }
         name: { type: string }
         description: { type: string }
+        address: { type: string, maxLength: 255 }
+        state: { type: string, maxLength: 80 }
+        city: { type: string, maxLength: 120 }
         regionZip: { type: ["string", "null"], maxLength: 10, pattern: "^[0-9]{5}(-[0-9]{4})?$" }
         cardType: { type: string, maxLength: 80 }
         issuer: { type: string, maxLength: 80 }
@@ -1916,7 +1922,7 @@ components:
         hasPhone: { type: boolean }
         canReceiveStock: { type: boolean }
         createdAt: { type: string, format: date-time }
-      required: [id, name, description, regionZip, cardType, issuer, brand, faceValueCents, priceCents, availableCount, hasEmail, hasPhone, canReceiveStock, createdAt]
+      required: [id, name, description, address, state, city, regionZip, cardType, issuer, brand, faceValueCents, priceCents, availableCount, hasEmail, hasPhone, canReceiveStock, createdAt]
     AdminGiftCardProductsResponse:
       type: object
       properties:
@@ -1929,6 +1935,9 @@ components:
       properties:
         name: { type: string, minLength: 1, maxLength: 100 }
         description: { type: string, maxLength: 1000 }
+        address: { type: string, maxLength: 255 }
+        state: { type: string, maxLength: 80 }
+        city: { type: string, maxLength: 120 }
         regionZip: { type: ["string", "null"], maxLength: 10, pattern: "^[0-9]{5}(-[0-9]{4})?$" }
         cardType: { type: string, maxLength: 80 }
         issuer: { type: string, maxLength: 80 }
@@ -1940,24 +1949,29 @@ components:
       type: object
       properties:
         regionZip: { type: ["string", "null"], maxLength: 10, pattern: "^[0-9]{5}(-[0-9]{4})?$" }
+        address: { type: string, maxLength: 255 }
+        state: { type: string, maxLength: 80 }
+        city: { type: string, maxLength: 120 }
         cardType: { type: string, minLength: 1, maxLength: 80 }
         issuer: { type: string, minLength: 1, maxLength: 80 }
         brand: { type: string, minLength: 1, maxLength: 80 }
-      required: [regionZip, cardType, issuer, brand]
+      required: [regionZip, address, state, city, cardType, issuer, brand]
     GiftCardCredentialInput:
       type: object
       properties:
         cardNumber: { type: string, minLength: 13, maxLength: 19, pattern: "^[0-9 ]+$" }
         expiration: { type: string, minLength: 4, maxLength: 7 }
         securityCode: { type: string, minLength: 3, maxLength: 4, pattern: "^[0-9]+$" }
-        pin: { type: ["string", "null"], maxLength: 16 }
         email: { type: ["string", "null"], format: email, maxLength: 320 }
         phone: { type: ["string", "null"], maxLength: 40 }
-      required: [cardNumber, expiration, securityCode, pin]
+      required: [cardNumber, expiration, securityCode]
     AddGiftCardStockInput:
       type: object
       properties:
         redemptionRegionZip: { type: ["string", "null"], maxLength: 10, pattern: "^[0-9]{5}(-[0-9]{4})?$" }
+        address: { type: string, maxLength: 255 }
+        state: { type: string, maxLength: 80 }
+        city: { type: string, maxLength: 120 }
         cards:
           type: array
           minItems: 1
@@ -1971,17 +1985,17 @@ components:
         availableCount: { type: integer }
         binMetadataApplied: { type: boolean }
         redemptionZipApplied: { type: boolean }
-      required: [addedCount, availableCount, binMetadataApplied, redemptionZipApplied]
+        locationMetadataApplied: { type: boolean }
+      required: [addedCount, availableCount, binMetadataApplied, redemptionZipApplied, locationMetadataApplied]
     GiftCardCredential:
       type: object
       properties:
         cardNumber: { type: string }
         expiration: { type: string }
         securityCode: { type: string }
-        pin: { type: ["string", "null"] }
         email: { type: ["string", "null"], format: email, maxLength: 320 }
         phone: { type: ["string", "null"], maxLength: 40 }
-      required: [cardNumber, expiration, securityCode, pin]
+      required: [cardNumber, expiration, securityCode]
     PurchaseGiftCardInput:
       type: object
       properties:

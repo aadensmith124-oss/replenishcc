@@ -13,6 +13,12 @@ export interface UpdateGiftCardProductMetadataInput {
      * @pattern ^[0-9]{5}(-[0-9]{4})?$
      */
   regionZip: string | null;
+  /** @maxLength 255 */
+  address: string;
+  /** @maxLength 80 */
+  state: string;
+  /** @maxLength 120 */
+  city: string;
   /**
      * @minLength 1
      * @maxLength 80

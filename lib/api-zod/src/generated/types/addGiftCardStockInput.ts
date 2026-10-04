@@ -14,6 +14,12 @@ export interface AddGiftCardStockInput {
      * @pattern ^[0-9]{5}(-[0-9]{4})?$
      */
   redemptionRegionZip?: string | null;
+  /** @maxLength 255 */
+  address?: string;
+  /** @maxLength 80 */
+  state?: string;
+  /** @maxLength 120 */
+  city?: string;
   /**
      * @minItems 1
      * @maxItems 1

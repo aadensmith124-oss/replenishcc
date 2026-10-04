@@ -11,4 +11,5 @@ export interface AddGiftCardStockResponse {
   availableCount: number;
   binMetadataApplied: boolean;
   redemptionZipApplied: boolean;
+  locationMetadataApplied: boolean;
 }

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocation, Link } from 'wouter';
 import {
-  ArrowRight, Check, CircleAlert, Clipboard, Clock3, KeyRound, PackageCheck,
+  ArrowRight, Check, CircleAlert, Clipboard, Clock3, Download, KeyRound, PackageCheck,
   Plus, RotateCcw, ShieldCheck, ShoppingBag, Trash2,
 } from 'lucide-react';
 import {
@@ -21,6 +21,7 @@ import {
   type LicenseProduct,
 } from '@workspace/api-client-react';
 import { MemberShell } from '../components/MemberShell';
+import { downloadTextFile, plainTextLine } from '../lib/download-text-file';
 
 const money = (cents: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 const date = (value: string) => new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
@@ -53,7 +54,6 @@ export function LicenseProductsPage() {
   const productsQuery = useGetLicenseProducts({ query: { queryKey: getGetLicenseProductsQueryKey(), enabled: Boolean(user) } });
   const purchase = useCreateLicenseOrder();
   const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const [couponCode, setCouponCode] = useState('');
   const [notice, setNotice] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
   const [category, setCategory] = useState('All products');
   const products = productsQuery.data?.products ?? [];
@@ -61,19 +61,14 @@ export function LicenseProductsPage() {
   const shown = category === 'All products' ? products : products.filter((p) => p.category === category);
   const buy = (product: LicenseProduct) => {
     const quantity = Math.max(1, Math.min(product.availableCount, Math.floor(quantities[product.id] ?? 1)));
-    const normalizedCoupon = couponCode.trim().toUpperCase();
     setNotice(null);
-    purchase.mutate({ data: { productId: product.id, quantity, ...(normalizedCoupon ? { couponCode: normalizedCoupon } : {}) } }, {
+    purchase.mutate({ data: { productId: product.id, quantity } }, {
       onSuccess: (result) => {
         void client.invalidateQueries({ queryKey: getGetLicenseProductsQueryKey() });
         void client.invalidateQueries({ queryKey: getGetMyLicenseOrdersQueryKey() });
         void client.invalidateQueries({ queryKey: getGetMyDepositsQueryKey() });
-        const savings = result.order.discountCents > 0
-          ? ` Coupon ${result.order.couponCode} saved ${money(result.order.discountCents)}.`
-          : '';
-        setNotice({ kind: 'success', text: `${result.order.quantity} ${logsText(result.order.productName)} log${result.order.quantity === 1 ? '' : 's'} purchased. Your logs are ready in order history.${savings}` });
+        setNotice({ kind: 'success', text: `${result.order.quantity} ${logsText(result.order.productName)} log${result.order.quantity === 1 ? '' : 's'} purchased. Your logs are ready in order history.` });
         setQuantities((current) => ({ ...current, [product.id]: 1 }));
-        setCouponCode('');
       },
       onError: (error) => setNotice({ kind: 'error', text: message(error) }),
     });
@@ -86,7 +81,6 @@ export function LicenseProductsPage() {
       </header>
       {notice && <div className={`license-notice ${notice.kind}`} role={notice.kind === 'error' ? 'alert' : 'status'}>{notice.kind === 'success' ? <Check aria-hidden="true" /> : <CircleAlert aria-hidden="true" />}{notice.text}{notice.kind === 'success' && <Link href="/my-log-orders">View keys</Link>}</div>}
       <div className="license-catalog-top"><label className="license-category">Category<select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Filter products by category" data-testid="select-license-category">{categories.map((item) => <option key={item} value={item}>{logsText(item)}</option>)}</select></label></div>
-      <div className="license-coupon-entry"><label htmlFor="license-coupon-code">Coupon code <span>optional</span></label><input id="license-coupon-code" value={couponCode} onChange={(event) => setCouponCode(event.target.value.toUpperCase())} maxLength={40} autoComplete="off" placeholder="Enter a coupon before purchasing" data-testid="input-license-coupon-code" /><p>The code is applied to your next log purchase if it is valid and still has redemptions available.</p></div>
       {productsQuery.isLoading ? <div className="license-product-grid" aria-label="Loading products" aria-busy="true">{[1, 2, 3].map((n) => <div className="license-card license-card-skeleton" key={n}><i /><i /><i /><i /></div>)}</div>
         : productsQuery.isError ? <QueryError retry={() => void productsQuery.refetch()}>We couldn’t load log products.</QueryError>
           : products.length === 0 ? <div className="license-empty"><div className="license-empty-icon"><ShoppingBag aria-hidden="true" /></div><h2>No logs available yet</h2><p>There are no products in the catalog right now. Please check back later.</p></div>
@@ -117,9 +111,39 @@ export function LicenseOrdersPage() {
   };
   if (session.isLoading || !user) return <MemberShell pageTitle="My Log Orders" user={null} loading />;
   const orders = ordersQuery.data?.orders ?? [];
+  const exportOrders = () => {
+    if (orders.length === 0) return;
+    const orderSections = orders.map((order, orderIndex) => [
+      `Order ${orderIndex + 1}`,
+      `ID: ${plainTextLine(order.id)}`,
+      `Purchased: ${date(order.createdAt)}`,
+      `Product: ${plainTextLine(logsText(order.productName))}`,
+      `Description: ${plainTextLine(logsText(order.description))}`,
+      `Quantity: ${order.quantity}`,
+      `Unit price: ${money(order.unitPriceCents)}`,
+      ...(order.couponCode ? [`Coupon: ${plainTextLine(order.couponCode)}`] : []),
+      `Discount: ${money(order.discountCents)}`,
+      `Total paid: ${money(order.totalCents)}`,
+      `Delivered log keys (${order.deliveredKeys.length}):`,
+      ...(order.deliveredKeys.length
+        ? order.deliveredKeys.map((key, keyIndex) => `${keyIndex + 1}. ${plainTextLine(key)}`)
+        : ['None']),
+    ].join('\n'));
+    const fileDate = new Date().toISOString().slice(0, 10);
+    downloadTextFile(
+      `replenishcc-log-orders-${fileDate}.txt`,
+      [
+        'ReplenishCC — My Log Orders',
+        `Exported: ${date(new Date().toISOString())}`,
+        'Contains private delivered log keys. Keep this file secure.',
+        '',
+        orderSections.join('\n\n'),
+      ].join('\n'),
+    );
+  };
   return <MemberShell pageTitle="My Log Orders" user={user} contentClassName="member-dashboard-content">
     <div className="workspace-page license-page">
-      <header className="workspace-heading"><div><div className="section-kicker"><Clipboard aria-hidden="true" /> Purchase records</div><h1>My Log Orders</h1><p>Order details and delivered keys are visible only to your authenticated account.</p></div><Link className="workspace-primary-button" href="/buy-logs"><ShoppingBag aria-hidden="true" /> Buy Logs</Link></header>
+      <header className="workspace-heading"><div><div className="section-kicker"><Clipboard aria-hidden="true" /> Purchase records</div><h1>My Log Orders</h1><p>Order details and delivered keys are visible only to your authenticated account.</p></div><div className="workspace-heading-actions"><button type="button" className="workspace-secondary-button" onClick={exportOrders} disabled={orders.length === 0} title="Downloads delivered log keys in plain text." data-testid="button-export-log-orders"><Download aria-hidden="true" /> Export .txt</button><Link className="workspace-primary-button" href="/buy-logs"><ShoppingBag aria-hidden="true" /> Buy Logs</Link></div></header>
       {ordersQuery.isLoading ? <div className="license-orders-loading" aria-busy="true">{[1, 2].map((item) => <div className="license-order-skeleton" key={item}><i /><i /><i /></div>)}</div>
         : ordersQuery.isError ? <QueryError retry={() => void ordersQuery.refetch()}>We couldn’t load your log orders.</QueryError>
           : orders.length === 0 ? <div className="license-empty"><div className="license-empty-icon"><KeyRound aria-hidden="true" /></div><h2>No log orders yet</h2><p>When you buy a log, the purchase and delivered log will appear here.</p><Link href="/buy-logs" className="workspace-primary-button">Buy Logs <ArrowRight aria-hidden="true" /></Link></div>

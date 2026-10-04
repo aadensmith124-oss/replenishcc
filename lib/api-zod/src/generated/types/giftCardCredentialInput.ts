@@ -25,11 +25,6 @@ export interface GiftCardCredentialInput {
      */
   securityCode: string;
   /**
-     * @maxLength 16
-     * @nullable
-     */
-  pin: string | null;
-  /**
      * @maxLength 320
      * @nullable
      */
