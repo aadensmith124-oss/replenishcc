@@ -213,6 +213,22 @@ router.get("/orders/gift-cards", async (req, res): Promise<void> => {
     .where(eq(giftCardOrdersTable.userId, user.id))
     .orderBy(desc(giftCardOrdersTable.createdAt));
 
+  const productIds = [...new Set(orders.map((order) => order.productId))];
+  const productLocations = productIds.length
+    ? await db
+        .select({
+          id: giftCardProductsTable.id,
+          address: giftCardProductsTable.address,
+          state: giftCardProductsTable.state,
+          regionZip: giftCardProductsTable.regionZip,
+        })
+        .from(giftCardProductsTable)
+        .where(inArray(giftCardProductsTable.id, productIds))
+    : [];
+  const productLocationsById = new Map(
+    productLocations.map((location) => [location.id, location]),
+  );
+
   const orderIds = orders.map((order) => order.id);
   const inventory = orderIds.length
     ? await db
@@ -237,16 +253,29 @@ router.get("/orders/gift-cards", async (req, res): Promise<void> => {
   res.json(
     GetMyGiftCardOrdersResponse.parse({
       orders: orders.map((order) => ({
-        id: order.id,
-        productId: order.productId,
-        productName: order.productName,
-        description: order.description,
-        faceValueCents: order.faceValueCents,
-        quantity: order.quantity,
-        unitPriceCents: order.unitPriceCents,
-        totalCents: order.totalCents,
-        deliveredCards: cardsByOrder.get(order.id) ?? [],
-        createdAt: order.createdAt.toISOString(),
+        ...(() => {
+          const publicLocation = productLocationsById.get(order.productId);
+          if (!publicLocation) {
+            throw new Error(`Public location metadata missing for gift-card order ${order.id}.`);
+          }
+          return {
+            id: order.id,
+            productId: order.productId,
+            productName: order.productName,
+            description: order.description,
+            publicLocation: {
+              address: publicLocation.address,
+              state: publicLocation.state,
+              regionZip: publicLocation.regionZip,
+            },
+            faceValueCents: order.faceValueCents,
+            quantity: order.quantity,
+            unitPriceCents: order.unitPriceCents,
+            totalCents: order.totalCents,
+            deliveredCards: cardsByOrder.get(order.id) ?? [],
+            createdAt: order.createdAt.toISOString(),
+          };
+        })(),
       })),
     }),
   );

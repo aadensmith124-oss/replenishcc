@@ -2055,6 +2055,13 @@ components:
         totalCents: { type: integer }
         balanceCents: { type: integer }
       required: [orders, totalCents, balanceCents]
+    GiftCardPublicLocation:
+      type: object
+      properties:
+        address: { type: string }
+        state: { type: string }
+        regionZip: { type: ["string", "null"], maxLength: 10 }
+      required: [address, state, regionZip]
     GiftCardOrder:
       type: object
       properties:
@@ -2062,6 +2069,7 @@ components:
         productId: { type: string, format: uuid }
         productName: { type: string }
         description: { type: string }
+        publicLocation: { $ref: "#/components/schemas/GiftCardPublicLocation" }
         faceValueCents: { type: integer }
         quantity: { type: integer }
         unitPriceCents: { type: integer }
