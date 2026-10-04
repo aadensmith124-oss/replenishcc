@@ -2145,7 +2145,7 @@ components:
       type: object
       properties:
         inventoryId: { type: string, format: uuid }
-        bin: { type: ["string", "null"], minLength: 8, maxLength: 8, pattern: "^[0-9]{8}$" }
+        bin: { type: ["string", "null"], minLength: 6, maxLength: 6, pattern: "^[0-9]{6}$" }
         address: { type: string }
         city: { type: string }
         state: { type: string }

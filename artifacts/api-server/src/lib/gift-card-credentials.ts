@@ -16,7 +16,7 @@ export type GiftCardCredential = {
 
 export function getGiftCardBinPrefix(cardNumber: string): string | null {
   const digits = cardNumber.replace(/\D/g, "");
-  return digits.length >= 8 ? digits.slice(0, 8) : null;
+  return digits.length >= 6 ? digits.slice(0, 6) : null;
 }
 
 function sessionSecret(): string {

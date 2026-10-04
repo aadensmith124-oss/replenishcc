@@ -4,7 +4,7 @@
 - [Support ticket business rules](support-ticket-business-rules.md) — Orders are planned for later; current support refunds credit account balance and replacements are unavailable.
 - [License-key store scope](license-key-store-scope.md) — Members buy admin-listed license keys with account balance; admins create products and add stock.
 - [Coupon and deposit rules](coupon-and-deposit-rules.md) — Coupons discount balance-funded log orders; deposit minimums apply to manual and crypto deposits, not referrals.
-- [Vanilla gift-card store](vanilla-gift-card-store.md) — Per-card locations stay public; bases with history are archived to preserve orders, credentials, and ledger entries.
+- [Vanilla gift-card store](vanilla-gift-card-store.md) — Per-card locations stay public; catalog BINs use six digits, metadata lookups stay at eight, and bases with history are archived.
 - [Workflow port ownership](workflow-port-ownership.md) — Failed artifact launches can leave child dev servers holding ports; inspect listeners before retrying.
 - [Development API database environment](database-workflow-env.md) — When the DB tool works but API startup lacks `DATABASE_URL`, check for an overriding secret/config instead of bypassing the DB guard.
 - [TypeScript build-info cache](typescript-build-cache.md) — After dependency changes, rule out stale build info before editing source to fix contradictory type errors.

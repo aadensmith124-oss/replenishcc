@@ -1351,11 +1351,11 @@ export const getGiftCardProductsResponseProductsItemIssuerMax = 80;
 
 export const getGiftCardProductsResponseProductsItemBrandMax = 80;
 
-export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBinMin = 8;
-export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBinMax = 8;
+export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBinMin = 6;
+export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBinMax = 6;
 
 
-export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBinRegExp = new RegExp('^[0-9]{8}$');
+export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBinRegExp = new RegExp('^[0-9]{6}$');
 export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemRegionZipMax = 10;
 
 
@@ -1610,11 +1610,11 @@ export const createAdminGiftCardProductResponseIssuerMax = 80;
 
 export const createAdminGiftCardProductResponseBrandMax = 80;
 
-export const createAdminGiftCardProductResponseAvailableCardLocationsItemBinMin = 8;
-export const createAdminGiftCardProductResponseAvailableCardLocationsItemBinMax = 8;
+export const createAdminGiftCardProductResponseAvailableCardLocationsItemBinMin = 6;
+export const createAdminGiftCardProductResponseAvailableCardLocationsItemBinMax = 6;
 
 
-export const createAdminGiftCardProductResponseAvailableCardLocationsItemBinRegExp = new RegExp('^[0-9]{8}$');
+export const createAdminGiftCardProductResponseAvailableCardLocationsItemBinRegExp = new RegExp('^[0-9]{6}$');
 export const createAdminGiftCardProductResponseAvailableCardLocationsItemRegionZipMax = 10;
 
 

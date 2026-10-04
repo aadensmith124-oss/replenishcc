@@ -9,10 +9,10 @@
 export interface AvailableGiftCardLocation {
   inventoryId: string;
   /**
-     * @minLength 8
-     * @maxLength 8
+     * @minLength 6
+     * @maxLength 6
      * @nullable
-     * @pattern ^[0-9]{8}$
+     * @pattern ^[0-9]{6}$
      */
   bin: string | null;
   address: string;
