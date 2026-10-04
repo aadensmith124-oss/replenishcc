@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
-import { ArrowRight, Check, ChevronRight, Clipboard, Columns3, CreditCard, Info, LockKeyhole, RefreshCw, RotateCcw, Search, ShieldCheck, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { ArrowRight, Check, ChevronRight, Clipboard, Columns3, CreditCard, Info, LockKeyhole, RefreshCw, RotateCcw, Search, ShieldCheck, ShoppingCart, SlidersHorizontal, Trash2 } from 'lucide-react';
 import {
   getGetAdminGiftCardProductsQueryKey, getGetGiftCardProductsQueryKey, getGetMyGiftCardOrdersQueryKey, getGetMyDepositsQueryKey,
   useAddAdminGiftCardStock, useCreateAdminGiftCardProduct, useDeleteAdminGiftCardProduct,
@@ -132,50 +132,27 @@ export function BuyCardsPage() {
       <Link className="gift-orders-link" href="/my-card-orders" data-testid="link-card-order-history"><Clipboard /> My card orders <ArrowRight /></Link>
     </header>
     {notice && <div className="gift-notice" role="status" data-testid="status-card-purchase">{notice}<Link href="/my-card-orders">View order history</Link><button aria-label="Dismiss purchase notice" onClick={() => setNotice('')} data-testid="button-dismiss-purchase-notice">×</button></div>}
-    <section className="gift-catalog-base-panel" aria-label="Bases" data-testid="section-card-catalog-bases">
-      <div className="gift-catalog-control-title"><CreditCard /><span>Bases</span><small>Choose a listing; count shows stock</small></div>
+    <section className="gift-catalog-bases" aria-label="Bases" data-testid="section-card-catalog-bases">
+      <div className="gift-catalog-base-heading"><span>Bases</span><small>Choose a listing</small></div>
       <div className="gift-catalog-base-options">
-        <button type="button" disabled={productsQuery.isLoading || productsQuery.isError || products.length === 0} className={`gift-catalog-base-button${baseId === 'all' ? ' is-active' : ''}`} aria-pressed={baseId === 'all'} onClick={() => setBaseId('all')} data-testid="button-card-base-all">All listings <span>{products.length}</span></button>
+        <button type="button" disabled={productsQuery.isLoading || productsQuery.isError || products.length === 0} className={`gift-catalog-base-button${baseId === 'all' ? ' is-active' : ''}`} aria-pressed={baseId === 'all'} onClick={() => setBaseId('all')} data-testid="button-card-base-all">All bases <span>{products.length}</span></button>
         {products.map((product) => <button type="button" key={product.id} className={`gift-catalog-base-button${baseId === product.id ? ' is-active' : ''}`} aria-pressed={baseId === product.id} onClick={() => setBaseId(product.id)} data-testid={`button-card-base-${product.id}`}>{product.name}<span>{product.availableCount}</span></button>)}
-        {productsQuery.isLoading && <p className="gift-bases-empty" role="status">Loading bases…</p>}
+        {productsQuery.isLoading && products.length === 0 && <p className="gift-bases-empty" role="status">Loading bases…</p>}
         {productsQuery.isError && products.length === 0 && <p className="gift-bases-empty" role="status">Bases couldn’t be loaded.</p>}
-        {!productsQuery.isLoading && !productsQuery.isError && products.length === 0 && <p className="gift-bases-empty" role="status">No card listings have been added yet.</p>}
+        {!productsQuery.isLoading && !productsQuery.isError && products.length === 0 && <p className="gift-bases-empty" role="status">No bases have been added yet.</p>}
       </div>
     </section>
     {productsQuery.isLoading ? <div className="gift-grid" aria-label="Loading card listings" data-testid="loading-card-products">{[1,2,3].map((i) => <div className="gift-product-skeleton" key={i}><i/><i/><i/><i/></div>)}</div>
       : productsQuery.isError ? <div className="gift-query-error" role="alert" data-testid="error-card-products">Catalog couldn’t be loaded. <button onClick={() => void productsQuery.refetch()} data-testid="button-retry-card-products"><RefreshCw /> Try again</button></div>
       : products.length === 0 ? <div className="gift-empty" data-testid="empty-card-catalog"><CreditCard /><h2>No card listings yet</h2><p>Once a listing is added, it will appear here along with its base and filters.</p></div>
       : <>
-        <section className="gift-catalog-filter-panel" aria-label="Catalog filters">
-            <div className="gift-catalog-control-title"><SlidersHorizontal /><span>Filters</span><small>Search and narrow catalog listings</small></div>
-          <div className="gift-catalog-toolbar">
-            <label className="gift-catalog-filter-field gift-catalog-search-field">
-              <span>Search listings</span>
-              <span className="gift-catalog-search-input"><Search aria-hidden="true" /><input type="search" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Name or description" aria-label="Search card listings" data-testid="input-card-catalog-search" /></span>
-            </label>
-            <label className="gift-catalog-filter-field">
-              <span>Face value</span>
-              <select value={faceValueFilter} onChange={(event) => setFaceValueFilter(event.target.value)} aria-label="Filter by face value" data-testid="select-card-face-value-filter">
-                <option value="all">Any denomination</option>
-                {faceValues.map((value) => <option key={value} value={value}>{money(value)}</option>)}
-              </select>
-            </label>
-            <label className="gift-catalog-filter-field">
-              <span>Stock</span>
-              <select value={stockFilter} onChange={(event) => setStockFilter(event.target.value as typeof stockFilter)} aria-label="Filter by stock status" data-testid="select-card-stock-filter">
-                <option value="all">All listings</option><option value="low">Low stock (1–5)</option><option value="out">Out of stock</option>
-              </select>
-            </label>
-            <label className="gift-catalog-filter-field">
-              <span>Member price</span>
-              <select value={priceFilter} onChange={(event) => setPriceFilter(event.target.value as CatalogPriceFilter)} aria-label="Filter by member price" data-testid="select-card-price-filter">
-                <option value="all">Any price</option><option value="under-25">Under $25</option><option value="25-50">$25 to under $50</option><option value="50-100">$50 to under $100</option><option value="100-plus">$100 and up</option>
-              </select>
-            </label>
+        <div className="gift-catalog-controls">
+          <div className="gift-column-control">
+            <span className="gift-column-visibility-label">Column Visibility</span>
             <details className="column-chooser gift-column-chooser">
               <summary className="quiet-button" data-testid="button-choose-card-columns"><Columns3 /> Columns <ChevronRight className="chooser-chevron" /></summary>
               <div className="column-chooser-menu" role="group" aria-label="Choose visible card listing columns">
-                <p className="gift-column-note">Listing name and Info stay visible. Credentials are never catalog columns.</p>
+                <p className="gift-column-note">Base and actions stay visible. Private card credentials are never catalog columns.</p>
                 {catalogColumns.map((column) => <label key={column.id} className="column-choice">
                   <input type="checkbox" checked={visibleColumns.includes(column.id)} onChange={() => toggleColumn(column.id)} data-testid={`checkbox-card-column-${column.id}`} />
                   <span>{column.label}</span>
@@ -183,53 +160,80 @@ export function BuyCardsPage() {
               </div>
             </details>
           </div>
-        </section>
+          <details className="gift-filter-disclosure">
+            <summary className="quiet-button gift-filter-trigger" data-testid="button-toggle-card-filters"><SlidersHorizontal /> Filters <ChevronRight className="chooser-chevron" /></summary>
+            <section className="gift-catalog-filter-panel" aria-label="Catalog filters">
+              <div className="gift-catalog-control-title"><span>Filter listings</span><small>Search and narrow by base, denomination, stock, or price</small></div>
+              <div className="gift-catalog-toolbar">
+                <label className="gift-catalog-filter-field gift-catalog-search-field">
+                  <span>Search listings</span>
+                  <span className="gift-catalog-search-input"><Search aria-hidden="true" /><input type="search" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Name or description" aria-label="Search card listings" data-testid="input-card-catalog-search" /></span>
+                </label>
+                <label className="gift-catalog-filter-field">
+                  <span>Face value</span>
+                  <select value={faceValueFilter} onChange={(event) => setFaceValueFilter(event.target.value)} aria-label="Filter by face value" data-testid="select-card-face-value-filter">
+                    <option value="all">Any denomination</option>
+                    {faceValues.map((value) => <option key={value} value={value}>{money(value)}</option>)}
+                  </select>
+                </label>
+                <label className="gift-catalog-filter-field">
+                  <span>Stock</span>
+                  <select value={stockFilter} onChange={(event) => setStockFilter(event.target.value as typeof stockFilter)} aria-label="Filter by stock status" data-testid="select-card-stock-filter">
+                    <option value="all">All listings</option><option value="low">Low stock (1–5)</option><option value="out">Out of stock</option>
+                  </select>
+                </label>
+                <label className="gift-catalog-filter-field">
+                  <span>Member price</span>
+                  <select value={priceFilter} onChange={(event) => setPriceFilter(event.target.value as CatalogPriceFilter)} aria-label="Filter by member price" data-testid="select-card-price-filter">
+                    <option value="all">Any price</option><option value="under-25">Under $25</option><option value="25-50">$25 to under $50</option><option value="50-100">$50 to under $100</option><option value="100-plus">$100 and up</option>
+                  </select>
+                </label>
+              </div>
+            </section>
+          </details>
+        </div>
         <div className="gift-catalog-results" role="status" data-testid="text-card-catalog-results">
           Showing <strong>{filteredProducts.length}</strong> of {products.length} listings
           {(normalizedSearch || baseId !== 'all' || faceValueFilter !== 'all' || stockFilter !== 'all' || priceFilter !== 'all') && <button type="button" onClick={resetFilters} data-testid="button-clear-card-filters"><RotateCcw /> Clear filters</button>}
         </div>
         {filteredProducts.length === 0 ? <div className="gift-empty gift-filter-empty" data-testid="empty-filtered-card-catalog"><Search /><h2>No matching listings</h2><p>Try changing the search text or filters.</p><button type="button" className="gift-primary-link" onClick={resetFilters} data-testid="button-reset-card-filters">Reset filters <RotateCcw /></button></div>
-          : <>
-            <div className="gift-catalog-table-wrap" role="region" aria-label="Card listings" tabIndex={0}>
-              <table className="gift-catalog-table">
-                <thead><tr><th scope="col">Card / listing</th>{visibleColumns.map((column) => <th scope="col" key={column}>{catalogColumns.find((item) => item.id === column)?.label}</th>)}<th scope="col">Actions</th></tr></thead>
-                <tbody>{filteredProducts.map((product) => <tr key={product.id} data-testid={`row-gift-product-${product.id}`}>
-                  <td><div className="gift-catalog-product"><span className="gift-product-mark"><CreditCard /></span><div><strong data-testid={`text-gift-product-name-${product.id}`}>{product.name}</strong></div></div></td>
-                  {visibleColumns.includes('description') && <td className="gift-catalog-description">{product.description || 'Authorized card listing'}</td>}
-                  {visibleColumns.includes('faceValue') && <td className="gift-catalog-face" data-testid={`text-gift-face-value-${product.id}`}>{money(product.faceValueCents)}</td>}
-                  {visibleColumns.includes('availability') && <td><span className={`gift-stock${product.availableCount === 0 ? ' is-out' : product.availableCount <= 5 ? ' is-low' : ''}`}><i />{product.availableCount} available</span></td>}
-                  {visibleColumns.includes('price') && <td className="gift-catalog-price" data-testid={`text-gift-member-price-${product.id}`}>{money(product.priceCents)}</td>}
-                  <td><div className="gift-catalog-actions">
-                    <button className="gift-info-button" type="button" onClick={() => setInfoProductId(product.id)} data-testid={`button-info-card-${product.id}`}><Info /> Info</button>
-                    <button className="gift-purchase-button" type="button" disabled={purchase.isPending || product.availableCount < 1} onClick={() => purchaseOne(product.id)} aria-label={`Buy one ${product.name}`} data-testid={`button-purchase-card-${product.id}`}>{purchase.isPending ? 'Working…' : 'Buy 1'} <ArrowRight /></button>
-                  </div></td>
-                </tr>)}</tbody>
-              </table>
-            </div>
-            <div className="gift-catalog-mobile">{filteredProducts.map((product) => <article className="gift-mobile-row" key={product.id} data-testid={`card-gift-product-${product.id}`}>
-              <div className="gift-mobile-row-head"><span className="gift-product-mark"><CreditCard /></span><div><strong>{product.name}</strong></div></div>
-              <div className="gift-mobile-fields">
-                {visibleColumns.includes('description') && <p className="gift-mobile-description">{product.description || 'Authorized card listing'}</p>}
-                {visibleColumns.includes('faceValue') && <span>Face value <strong>{money(product.faceValueCents)}</strong></span>}
-                {visibleColumns.includes('availability') && <span>Available <strong className={product.availableCount === 0 ? 'is-out' : product.availableCount <= 5 ? 'is-low' : ''}>{product.availableCount}</strong></span>}
-                {visibleColumns.includes('price') && <span>Member price <strong className="gift-mobile-price">{money(product.priceCents)}</strong></span>}
-              </div>
-              <div className="gift-mobile-actions">
-                <button className="gift-info-button" type="button" onClick={() => setInfoProductId(product.id)} data-testid={`button-info-card-mobile-${product.id}`}><Info /> Info</button>
-                <button className="gift-purchase-button" type="button" disabled={purchase.isPending || product.availableCount < 1} onClick={() => purchaseOne(product.id)} aria-label={`Buy one ${product.name}`} data-testid={`button-purchase-card-mobile-${product.id}`}>{purchase.isPending ? 'Working…' : 'Buy 1'} <ArrowRight /></button>
-              </div>
-            </article>)}</div>
-          </>}
+          : <div className="gift-catalog-table-wrap" role="region" aria-label="Card listings" tabIndex={0}>
+            <table className="gift-catalog-table">
+              <thead><tr><th scope="col">Base</th>{visibleColumns.map((column) => <th scope="col" key={column}>{catalogColumns.find((item) => item.id === column)?.label}</th>)}<th scope="col">Actions</th></tr></thead>
+              <tbody>{filteredProducts.map((product) => <tr key={product.id} data-testid={`row-gift-product-${product.id}`}>
+                <td><div className="gift-catalog-product"><div><strong data-testid={`text-gift-product-name-${product.id}`}>{product.name}</strong></div></div></td>
+                {visibleColumns.includes('description') && <td className="gift-catalog-description">{product.description || 'Authorized card listing'}</td>}
+                {visibleColumns.includes('faceValue') && <td className="gift-catalog-face" data-testid={`text-gift-face-value-${product.id}`}>{money(product.faceValueCents)}</td>}
+                {visibleColumns.includes('availability') && <td><span className={`gift-stock${product.availableCount === 0 ? ' is-out' : product.availableCount <= 5 ? ' is-low' : ''}`}><i />{product.availableCount} available</span></td>}
+                {visibleColumns.includes('price') && <td className="gift-catalog-price" data-testid={`text-gift-member-price-${product.id}`}>{money(product.priceCents)}</td>}
+                <td><div className="gift-catalog-actions">
+                  <button className="gift-info-button" type="button" onClick={() => setInfoProductId(product.id)} data-testid={`button-info-card-${product.id}`}><Info /> Info</button>
+                  <button className="gift-purchase-button" type="button" disabled={purchase.isPending || product.availableCount < 1} onClick={() => purchaseOne(product.id)} aria-label={`Buy one ${product.name}`} data-testid={`button-purchase-card-${product.id}`}>{purchase.isPending ? 'Working…' : 'Buy 1'} <ShoppingCart /></button>
+                </div></td>
+              </tr>)}</tbody>
+            </table>
+          </div>}
+        {filteredProducts.length > 0 && <p className="gift-catalog-scroll-note">Swipe to browse columns. Info and Buy 1 stay visible.</p>}
       </>}
     <Dialog open={!!infoProduct} onOpenChange={(open) => { if (!open) setInfoProductId(null); }}>
       {infoProduct && <DialogContent className="gift-info-dialog" data-testid={`dialog-card-info-${infoProduct.id}`}>
-        <DialogHeader className="gift-info-dialog-head"><span className="gift-product-mark"><CreditCard /></span><div><DialogTitle>{infoProduct.name}</DialogTitle><DialogDescription>Listing details · product information only</DialogDescription></div></DialogHeader>
+        <DialogHeader className="gift-info-dialog-head"><div><DialogTitle>{infoProduct.name}</DialogTitle><DialogDescription>Authorized gift-card listing</DialogDescription></div></DialogHeader>
         <p className="gift-info-description" data-testid={`text-card-info-description-${infoProduct.id}`}>{infoProduct.description || 'No additional description provided.'}</p>
         <dl className="gift-info-facts">
+          <div><dt>Base</dt><dd>{infoProduct.name}</dd></div>
           <div><dt>Face value</dt><dd data-testid={`text-card-info-value-${infoProduct.id}`}>{money(infoProduct.faceValueCents)}</dd></div>
           <div><dt>Member price</dt><dd data-testid={`text-card-info-price-${infoProduct.id}`}>{money(infoProduct.priceCents)}</dd></div>
           <div><dt>Available stock</dt><dd data-testid={`text-card-info-stock-${infoProduct.id}`}>{infoProduct.availableCount} cards</dd></div>
         </dl>
+        <section className="gift-info-features" aria-label="Purchase details">
+          <h3>Purchase details</h3>
+          <ul>
+            <li><Check aria-hidden="true" /> One card per order</li>
+            <li><Check aria-hidden="true" /> Checkout uses account balance</li>
+            <li><Check aria-hidden="true" /> Card details appear in your private order history</li>
+          </ul>
+          <p className="gift-info-private-note"><LockKeyhole aria-hidden="true" /> Full card credentials are only available to the purchaser after checkout.</p>
+        </section>
       </DialogContent>}
     </Dialog>
   </section>}</MemberGuard>;
