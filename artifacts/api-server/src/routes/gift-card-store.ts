@@ -826,16 +826,6 @@ router.post(
       state: card.publicLocation?.state?.trim() || defaultLocation.state,
       regionZip: card.publicLocation?.regionZip ?? defaultLocation.regionZip,
     }));
-    const values = credentials.map((credential, index) => ({
-      productId: params.data.productId,
-      hasEmail: Boolean(credential.email),
-      hasPhone: Boolean(credential.phone),
-      publicAddress: cardLocations[index]?.address ?? null,
-      publicCity: cardLocations[index]?.city ?? null,
-      publicState: cardLocations[index]?.state ?? null,
-      publicRegionZip: cardLocations[index]?.regionZip ?? null,
-      ...encryptGiftCardCredential(credential),
-    }));
     let stockResult:
       | { kind: "missing" }
       | { kind: "ineligible" }
@@ -843,7 +833,13 @@ router.post(
     try {
       stockResult = await db.transaction(async (tx) => {
         const [product] = await tx
-          .select({ id: giftCardProductsTable.id })
+          .select({
+            id: giftCardProductsTable.id,
+            address: giftCardProductsTable.address,
+            city: giftCardProductsTable.city,
+            state: giftCardProductsTable.state,
+            regionZip: giftCardProductsTable.regionZip,
+          })
           .from(giftCardProductsTable)
           .where(eq(giftCardProductsTable.id, params.data.productId))
           .for("update")
@@ -866,6 +862,17 @@ router.post(
           return { kind: "ineligible" as const };
         }
 
+        const values = credentials.map((credential, index) => ({
+          productId: product.id,
+          hasEmail: Boolean(credential.email),
+          hasPhone: Boolean(credential.phone),
+          publicAddress: cardLocations[index]?.address ?? product.address,
+          publicCity: cardLocations[index]?.city ?? product.city,
+          publicState: cardLocations[index]?.state ?? product.state,
+          publicRegionZip:
+            cardLocations[index]?.regionZip ?? product.regionZip,
+          ...encryptGiftCardCredential(credential),
+        }));
         const inserted = await tx
           .insert(giftCardInventoryTable)
           .values(values)
@@ -946,7 +953,7 @@ router.post(
     }
     res.json(
       AddAdminGiftCardStockResponse.parse({
-        addedCount: values.length,
+        addedCount: credentials.length,
         availableCount: stockResult.availableCount,
         binMetadataApplied: metadataSaved && binLookup.kind === "found",
         redemptionZipApplied: cardLocations.some((location) => location.regionZip !== null),
