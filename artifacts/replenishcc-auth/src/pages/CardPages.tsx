@@ -98,6 +98,14 @@ const legacyCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v2';
 const oldestCatalogColumnStorageKey = 'replenishcc-card-catalog-columns';
 const defaultCatalogColumns = catalogColumns.map((column) => column.id);
 
+function matchesCatalogPrice(priceCents: number, filter: CatalogPriceFilter) {
+  return filter === 'all'
+    || (filter === 'under-25' && priceCents < 2500)
+    || (filter === '25-50' && priceCents >= 2500 && priceCents < 5000)
+    || (filter === '50-100' && priceCents >= 5000 && priceCents < 10000)
+    || (filter === '100-plus' && priceCents >= 10000);
+}
+
 function readCatalogColumns(): CatalogColumn[] {
   if (typeof window === 'undefined') return defaultCatalogColumns;
   try {
@@ -139,9 +147,9 @@ export function BuyCardsPage() {
   const [notice, setNotice] = useState('');
   const [baseId, setBaseId] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [faceValueFilter, setFaceValueFilter] = useState('all');
-  const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all');
   const [priceFilter, setPriceFilter] = useState<CatalogPriceFilter>('all');
+  const [draftPriceFilter, setDraftPriceFilter] = useState<CatalogPriceFilter>('all');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<CatalogColumn[]>(readCatalogColumns);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const infoProduct = products.find((product) => product.id === infoProductId) ?? null;
@@ -181,11 +189,7 @@ export function BuyCardsPage() {
     });
   };
   const normalizedSearch = searchTerm.trim().toLowerCase();
-  const faceValues = useMemo(
-    () => [...new Set(products.map((product) => product.faceValueCents))].sort((left, right) => left - right),
-    [products],
-  );
-  const filteredProducts = useMemo(() => products.filter((product) => {
+  const searchFilteredProducts = useMemo(() => products.filter((product) => {
     const matchesBase = baseId === 'all' || product.id === baseId;
     const matchesSearch = !normalizedSearch
       || product.name.toLowerCase().includes(normalizedSearch)
@@ -196,17 +200,16 @@ export function BuyCardsPage() {
       || product.city.toLowerCase().includes(normalizedSearch)
       || product.state.toLowerCase().includes(normalizedSearch)
       || (product.regionZip ?? '').toLowerCase().includes(normalizedSearch);
-    const matchesFaceValue = faceValueFilter === 'all' || product.faceValueCents === Number(faceValueFilter);
-    const matchesStock = stockFilter === 'all'
-      || (stockFilter === 'low' && product.availableCount > 0 && product.availableCount <= 5)
-      || (stockFilter === 'out' && product.availableCount === 0);
-    const matchesPrice = priceFilter === 'all'
-      || (priceFilter === 'under-25' && product.priceCents < 2500)
-      || (priceFilter === '25-50' && product.priceCents >= 2500 && product.priceCents < 5000)
-      || (priceFilter === '50-100' && product.priceCents >= 5000 && product.priceCents < 10000)
-      || (priceFilter === '100-plus' && product.priceCents >= 10000);
-    return matchesBase && matchesSearch && matchesFaceValue && matchesStock && matchesPrice;
-  }), [products, baseId, normalizedSearch, faceValueFilter, stockFilter, priceFilter]);
+    return matchesBase && matchesSearch;
+  }), [products, baseId, normalizedSearch]);
+  const filteredProducts = useMemo(
+    () => searchFilteredProducts.filter((product) => matchesCatalogPrice(product.priceCents, priceFilter)),
+    [searchFilteredProducts, priceFilter],
+  );
+  const draftResultCount = useMemo(
+    () => searchFilteredProducts.filter((product) => matchesCatalogPrice(product.priceCents, draftPriceFilter)).length,
+    [searchFilteredProducts, draftPriceFilter],
+  );
   const selectableProducts = filteredProducts.filter((product) => product.availableCount > 0);
   const selectedProducts = selectedIds
     .map((id) => products.find((product) => product.id === id))
@@ -239,9 +242,16 @@ export function BuyCardsPage() {
   const resetFilters = () => {
     setBaseId('all');
     setSearchTerm('');
-    setFaceValueFilter('all');
-    setStockFilter('all');
     setPriceFilter('all');
+    setDraftPriceFilter('all');
+  };
+  const openFilters = () => {
+    setDraftPriceFilter(priceFilter);
+    setFiltersOpen(true);
+  };
+  const applyPriceFilter = () => {
+    setPriceFilter(draftPriceFilter);
+    setFiltersOpen(false);
   };
   useEffect(() => {
     try { window.localStorage.setItem(catalogColumnStorageKey, JSON.stringify(visibleColumns)); }
@@ -275,33 +285,28 @@ export function BuyCardsPage() {
       : products.length === 0 ? <div className="gift-empty" data-testid="empty-card-catalog"><CreditCard /><h2>No card listings yet</h2><p>Once a listing is added, it will appear here along with its base and filters.</p></div>
       : <>
         <div className="gift-catalog-controls">
-          <details className="gift-filter-disclosure">
-            <summary className="quiet-button gift-filter-trigger" data-testid="button-toggle-card-filters"><SlidersHorizontal /> Filters <ChevronRight className="chooser-chevron" /></summary>
-            <section className="gift-catalog-filter-panel" aria-label="Catalog filters">
-              <div className="gift-catalog-control-title"><span>Filter listings</span><small>Narrow by denomination, stock, or price</small></div>
-              <div className="gift-catalog-toolbar">
-                <label className="gift-catalog-filter-field">
-                  <span>Face value</span>
-                  <select value={faceValueFilter} onChange={(event) => setFaceValueFilter(event.target.value)} aria-label="Filter by face value" data-testid="select-card-face-value-filter">
-                    <option value="all">Any denomination</option>
-                    {faceValues.map((value) => <option key={value} value={value}>{money(value)}</option>)}
-                  </select>
-                </label>
-                <label className="gift-catalog-filter-field">
-                  <span>Stock</span>
-                  <select value={stockFilter} onChange={(event) => setStockFilter(event.target.value as typeof stockFilter)} aria-label="Filter by stock status" data-testid="select-card-stock-filter">
-                    <option value="all">All listings</option><option value="low">Low stock (1–5)</option><option value="out">Out of stock</option>
-                  </select>
-                </label>
-                <label className="gift-catalog-filter-field">
-                  <span>Member price</span>
-                  <select value={priceFilter} onChange={(event) => setPriceFilter(event.target.value as CatalogPriceFilter)} aria-label="Filter by member price" data-testid="select-card-price-filter">
+          <button type="button" className="quiet-button gift-filter-trigger" onClick={openFilters} aria-haspopup="dialog" aria-expanded={filtersOpen} data-testid="button-toggle-card-filters">
+            <SlidersHorizontal aria-hidden="true" /> Filters <ChevronRight className="chooser-chevron" aria-hidden="true" />
+          </button>
+          <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <DialogContent className="catalog-filter-dialog" data-testid="dialog-card-catalog-filters">
+              <DialogHeader className="catalog-filter-header">
+                <DialogTitle>Filters</DialogTitle>
+              </DialogHeader>
+              <div className="catalog-filter-body">
+                <label className="catalog-filter-field" htmlFor="select-card-price-filter">Price
+                  <select id="select-card-price-filter" value={draftPriceFilter} onChange={(event) => setDraftPriceFilter(event.target.value as CatalogPriceFilter)} aria-label="Filter by price" data-testid="select-card-price-filter">
                     <option value="all">Any price</option><option value="under-25">Under $25</option><option value="25-50">$25 to under $50</option><option value="50-100">$50 to under $100</option><option value="100-plus">$100 and up</option>
                   </select>
                 </label>
               </div>
-            </section>
-          </details>
+              <div className="catalog-filter-footer">
+                <button type="button" className="catalog-filter-apply" onClick={applyPriceFilter} data-testid="button-show-filter-results">
+                  Show {draftResultCount} result{draftResultCount === 1 ? '' : 's'}
+                </button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
         <div className="catalog-selection-bar">
           <div><strong>{selectedProducts.length} selected</strong><span>{selectedProducts.length ? ` · Estimated total ${money(selectedTotalCents)}` : ' · Choose one card from each listing'}</span></div>
@@ -324,7 +329,7 @@ export function BuyCardsPage() {
         </div>
         <div className="gift-catalog-results" role="status" data-testid="text-card-catalog-results">
           Showing <strong>{filteredProducts.length}</strong> of {products.length} listings
-          {(normalizedSearch || baseId !== 'all' || faceValueFilter !== 'all' || stockFilter !== 'all' || priceFilter !== 'all') && <button type="button" onClick={resetFilters} data-testid="button-clear-card-filters"><RotateCcw /> Clear filters</button>}
+          {(normalizedSearch || baseId !== 'all' || priceFilter !== 'all') && <button type="button" onClick={resetFilters} data-testid="button-clear-card-filters"><RotateCcw /> Clear filters</button>}
         </div>
         {filteredProducts.length === 0 ? <div className="gift-empty gift-filter-empty" data-testid="empty-filtered-card-catalog"><Search /><h2>No matching listings</h2><p>Try changing the search text or filters.</p><button type="button" className="gift-primary-link" onClick={resetFilters} data-testid="button-reset-card-filters">Reset filters <RotateCcw /></button></div>
           : <div className="gift-catalog-table-wrap" role="region" aria-label="Card listings" tabIndex={0}>
@@ -532,7 +537,7 @@ export function AdminCardInventoryPage() {
           <FormField control={form.control} name="cardType" render={({ field }) => <FormItem><FormLabel>Card type · optional</FormLabel><FormControl><Input {...field} maxLength={80} placeholder="Auto-detected from BIN when available" data-testid="input-admin-card-type" /></FormControl><FormMessage /></FormItem>} />
           <FormField control={form.control} name="issuer" render={({ field }) => <FormItem><FormLabel>Issuer · optional</FormLabel><FormControl><Input {...field} maxLength={80} placeholder="Auto-detected from BIN when available" data-testid="input-admin-card-issuer" /></FormControl><FormMessage /></FormItem>} />
           <FormField control={form.control} name="brand" render={({ field }) => <FormItem><FormLabel>Brand · optional</FormLabel><FormControl><Input {...field} maxLength={80} placeholder="Auto-detected from BIN when available" data-testid="input-admin-card-brand" /></FormControl><FormMessage /></FormItem>} />
-          <div className="gift-form-pair"><FormField control={form.control} name="faceValue" render={({ field }) => <FormItem><FormLabel>Face value (USD)</FormLabel><FormControl><Input {...field} type="number" min="0.01" step="0.01" data-testid="input-admin-face-value" /></FormControl><FormMessage /></FormItem>} /><FormField control={form.control} name="price" render={({ field }) => <FormItem><FormLabel>Member price (USD)</FormLabel><FormControl><Input {...field} type="number" min="0.01" step="0.01" data-testid="input-admin-card-price" /></FormControl><FormMessage /></FormItem>} /></div>
+          <div className="gift-form-pair"><FormField control={form.control} name="faceValue" render={({ field }) => <FormItem><FormLabel>Face value (USD)</FormLabel><FormControl><Input {...field} type="number" min="0.01" step="0.01" data-testid="input-admin-face-value" /></FormControl><FormMessage /></FormItem>} /><FormField control={form.control} name="price" render={({ field }) => <FormItem><FormLabel>Price (USD)</FormLabel><FormControl><Input {...field} type="number" min="0.01" step="0.01" data-testid="input-admin-card-price" /></FormControl><FormMessage /></FormItem>} /></div>
           <button className="gift-admin-submit" disabled={create.isPending} data-testid="button-create-card-listing">{create.isPending ? 'Creating…' : 'Create listing'} <ArrowRight /></button>
         </form></Form>
       </section>
@@ -578,7 +583,7 @@ export function AdminCardInventoryPage() {
       : rows.length === 0 ? <div className="gift-admin-empty" data-testid="empty-admin-card-inventory">No listings created yet. Create a listing above to begin.</div>
         : <div className="gift-table-wrap">
           <table className="gift-table">
-            <thead><tr><th>Listing</th><th>Address</th><th>State</th><th>City</th><th>ZIP</th><th>Card type</th><th>Issuer</th><th>Brand</th><th>Face value</th><th>Member price</th><th>Email in stock</th><th>Phone in stock</th><th>Available</th><th>Stock eligibility</th><th>Created</th><th><span className="sr-only">Actions</span></th></tr></thead>
+            <thead><tr><th>Listing</th><th>Address</th><th>State</th><th>City</th><th>ZIP</th><th>Card type</th><th>Issuer</th><th>Brand</th><th>Face value</th><th>Price</th><th>Email in stock</th><th>Phone in stock</th><th>Available</th><th>Stock eligibility</th><th>Created</th><th><span className="sr-only">Actions</span></th></tr></thead>
             <tbody>{rows.map((product) => <tr key={product.id} data-testid={`row-card-inventory-${product.id}`}>
               <td><strong>{product.name}</strong><small>{product.description || 'No description'}</small></td>
               <td>{product.address || '—'}</td><td>{product.state || '—'}</td><td>{product.city || '—'}</td><td>{product.regionZip || '—'}</td>
