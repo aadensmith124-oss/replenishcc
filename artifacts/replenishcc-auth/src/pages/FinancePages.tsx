@@ -99,10 +99,13 @@ export function DepositsPage() {
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<'nowpayments' | 'cashapp' | 'chime' | 'applepay' | 'venmo'>('nowpayments');
   const [currency, setCurrency] = useState('');
+  const [currencySearch, setCurrencySearch] = useState('');
   const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
   const [created, setCreated] = useState<Deposit | null>(null);
   const [copyMessage, setCopyMessage] = useState('');
   const availableCurrencies = currencies.data?.currencies ?? [];
+  const currencySearchTerm = currencySearch.trim().toLowerCase();
+  const matchingCurrencies = availableCurrencies.filter((item) => item.toLowerCase().includes(currencySearchTerm));
   const availableMethods: Array<['nowpayments' | 'cashapp' | 'chime' | 'applepay' | 'venmo', string, string]> = [];
   if (config?.nowPaymentsEnabled && config.nowPaymentsConfigured) {
     availableMethods.push(['nowpayments', 'Crypto', 'NOWPayments']);
@@ -182,8 +185,21 @@ export function DepositsPage() {
           <label className="finance-label" htmlFor="deposit-amount">Amount in USD</label>
           <div className="amount-input-wrap"><span>$</span><input id="deposit-amount" type="number" min={dollars(minimum)} max={dollars(maximum)} step="0.01" inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Enter an amount" required data-testid="input-deposit-amount" /></div>
           <div className="field-assist">Limits: {dollars(minimum)} – {dollars(maximum)} per request</div>
-          {method === 'nowpayments' && <div className="currency-field"><label className="finance-label" htmlFor="deposit-currency">Receive payment in</label>
-            {currencies.isLoading ? <LoadingBlock label="Loading live crypto currencies" /> : currencies.isError ? <QueryError error={currencies.error} retry={() => void currencies.refetch()} /> : availableCurrencies.length ? <select id="deposit-currency" value={currency} onChange={(event) => setCurrency(event.target.value)} required data-testid="select-crypto-currency"><option value="">Choose a currency</option>{availableCurrencies.map((item) => <option key={item} value={item}>{item.toUpperCase()}</option>)}</select> : <Alert kind="info">No payment currencies are currently offered by the live payment service.</Alert>}
+          {method === 'nowpayments' && <div className="currency-field">
+            {currencies.isLoading ? <LoadingBlock label="Loading live crypto currencies" /> : currencies.isError ? <QueryError error={currencies.error} retry={() => void currencies.refetch()} /> : availableCurrencies.length ? <>
+              <label className="finance-label" htmlFor="deposit-currency-search">Search crypto currencies</label>
+              <div className="currency-search-wrap">
+                <Search aria-hidden="true" />
+                <input id="deposit-currency-search" type="search" value={currencySearch} onChange={(event) => setCurrencySearch(event.target.value)} placeholder="Search by symbol, e.g. BTC or USDT" autoComplete="off" data-testid="input-search-crypto-currency" />
+              </div>
+              <label className="finance-label" htmlFor="deposit-currency">Currency to send</label>
+              <select id="deposit-currency" value={currency} onChange={(event) => setCurrency(event.target.value)} required data-testid="select-crypto-currency">
+                <option value="">Choose a currency</option>
+                {currency && !matchingCurrencies.includes(currency) && <option value={currency}>{currency.toUpperCase()} (current selection)</option>}
+                {matchingCurrencies.map((item) => <option key={item} value={item}>{item.toUpperCase()}</option>)}
+              </select>
+              {currencySearchTerm && matchingCurrencies.length === 0 && <p className="currency-search-empty" role="status">No currencies match “{currencySearch.trim()}”. Your current selection is unchanged.</p>}
+            </> : <Alert kind="info">No payment currencies are currently offered by the live payment service.</Alert>}
           </div>}
            {method !== 'nowpayments' && <div className="manual-note"><CircleAlert /><span>After submitting, include the exact payment note shown below with your transfer. Requests are reviewed before your balance is credited.</span></div>}
           {message && <Alert kind={message.kind}>{message.text}</Alert>}

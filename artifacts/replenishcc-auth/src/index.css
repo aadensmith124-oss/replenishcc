@@ -1848,6 +1848,12 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .field-assist { margin-top: 7px; color: #7f897f; font-size: 9px; }
 .currency-field { margin-top: 18px; }
 .currency-field select { width: 100%; height: 45px; border: 1px solid #383f39; border-radius: 7px; padding: 0 12px; color: #e6e7df; background: #121613; font-size: 12px; }
+.currency-search-wrap { height: 45px; display: flex; align-items: center; gap: 10px; margin-bottom: 16px; border: 1px solid #383f39; border-radius: 7px; padding: 0 12px; background: #121613; }
+.currency-search-wrap:focus-within { border-color: #a28d4c; box-shadow: 0 0 0 3px #a28d4c22; }
+.currency-search-wrap > svg { width: 15px; height: 15px; flex: 0 0 auto; color: #92998e; }
+.currency-search-wrap input { min-width: 0; width: 100%; height: 100%; border: 0; outline: 0; color: #e6e7df; background: transparent; font-size: 12px; }
+.currency-search-wrap input::placeholder { color: #737d73; }
+.currency-search-empty { margin: 8px 0 0; color: #9ca69d; font-size: 10px; line-height: 1.5; }
 .manual-note { display: flex; gap: 10px; margin-top: 18px; border: 1px solid #48432e; border-radius: 7px; padding: 11px 12px; color: #b5ae91; background: #222219; font-size: 10px; line-height: 1.65; }
 .manual-note svg { width: 15px; height: 15px; flex: 0 0 auto; color: #c5ac57; }
 .finance-submit { margin-top: 20px; }
@@ -3001,6 +3007,7 @@ html ::placeholder {
   min-height: 276px;
   max-height: min(620px, calc(100dvh - 36px)) !important;
   transform: translateY(-50%) !important;
+  translate: none !important;
   overflow-x: hidden !important;
   overflow: hidden !important;
   border: 1px solid #3c3c3c !important;
