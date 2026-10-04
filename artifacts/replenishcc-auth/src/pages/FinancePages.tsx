@@ -6,11 +6,11 @@ import {
   WalletCards, XCircle, Columns3, Gift,
 } from 'lucide-react';
 import {
-  getGetAdminDepositMethodsQueryKey, getGetAdminDepositsQueryKey, getGetCryptoCurrenciesQueryKey, getGetDepositMethodsQueryKey,
+  getGetAdminDepositsQueryKey, getGetCryptoCurrenciesQueryKey, getGetDepositMethodsQueryKey,
   getGetAdminRedeemCodesQueryKey, getGetMyDepositsQueryKey, getGetMyReferralSummaryQueryKey, useCreateAdminRedeemCode, useCreateAdminRedeemCodeBatch, useGetAdminRedeemCodes, useCreateCryptoDeposit,
-  useCreateManualDeposit, useGetAdminDepositMethods, useGetAdminDeposits, useGetAuthMe,
+  useCreateManualDeposit, useGetAdminDeposits, useGetAuthMe,
   useGetCryptoCurrencies, useGetDepositMethods, useGetMyDeposits, useGetMyReferralSummary,
-  useReviewDeposit, useUpdateAdminDepositMethods,
+  useReviewDeposit,
   type AdminDeposit, type AdminRedeemCode, type Deposit,
 } from '@workspace/api-client-react';
 import { Link } from 'wouter';
@@ -378,7 +378,7 @@ export function ReferralsPage() {
   </PortalFrame>;
 }
 
-function AdminRedeemCodes() {
+export function AdminRedeemCodesPage() {
   const client = useQueryClient();
   const codesQuery = useGetAdminRedeemCodes({ query: { queryKey: getGetAdminRedeemCodesQueryKey() } });
   const createCode = useCreateAdminRedeemCode();
@@ -494,56 +494,16 @@ export function AdminDepositsPage() {
   const session = useGetAuthMe();
   const isAdmin = Boolean(session.data?.authenticated && session.data.user?.isDepositAdmin);
   const queue = useGetAdminDeposits({ query: { enabled: isAdmin, queryKey: getGetAdminDepositsQueryKey() } });
-  const methods = useGetAdminDepositMethods({ query: { enabled: isAdmin, queryKey: getGetAdminDepositMethodsQueryKey() } });
   const review = useReviewDeposit();
-  const saveMethods = useUpdateAdminDepositMethods();
   const client = useQueryClient();
-  const [cashAppHandle, setCashAppHandle] = useState('');
-  const [chimeHandle, setChimeHandle] = useState('');
-  const [applePayRecipient, setApplePayRecipient] = useState('');
-  const [venmoHandle, setVenmoHandle] = useState('');
-  const [cashAppEnabled, setCashAppEnabled] = useState(true);
-  const [chimeEnabled, setChimeEnabled] = useState(true);
-  const [applePayEnabled, setApplePayEnabled] = useState(true);
-  const [venmoEnabled, setVenmoEnabled] = useState(true);
-  const [nowPaymentsEnabled, setNowPaymentsEnabled] = useState(true);
-  const [minimumAmount, setMinimumAmount] = useState('15.00');
-  const [initialized, setInitialized] = useState(false);
-  const [settingsMessage, setSettingsMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
   const [reviewMessage, setReviewMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const [decidedIds, setDecidedIds] = useState<Set<string>>(() => new Set());
-  useEffect(() => {
-    if (!methods.data || initialized) return;
-    setCashAppHandle(methods.data.cashAppHandle ?? '');
-    setChimeHandle(methods.data.chimeHandle ?? '');
-    setApplePayRecipient(methods.data.applePayRecipient ?? '');
-    setVenmoHandle(methods.data.venmoHandle ?? '');
-    setCashAppEnabled(methods.data.cashAppEnabled);
-    setChimeEnabled(methods.data.chimeEnabled);
-    setApplePayEnabled(methods.data.applePayEnabled);
-    setVenmoEnabled(methods.data.venmoEnabled);
-    setNowPaymentsEnabled(methods.data.nowPaymentsEnabled);
-    setMinimumAmount((methods.data.minimumAmountCents / 100).toFixed(2));
-    setInitialized(true);
-  }, [methods.data, initialized]);
   if (session.isLoading) return <PortalFrame title="Deposit review"><LoadingBlock label="Checking administrator access" /></PortalFrame>;
   if (session.isError || !session.data?.authenticated || !session.data.user?.isDepositAdmin) {
     return <PortalFrame title="Deposit review"><div className="member-gate inline-gate"><ShieldCheck /><h1>Administrator access required</h1><p>This review area is limited to authorized deposit administrators.</p></div></PortalFrame>;
   }
-  const save = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault(); setSettingsMessage(null);
-    const minimumAmountCents = Math.round(Number(minimumAmount) * 100);
-    if (!Number.isFinite(minimumAmountCents) || minimumAmountCents < 100 || minimumAmountCents > 1_000_000) {
-      setSettingsMessage({ kind: 'error', text: 'Set a minimum deposit between $1.00 and $10,000.00.' });
-      return;
-    }
-     saveMethods.mutate({ data: { cashAppHandle: cashAppHandle.trim() || null, chimeHandle: chimeHandle.trim() || null, applePayRecipient: applePayRecipient.trim() || null, venmoHandle: venmoHandle.trim() || null, cashAppEnabled, chimeEnabled, applePayEnabled, venmoEnabled, nowPaymentsEnabled, minimumAmountCents } }, {
-      onSuccess: () => { setSettingsMessage({ kind: 'success', text: 'Deposit settings saved.' }); void client.invalidateQueries({ queryKey: getGetDepositMethodsQueryKey() }); void client.invalidateQueries({ queryKey: getGetAdminDepositMethodsQueryKey() }); },
-      onError: (error) => setSettingsMessage({ kind: 'error', text: errorText(error) }),
-    });
-  };
   const decide = (deposit: AdminDeposit, action: 'approve' | 'reject') => {
     if (action === 'reject' && rejecting !== deposit.id) { setRejecting(deposit.id); setReason(''); return; }
     if (action === 'reject' && !reason.trim()) { setReviewMessage({ kind: 'error', text: 'Add a reason before rejecting this request.' }); return; }
@@ -573,28 +533,5 @@ export function AdminDepositsPage() {
         {rejecting !== deposit.id && <div className="admin-request-actions"><button type="button" className="admin-action approve-action" onClick={() => decide(deposit, 'approve')} disabled={review.isPending} data-testid={`button-approve-deposit-${deposit.id}`}><Check /> Approve request</button><button type="button" className="admin-action reject-action" onClick={() => decide(deposit, 'reject')} disabled={review.isPending} data-testid={`button-reject-deposit-${deposit.id}`}>Reject</button></div>}
       </article>)}</div>}
     </section>
-    <section className="finance-panel settings-panel" aria-labelledby="recipient-settings-title">
-       <div className="panel-overline">Payment routing</div><h2 id="recipient-settings-title">Deposit settings</h2><p>Choose which payment methods members can use for new deposits, set manual transfer handles, and set the minimum deposit. The threshold applies to manual and cryptocurrency deposits.</p>
-      {methods.isLoading ? <LoadingBlock label="Loading recipient settings" /> : methods.isError ? <QueryError error={methods.error} retry={() => void methods.refetch()} /> : <form onSubmit={save} className="recipient-settings-form">
-         <fieldset className="payment-method-visibility">
-           <legend>Methods visible to members</legend>
-           <div className="payment-method-visibility-list">
-             <label className="payment-method-visibility-option" htmlFor="admin-cashapp-enabled"><input id="admin-cashapp-enabled" type="checkbox" checked={cashAppEnabled} onChange={(event) => setCashAppEnabled(event.target.checked)} data-testid="input-admin-cashapp-enabled" /><span><strong>Cash App</strong><small>Manual transfer</small></span><em>{cashAppEnabled ? 'Visible' : 'Hidden'}</em></label>
-             <label className="payment-method-visibility-option" htmlFor="admin-chime-enabled"><input id="admin-chime-enabled" type="checkbox" checked={chimeEnabled} onChange={(event) => setChimeEnabled(event.target.checked)} data-testid="input-admin-chime-enabled" /><span><strong>Chime</strong><small>Manual transfer</small></span><em>{chimeEnabled ? 'Visible' : 'Hidden'}</em></label>
-             <label className="payment-method-visibility-option" htmlFor="admin-applepay-enabled"><input id="admin-applepay-enabled" type="checkbox" checked={applePayEnabled} onChange={(event) => setApplePayEnabled(event.target.checked)} data-testid="input-admin-applepay-enabled" /><span><strong>Apple Pay</strong><small>Manual transfer</small></span><em>{applePayEnabled ? 'Visible' : 'Hidden'}</em></label>
-             <label className="payment-method-visibility-option" htmlFor="admin-venmo-enabled"><input id="admin-venmo-enabled" type="checkbox" checked={venmoEnabled} onChange={(event) => setVenmoEnabled(event.target.checked)} data-testid="input-admin-venmo-enabled" /><span><strong>Venmo</strong><small>Manual transfer</small></span><em>{venmoEnabled ? 'Visible' : 'Hidden'}</em></label>
-             <label className="payment-method-visibility-option" htmlFor="admin-nowpayments-enabled"><input id="admin-nowpayments-enabled" type="checkbox" checked={nowPaymentsEnabled} onChange={(event) => setNowPaymentsEnabled(event.target.checked)} data-testid="input-admin-nowpayments-enabled" /><span><strong>Cryptocurrency</strong><small>NOWPayments</small></span><em>{nowPaymentsEnabled ? 'Visible' : 'Hidden'}</em></label>
-           </div>
-         </fieldset>
-         <div><label className="finance-label" htmlFor="admin-cashapp">Cash App handle</label><input id="admin-cashapp" className="field-input" value={cashAppHandle} onChange={(event) => setCashAppHandle(event.target.value)} maxLength={100} placeholder="Enter Cash App handle" data-testid="input-admin-cashapp-handle" /></div>
-         <div><label className="finance-label" htmlFor="admin-chime">Chime handle</label><input id="admin-chime" className="field-input" value={chimeHandle} onChange={(event) => setChimeHandle(event.target.value)} maxLength={100} placeholder="Enter Chime handle" data-testid="input-admin-chime-handle" /></div>
-         <div><label className="finance-label" htmlFor="admin-applepay">Apple Pay recipient (email or phone)</label><input id="admin-applepay" className="field-input" value={applePayRecipient} onChange={(event) => setApplePayRecipient(event.target.value)} maxLength={100} placeholder="Enter Apple Pay recipient" data-testid="input-admin-applepay-recipient" /></div>
-         <div><label className="finance-label" htmlFor="admin-venmo">Venmo handle</label><input id="admin-venmo" className="field-input" value={venmoHandle} onChange={(event) => setVenmoHandle(event.target.value)} maxLength={100} placeholder="Enter Venmo handle" data-testid="input-admin-venmo-handle" /></div>
-        <div><label className="finance-label" htmlFor="admin-minimum-deposit">Minimum deposit (USD)</label><div className="amount-input-wrap"><span>$</span><input id="admin-minimum-deposit" type="number" min="1.00" max="10000.00" step="0.01" inputMode="decimal" value={minimumAmount} onChange={(event) => setMinimumAmount(event.target.value)} required data-testid="input-admin-minimum-deposit" /></div></div>
-        {settingsMessage && <Alert kind={settingsMessage.kind}>{settingsMessage.text}</Alert>}
-         <button className="primary-button settings-save" type="submit" disabled={saveMethods.isPending || methods.isLoading} data-testid="button-save-recipient-settings">{saveMethods.isPending ? 'Saving…' : <>Save payment settings <ArrowRight /></>}</button>
-      </form>}
-    </section>
-    <AdminRedeemCodes />
   </PortalFrame>;
 }

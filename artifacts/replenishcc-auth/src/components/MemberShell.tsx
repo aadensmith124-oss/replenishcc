@@ -3,11 +3,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   ChevronDown, ChevronRight, CircleDollarSign, ClipboardList, CreditCard, ExternalLink, FileText,
   Gift, Headphones, Home, LoaderCircle, LockKeyhole, LogOut, Menu, MessageSquare, Moon,
-  Package, Settings2, ShieldCheck, ShoppingBag, Sparkles, Sun, Trophy, WalletCards, X,
+  Package, RefreshCw, Settings2, ShieldCheck, ShoppingBag, Sparkles, Sun, Trophy, WalletCards, X,
 } from 'lucide-react';
 import {
-  getGetAuthMeQueryKey, getGetMyDepositsQueryKey, useGetMyDeposits, usePostAuthLogout,
-  type AuthMeResponse,
+  getGetAuthMeQueryKey, getGetMemberPageVisibilityQueryKey, getGetMyDepositsQueryKey,
+  useGetMemberPageVisibility, useGetMyDeposits, usePostAuthLogout, type AuthMeResponse,
 } from '@workspace/api-client-react';
 import { Link, useLocation } from 'wouter';
 import { Brand } from './Brand';
@@ -107,6 +107,13 @@ export function MemberShell({
       staleTime: 5 * 60_000,
     },
   });
+  const memberVisibility = useGetMemberPageVisibility({
+    query: {
+      queryKey: getGetMemberPageVisibilityQueryKey(),
+      enabled: Boolean(user),
+      staleTime: 30_000,
+    },
+  });
   const initials = user?.fullName.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'R';
   const isDepositPage = location === '/deposits' || location === '/my-deposits';
   const isBuyLogsPage = location === '/buy-logs' || location === '/license-products';
@@ -114,6 +121,23 @@ export function MemberShell({
   const isMyLogOrdersPage = location === '/my-log-orders' || location === '/orders/license-keys';
   const isMyCardOrdersPage = location === '/my-card-orders';
   const isSupportPage = location.startsWith('/support/') || location.startsWith('/admin/support/');
+  const visibilityKey = location === '/deposits' ? 'deposits'
+    : location === '/my-deposits' ? 'depositHistory'
+      : location === '/referrals' ? 'referrals'
+        : location === '/redeem-code' ? 'redeemCode'
+          : location === '/leaderboard' ? 'leaderboard'
+            : location === '/buy-logs' || location === '/license-products' ? 'buyLogs'
+              : location === '/buy-cards' ? 'buyCards'
+                : location === '/my-log-orders' || location === '/orders/license-keys' ? 'myLogOrders'
+                  : location === '/my-card-orders' ? 'myCardOrders'
+                    : location.startsWith('/support/') ? 'support'
+                      : location === '/account-management' ? 'accountManagement' : null;
+  const memberPageBlocked = Boolean(visibilityKey && ((memberVisibility.data && !memberVisibility.data.pages[visibilityKey]) || memberVisibility.isError));
+  const checkingMemberPage = Boolean(visibilityKey && user && memberVisibility.isLoading);
+  const showDepositNav = !memberVisibility.data || memberVisibility.data.pages.deposits || memberVisibility.data.pages.depositHistory;
+  const showShopNav = !memberVisibility.data || memberVisibility.data.pages.buyLogs || memberVisibility.data.pages.buyCards;
+  const showOrdersNav = !memberVisibility.data || memberVisibility.data.pages.myLogOrders || memberVisibility.data.pages.myCardOrders;
+  const showSupportNav = !memberVisibility.data || memberVisibility.data.pages.support;
 
   useEffect(() => {
     try {
@@ -226,44 +250,45 @@ export function MemberShell({
         <Link href="/dashboard" className={`nav-row nav-home${location === '/dashboard' ? ' active' : ''}`} aria-current={location === '/dashboard' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-dashboard-home">
           <Home aria-hidden="true" /><span>Home</span>
         </Link>
-        <div className="nav-section-label">Finance</div>
+        {showDepositNav && <><div className="nav-section-label">Finance</div>
         <button className={`nav-row nav-group${isDepositPage ? ' active' : ''}`} type="button" onClick={() => toggleGroup('financeDeposit')} aria-expanded={expanded.financeDeposit} data-testid="button-toggle-deposit">
           <WalletCards aria-hidden="true" /><span>Deposit</span><ChevronDown className={`nav-chevron${expanded.financeDeposit ? ' is-open' : ''}`} aria-hidden="true" />
         </button>
         {expanded.financeDeposit && <div className="nav-children">
-          <Link href="/deposits" className={`nav-row${location === '/deposits' ? ' active' : ''}`} aria-current={location === '/deposits' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-deposit-money"><CircleDollarSign aria-hidden="true" /><span>Deposit funds</span></Link>
-          <Link href="/my-deposits" className={`nav-row${location === '/my-deposits' ? ' active' : ''}`} aria-current={location === '/my-deposits' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-my-deposits"><FileText aria-hidden="true" /><span>Deposit history</span></Link>
-        </div>}
-        <Link href="/referrals" className={`nav-row${location === '/referrals' ? ' active' : ''}`} aria-current={location === '/referrals' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-referrals"><Gift aria-hidden="true" /><span>Referrals</span></Link>
+          {(!memberVisibility.data || memberVisibility.data.pages.deposits) && <Link href="/deposits" className={`nav-row${location === '/deposits' ? ' active' : ''}`} aria-current={location === '/deposits' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-deposit-money"><CircleDollarSign aria-hidden="true" /><span>Deposit funds</span></Link>}
+          {(!memberVisibility.data || memberVisibility.data.pages.depositHistory) && <Link href="/my-deposits" className={`nav-row${location === '/my-deposits' ? ' active' : ''}`} aria-current={location === '/my-deposits' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-my-deposits"><FileText aria-hidden="true" /><span>Deposit history</span></Link>}
+        </div>}</>}
+        {(!memberVisibility.data || memberVisibility.data.pages.referrals) && <Link href="/referrals" className={`nav-row${location === '/referrals' ? ' active' : ''}`} aria-current={location === '/referrals' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-referrals"><Gift aria-hidden="true" /><span>Referrals</span></Link>}
         {user?.isDepositAdmin && <Link href="/admin/dashboard" className={`nav-row${location.startsWith('/admin/') ? ' active' : ''}`} aria-current={location.startsWith('/admin/') ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-admin-dashboard"><ShieldCheck aria-hidden="true" /><span>Admin Dashboard</span></Link>}
-        <Link href="/redeem-code" className={`nav-row${location === '/redeem-code' ? ' active' : ''}`} aria-current={location === '/redeem-code' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-redeem-code"><Gift aria-hidden="true" /><span>Redeem Code</span></Link>
-        <Link href="/leaderboard" className={`nav-row${location === '/leaderboard' ? ' active' : ''}`} aria-current={location === '/leaderboard' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-leaderboard"><Trophy aria-hidden="true" /><span>Leaderboard</span></Link>
-        <div className="nav-section-label">Shopping</div>
+        {(!memberVisibility.data || memberVisibility.data.pages.redeemCode) && <Link href="/redeem-code" className={`nav-row${location === '/redeem-code' ? ' active' : ''}`} aria-current={location === '/redeem-code' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-redeem-code"><Gift aria-hidden="true" /><span>Redeem Code</span></Link>}
+        {(!memberVisibility.data || memberVisibility.data.pages.leaderboard) && <Link href="/leaderboard" className={`nav-row${location === '/leaderboard' ? ' active' : ''}`} aria-current={location === '/leaderboard' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-leaderboard"><Trophy aria-hidden="true" /><span>Leaderboard</span></Link>}
+        {showShopNav && <><div className="nav-section-label">Shopping</div>
         <button className={`nav-row nav-group${isBuyLogsPage || isBuyCardsPage ? ' active' : ''}`} type="button" onClick={() => toggleGroup('shop')} aria-expanded={expanded.shop} data-testid="button-toggle-shop">
           <ShoppingBag aria-hidden="true" /><span>Shop</span><ChevronDown className={`nav-chevron${expanded.shop ? ' is-open' : ''}`} aria-hidden="true" />
         </button>
         {expanded.shop && <div className="nav-children">
-          <Link href="/buy-logs" className={`nav-row${isBuyLogsPage ? ' active' : ''}`} aria-current={isBuyLogsPage ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-buy-logs"><ClipboardList aria-hidden="true" /><span>Buy Logs</span></Link>
-          <Link href="/buy-cards" className={`nav-row${location === '/buy-cards' ? ' active' : ''}`} aria-current={location === '/buy-cards' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-buy-cards"><CreditCard aria-hidden="true" /><span>Buy Cards</span></Link>
+          {(!memberVisibility.data || memberVisibility.data.pages.buyLogs) && <Link href="/buy-logs" className={`nav-row${isBuyLogsPage ? ' active' : ''}`} aria-current={isBuyLogsPage ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-buy-logs"><ClipboardList aria-hidden="true" /><span>Buy Logs</span></Link>}
+          {(!memberVisibility.data || memberVisibility.data.pages.buyCards) && <Link href="/buy-cards" className={`nav-row${location === '/buy-cards' ? ' active' : ''}`} aria-current={location === '/buy-cards' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-buy-cards"><CreditCard aria-hidden="true" /><span>Buy Cards</span></Link>}
           <a href="https://t.me/CardVenomBot" className="nav-row" target="_blank" rel="noopener noreferrer" onClick={closeMobileNav} data-testid="link-cc-checker"><ExternalLink aria-hidden="true" /><span>CC Checker</span></a>
-        </div>}
+        </div>}</>}
+        {showOrdersNav && <>
         <button className={`nav-row nav-group${isMyLogOrdersPage || isMyCardOrdersPage ? ' active' : ''}`} type="button" onClick={() => toggleGroup('orders')} aria-expanded={expanded.orders} data-testid="button-toggle-orders">
           <Package aria-hidden="true" /><span>My Orders</span><ChevronDown className={`nav-chevron${expanded.orders ? ' is-open' : ''}`} aria-hidden="true" />
         </button>
         {expanded.orders && <div className="nav-children">
-          <Link href="/my-log-orders" className={`nav-row${isMyLogOrdersPage ? ' active' : ''}`} aria-current={isMyLogOrdersPage ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-my-log-orders"><ClipboardList aria-hidden="true" /><span>My Log Orders</span></Link>
-          <Link href="/my-card-orders" className={`nav-row${location === '/my-card-orders' ? ' active' : ''}`} aria-current={location === '/my-card-orders' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-my-card-orders"><CreditCard aria-hidden="true" /><span>My Card Orders</span></Link>
-        </div>}
-        <div className="nav-section-label">Support</div>
+          {(!memberVisibility.data || memberVisibility.data.pages.myLogOrders) && <Link href="/my-log-orders" className={`nav-row${isMyLogOrdersPage ? ' active' : ''}`} aria-current={isMyLogOrdersPage ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-my-log-orders"><ClipboardList aria-hidden="true" /><span>My Log Orders</span></Link>}
+          {(!memberVisibility.data || memberVisibility.data.pages.myCardOrders) && <Link href="/my-card-orders" className={`nav-row${location === '/my-card-orders' ? ' active' : ''}`} aria-current={location === '/my-card-orders' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-my-card-orders"><CreditCard aria-hidden="true" /><span>My Card Orders</span></Link>}
+        </div>}</>}
+        {showSupportNav && <><div className="nav-section-label">Support</div>
         <button className={`nav-row nav-group${isSupportPage ? ' active' : ''}`} type="button" onClick={() => toggleGroup('support')} aria-expanded={expanded.support} data-testid="button-toggle-support">
           <Headphones aria-hidden="true" /><span>Support</span><ChevronDown className={`nav-chevron${expanded.support ? ' is-open' : ''}`} aria-hidden="true" />
         </button>
         {expanded.support && <div className="nav-children">
           <Link href="/support/tickets" className={`nav-row${location === '/support/tickets' ? ' active' : ''}`} aria-current={location === '/support/tickets' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-my-support-tickets"><MessageSquare aria-hidden="true" /><span>My Tickets</span></Link>
           <Link href="/support/create" className={`nav-row${location === '/support/create' ? ' active' : ''}`} aria-current={location === '/support/create' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-create-support-ticket"><MessageSquare aria-hidden="true" /><span>Create Ticket</span></Link>
-        </div>}
-        <div className="nav-section-label">Settings</div>
-        <Link href="/account-management" className={`nav-row${location === '/account-management' ? ' active' : ''}`} aria-current={location === '/account-management' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-account-management"><Settings2 aria-hidden="true" /><span>Account management</span></Link>
+        </div>}</>}
+        {(!memberVisibility.data || memberVisibility.data.pages.accountManagement) && <><div className="nav-section-label">Settings</div>
+        <Link href="/account-management" className={`nav-row${location === '/account-management' ? ' active' : ''}`} aria-current={location === '/account-management' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-account-management"><Settings2 aria-hidden="true" /><span>Account management</span></Link></>}
       </nav>
       <div className="sidebar-foot">
         {user ? (
@@ -374,7 +399,10 @@ export function MemberShell({
             </div>
           </div>
         </header>
-        <div className={`member-content fade-in${contentClassName ? ` ${contentClassName}` : ''}`}>{children}</div>
+        <div className={`member-content fade-in${contentClassName ? ` ${contentClassName}` : ''}`}>
+          {checkingMemberPage ? <section className="member-page-unavailable" aria-busy="true"><span className="section-kicker">Checking access</span><div className="skeleton" style={{ width: '58%', height: 35, marginTop: 14 }} /><div className="skeleton" style={{ width: '78%', marginTop: 12 }} /></section>
+            : memberPageBlocked ? <section className="member-page-unavailable" role="status" data-testid="status-member-page-unavailable"><ShieldCheck /><span className="section-kicker">Access unavailable</span><h1>This page is currently unavailable.</h1><p>{memberVisibility.isError ? 'Page availability could not be confirmed. Please retry or return to your dashboard.' : 'An administrator has disabled this member destination. If you need access, contact support.'}</p>{memberVisibility.isError && <button type="button" className="quiet-button" onClick={() => void memberVisibility.refetch()} disabled={memberVisibility.isFetching}><RefreshCw className={memberVisibility.isFetching ? 'spin' : ''} /> Retry access check</button>}</section> : children}
+        </div>
         <SiteFooter />
         <TelegramAnnouncementPopup key={user.id} userId={user.id} />
       </main>

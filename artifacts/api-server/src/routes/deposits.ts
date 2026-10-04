@@ -35,6 +35,10 @@ import {
 } from "@workspace/db";
 import { createRateLimit } from "../middlewares/rate-limit";
 import { getCurrentUser, isDepositAdmin } from "../lib/auth";
+import {
+  isMemberPageEnabled,
+  requireMemberPage,
+} from "../lib/member-page-visibility";
 
 const router: IRouter = Router();
 const MAXIMUM_AMOUNT_CENTS = 1_000_000;
@@ -253,7 +257,7 @@ async function ensureReferralCode(
   throw new Error("A referral code could not be assigned.");
 }
 
-router.get("/deposits/methods", async (req, res): Promise<void> => {
+router.get("/deposits/methods", requireMemberPage("deposits"), async (req, res): Promise<void> => {
   const user = await getCurrentUser(req);
   if (!user) {
     res.status(401).json({ error: "Sign in to view deposit methods." });
@@ -287,11 +291,15 @@ router.get("/deposits/me", async (req, res): Promise<void> => {
   }
 
   const [deposits, balanceResult] = await Promise.all([
-    db
-      .select()
-      .from(depositsTable)
-      .where(eq(depositsTable.userId, user.id))
-      .orderBy(desc(depositsTable.createdAt)),
+    isMemberPageEnabled("depositHistory").then((visible) =>
+      visible
+        ? db
+            .select()
+            .from(depositsTable)
+            .where(eq(depositsTable.userId, user.id))
+            .orderBy(desc(depositsTable.createdAt))
+        : [],
+    ),
     db
       .select({ balanceCents: sum(accountLedgerTable.amountCents) })
       .from(accountLedgerTable)
@@ -308,6 +316,7 @@ router.get("/deposits/me", async (req, res): Promise<void> => {
 
 router.post(
   "/deposits/manual",
+  requireMemberPage("deposits"),
   createManualDepositLimit,
   async (req, res): Promise<void> => {
     const user = await getCurrentUser(req);
@@ -378,6 +387,7 @@ router.post(
 
 router.get(
   "/deposits/crypto/currencies",
+  requireMemberPage("deposits"),
   async (req, res): Promise<void> => {
     const user = await getCurrentUser(req);
     if (!user) {
@@ -413,6 +423,7 @@ router.get(
 
 router.post(
   "/deposits/crypto",
+  requireMemberPage("deposits"),
   createCryptoDepositLimit,
   async (req, res): Promise<void> => {
     const user = await getCurrentUser(req);
@@ -703,7 +714,7 @@ router.post(
   },
 );
 
-router.get("/referrals/me", async (req, res): Promise<void> => {
+router.get("/referrals/me", requireMemberPage("referrals"), async (req, res): Promise<void> => {
   const user = await getCurrentUser(req);
   if (!user) {
     res.status(401).json({ error: "Sign in to view your referral summary." });

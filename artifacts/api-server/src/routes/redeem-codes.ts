@@ -16,6 +16,7 @@ import {
   usersTable,
 } from "@workspace/db";
 import { getCurrentUser, isDepositAdmin } from "../lib/auth";
+import { requireMemberPage } from "../lib/member-page-visibility";
 import { createRateLimit } from "../middlewares/rate-limit";
 
 const router: IRouter = Router();
@@ -211,6 +212,7 @@ router.post(
 
 router.post(
   "/redeem-codes/redeem",
+  requireMemberPage("redeemCode"),
   redeemCodeRateLimit,
   async (req, res): Promise<void> => {
     const user = await getCurrentUser(req);

@@ -32,6 +32,7 @@ import {
   usersTable,
 } from "@workspace/db";
 import { getCurrentUser, isDepositAdmin } from "../lib/auth";
+import { requireMemberPage } from "../lib/member-page-visibility";
 import {
   decryptGiftCardCredential,
   encryptGiftCardCredential,
@@ -411,7 +412,7 @@ async function lookupBinMetadataForPrefixes(
   return results;
 }
 
-router.get("/gift-card-products", async (req, res): Promise<void> => {
+router.get("/gift-card-products", requireMemberPage("buyCards"), async (req, res): Promise<void> => {
   const user = await getCurrentUser(req);
   if (!user) {
     res.status(401).json({ error: "Sign in to browse gift cards." });
@@ -421,7 +422,7 @@ router.get("/gift-card-products", async (req, res): Promise<void> => {
   res.json(GetGiftCardProductsResponse.parse({ products }));
 });
 
-router.get("/orders/gift-cards", async (req, res): Promise<void> => {
+router.get("/orders/gift-cards", requireMemberPage("myCardOrders"), async (req, res): Promise<void> => {
   const user = await getCurrentUser(req);
   if (!user) {
     res.status(401).json({ error: "Sign in to view your gift-card orders." });
@@ -540,7 +541,7 @@ router.get("/orders/gift-cards", async (req, res): Promise<void> => {
   );
 });
 
-router.post("/orders/gift-cards", async (req, res): Promise<void> => {
+router.post("/orders/gift-cards", requireMemberPage("buyCards"), async (req, res): Promise<void> => {
   const user = await getCurrentUser(req);
   if (!user) {
     res.status(401).json({ error: "Sign in to purchase a gift card." });
@@ -719,7 +720,7 @@ router.post("/orders/gift-cards", async (req, res): Promise<void> => {
     );
 });
 
-router.post("/orders/gift-cards/bulk", async (req, res): Promise<void> => {
+router.post("/orders/gift-cards/bulk", requireMemberPage("buyCards"), async (req, res): Promise<void> => {
   const user = await getCurrentUser(req);
   if (!user) {
     res.status(401).json({ error: "Sign in to purchase gift cards." });

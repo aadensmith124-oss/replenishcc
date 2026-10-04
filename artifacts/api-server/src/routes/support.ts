@@ -32,9 +32,11 @@ import {
   type SupportTicketRefundRecord,
 } from "@workspace/db";
 import { getCurrentUser, isDepositAdmin } from "../lib/auth";
+import { requireMemberPage } from "../lib/member-page-visibility";
 import { createRateLimit } from "../middlewares/rate-limit";
 
 const router: IRouter = Router();
+router.use(requireMemberPage("support"));
 const createTicketLimit = createRateLimit(
   5,
   60 * 60 * 1000,

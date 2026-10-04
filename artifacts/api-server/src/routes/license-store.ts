@@ -28,6 +28,7 @@ import {
 } from "@workspace/db";
 import { decryptLicenseKey, encryptLicenseKey } from "../lib/license-keys";
 import { getCurrentUser, isDepositAdmin } from "../lib/auth";
+import { requireMemberPage } from "../lib/member-page-visibility";
 
 const router: IRouter = Router();
 
@@ -63,7 +64,7 @@ async function listProducts(admin: boolean) {
     }));
 }
 
-router.get("/license-products", async (req, res): Promise<void> => {
+router.get("/license-products", requireMemberPage("buyLogs"), async (req, res): Promise<void> => {
   const user = await getCurrentUser(req);
   if (!user) {
     res.status(401).json({ error: "Sign in to browse log products." });
@@ -74,7 +75,7 @@ router.get("/license-products", async (req, res): Promise<void> => {
   res.json(GetLicenseProductsResponse.parse({ products }));
 });
 
-router.get("/orders/license-keys", async (req, res): Promise<void> => {
+router.get("/orders/license-keys", requireMemberPage("myLogOrders"), async (req, res): Promise<void> => {
   const user = await getCurrentUser(req);
   if (!user) {
     res.status(401).json({ error: "Sign in to view your orders." });
@@ -128,7 +129,7 @@ router.get("/orders/license-keys", async (req, res): Promise<void> => {
   );
 });
 
-router.post("/orders/license-keys", async (req, res): Promise<void> => {
+router.post("/orders/license-keys", requireMemberPage("buyLogs"), async (req, res): Promise<void> => {
   const user = await getCurrentUser(req);
   if (!user) {
     res.status(401).json({ error: "Sign in to buy a log." });

@@ -3,6 +3,7 @@ import { Router, type IRouter } from "express";
 import { GetWeeklyLeaderboardResponse } from "@workspace/api-zod";
 import { db, depositsTable, usersTable } from "@workspace/db";
 import { getCurrentUser } from "../lib/auth";
+import { requireMemberPage } from "../lib/member-page-visibility";
 
 const router: IRouter = Router();
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -31,7 +32,7 @@ function maskEmail(email: string): string {
   return `${visiblePrefix}***@${domain}`;
 }
 
-router.get("/leaderboard/weekly", async (req, res): Promise<void> => {
+router.get("/leaderboard/weekly", requireMemberPage("leaderboard"), async (req, res): Promise<void> => {
   const user = await getCurrentUser(req);
   if (!user) {
     res.status(401).json({ error: "Sign in to view the leaderboard." });

@@ -26,9 +26,11 @@ import {
   isDepositAdmin,
   SESSION_COOKIE_NAME,
 } from "../lib/auth";
+import { requireMemberPage } from "../lib/member-page-visibility";
 import { createRateLimit } from "../middlewares/rate-limit";
 
 const router: IRouter = Router();
+router.use(requireMemberPage("accountManagement"));
 const passwordChangeLimit = createRateLimit(
   5,
   15 * 60 * 1000,
