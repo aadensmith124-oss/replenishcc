@@ -952,6 +952,7 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .gift-catalog-product { display:flex; align-items:center; min-width:145px; }
 .gift-catalog-product > div { display:grid; gap:4px; }
 .gift-catalog-product strong { color:#e7e8df; font-size:12px; font-weight:600; }
+.gift-catalog-product small { color:#969e94; font-size:9px; }
 .gift-catalog-description { min-width:160px; max-width:360px; color:#969e94 !important; font-size:10px !important; line-height:1.5; }
 .gift-catalog-face { color:#e6e6dc !important; font:600 14px var(--app-font-serif); font-variant-numeric:tabular-nums; white-space:nowrap; }
 .gift-catalog-price { color:#dfcf7d !important; font:600 14px var(--app-font-serif); font-variant-numeric:tabular-nums; white-space:nowrap; }

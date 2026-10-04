@@ -18,6 +18,7 @@ import {
   RestoreAdminGiftCardProductParams,
   UpdateAdminGiftCardProductMetadataBody,
   UpdateAdminGiftCardProductMetadataParams,
+  type AvailableGiftCardLocation,
   type GiftCardPublicLocation,
 } from "@workspace/api-zod";
 import {
@@ -65,14 +66,17 @@ async function listProducts({
       priceCents: giftCardProductsTable.priceCents,
       isArchived: giftCardProductsTable.isArchived,
       availableCount,
-      availableCardLocations: sql<GiftCardPublicLocation[]>`
+      availableCardLocations: sql<AvailableGiftCardLocation[]>`
         COALESCE(
           json_agg(
             json_build_object(
+              'inventoryId', ${giftCardInventoryTable.id},
               'address', COALESCE(${giftCardInventoryTable.publicAddress}, ${giftCardProductsTable.address}),
               'city', COALESCE(${giftCardInventoryTable.publicCity}, ${giftCardProductsTable.city}),
               'state', COALESCE(${giftCardInventoryTable.publicState}, ${giftCardProductsTable.state}),
-              'regionZip', COALESCE(${giftCardInventoryTable.publicRegionZip}, ${giftCardProductsTable.regionZip})
+              'regionZip', COALESCE(${giftCardInventoryTable.publicRegionZip}, ${giftCardProductsTable.regionZip}),
+              'hasEmail', ${giftCardInventoryTable.hasEmail},
+              'hasPhone', ${giftCardInventoryTable.hasPhone}
             )
             ORDER BY ${giftCardInventoryTable.createdAt}, ${giftCardInventoryTable.id}
           ) FILTER (WHERE ${giftCardInventoryTable.id} IS NOT NULL),
@@ -342,12 +346,21 @@ router.post("/orders/gift-cards", async (req, res): Promise<void> => {
       .for("update")
       .limit(1);
 
+    const [inventoryReference] = await tx
+      .select({ productId: giftCardInventoryTable.productId })
+      .from(giftCardInventoryTable)
+      .where(eq(giftCardInventoryTable.id, parsed.data.inventoryId))
+      .limit(1);
+    if (!inventoryReference || inventoryReference.productId !== parsed.data.productId) {
+      return { kind: "missing" as const };
+    }
+
     const [product] = await tx
       .select()
       .from(giftCardProductsTable)
       .where(
         and(
-          eq(giftCardProductsTable.id, parsed.data.productId),
+          eq(giftCardProductsTable.id, inventoryReference.productId),
           eq(giftCardProductsTable.isArchived, false),
         ),
       )
@@ -355,7 +368,7 @@ router.post("/orders/gift-cards", async (req, res): Promise<void> => {
       .limit(1);
     if (!product) return { kind: "missing" as const };
 
-    const totalCents = product.priceCents * parsed.data.quantity;
+    const totalCents = product.priceCents;
     const [balanceRow] = await tx
       .select({ balanceCents: sum(accountLedgerTable.amountCents) })
       .from(accountLedgerTable)
@@ -365,20 +378,20 @@ router.post("/orders/gift-cards", async (req, res): Promise<void> => {
       return { kind: "balance" as const };
     }
 
-    const stock = await tx
+    const [stock] = await tx
       .select()
       .from(giftCardInventoryTable)
       .where(
         and(
+          eq(giftCardInventoryTable.id, parsed.data.inventoryId),
           eq(giftCardInventoryTable.productId, product.id),
           eq(giftCardInventoryTable.status, "available"),
           isNull(giftCardInventoryTable.orderId),
         ),
       )
-      .orderBy(giftCardInventoryTable.createdAt)
-      .limit(parsed.data.quantity)
+      .limit(1)
       .for("update", { skipLocked: true });
-    if (stock.length < parsed.data.quantity) {
+    if (!stock) {
       return { kind: "stock" as const };
     }
 
@@ -390,7 +403,7 @@ router.post("/orders/gift-cards", async (req, res): Promise<void> => {
         productName: product.name,
         description: product.description,
         faceValueCents: product.faceValueCents,
-        quantity: parsed.data.quantity,
+        quantity: 1,
         unitPriceCents: product.priceCents,
         totalCents,
       })
@@ -400,12 +413,7 @@ router.post("/orders/gift-cards", async (req, res): Promise<void> => {
     await tx
       .update(giftCardInventoryTable)
       .set({ status: "sold", orderId: order.id, soldAt: order.createdAt })
-      .where(
-        inArray(
-          giftCardInventoryTable.id,
-          stock.map((item) => item.id),
-        ),
-      );
+      .where(eq(giftCardInventoryTable.id, stock.id));
 
     if (totalCents > 0) {
       await tx.insert(accountLedgerTable).values({
@@ -432,15 +440,15 @@ router.post("/orders/gift-cards", async (req, res): Promise<void> => {
         quantity: order.quantity,
         unitPriceCents: order.unitPriceCents,
         totalCents: order.totalCents,
-        deliveredCards: stock.map((item) => ({
-          ...decryptGiftCardCredential(item),
+        deliveredCards: [{
+          ...decryptGiftCardCredential(stock),
           publicLocation: {
-            address: item.publicAddress ?? product.address,
-            city: item.publicCity ?? product.city,
-            state: item.publicState ?? product.state,
-            regionZip: item.publicRegionZip ?? product.regionZip,
+            address: stock.publicAddress ?? product.address,
+            city: stock.publicCity ?? product.city,
+            state: stock.publicState ?? product.state,
+            regionZip: stock.publicRegionZip ?? product.regionZip,
           },
-        })),
+        }],
         createdAt: order.createdAt.toISOString(),
       },
     };
@@ -481,12 +489,12 @@ router.post("/orders/gift-cards/bulk", async (req, res): Promise<void> => {
   }
 
   const parsed = BulkPurchaseGiftCardsBody.safeParse(req.body);
-  if (!parsed.success || new Set(parsed.data?.productIds ?? []).size !== parsed.data?.productIds.length) {
-    res.status(400).json({ error: "Choose one or more different gift-card listings." });
+  if (!parsed.success || new Set(parsed.data?.inventoryIds ?? []).size !== parsed.data?.inventoryIds.length) {
+    res.status(400).json({ error: "Choose one or more different available cards." });
     return;
   }
 
-  const productIds = parsed.data.productIds;
+  const inventoryIds = parsed.data.inventoryIds;
   const result = await db.transaction(async (tx) => {
     await tx
       .select({ id: usersTable.id })
@@ -494,6 +502,23 @@ router.post("/orders/gift-cards/bulk", async (req, res): Promise<void> => {
       .where(eq(usersTable.id, user.id))
       .for("update")
       .limit(1);
+
+    const selectedStockRefs = await tx
+      .select({
+        id: giftCardInventoryTable.id,
+        productId: giftCardInventoryTable.productId,
+      })
+      .from(giftCardInventoryTable)
+      .where(inArray(giftCardInventoryTable.id, inventoryIds))
+      .orderBy(giftCardInventoryTable.id);
+    if (selectedStockRefs.length !== inventoryIds.length) {
+      return { kind: "missing" as const };
+    }
+
+    const productIds = selectedStockRefs.map((stock) => stock.productId);
+    if (new Set(productIds).size !== productIds.length) {
+      return { kind: "duplicate-base" as const };
+    }
 
     const selectedProducts = await tx
       .select()
@@ -511,8 +536,32 @@ router.post("/orders/gift-cards/bulk", async (req, res): Promise<void> => {
     }
 
     const productsById = new Map(selectedProducts.map((product) => [product.id, product]));
-    const purchaseProducts = productIds.map((productId) => productsById.get(productId)!);
-    const totalCents = purchaseProducts.reduce((total, product) => total + product.priceCents, 0);
+    const stockRows = await tx
+      .select()
+      .from(giftCardInventoryTable)
+      .where(
+        and(
+          inArray(giftCardInventoryTable.id, inventoryIds),
+          eq(giftCardInventoryTable.status, "available"),
+          isNull(giftCardInventoryTable.orderId),
+        ),
+      )
+      .orderBy(giftCardInventoryTable.id)
+      .for("update", { skipLocked: true });
+    if (
+      stockRows.length !== inventoryIds.length
+      || selectedStockRefs.some((reference) => (
+        stockRows.find((stock) => stock.id === reference.id)?.productId !== reference.productId
+      ))
+    ) {
+      return { kind: "stock" as const };
+    }
+
+    const stockById = new Map(stockRows.map((stock) => [stock.id, stock]));
+    const totalCents = selectedStockRefs.reduce(
+      (total, stock) => total + productsById.get(stock.productId)!.priceCents,
+      0,
+    );
     const [balanceRow] = await tx
       .select({ balanceCents: sum(accountLedgerTable.amountCents) })
       .from(accountLedgerTable)
@@ -522,29 +571,11 @@ router.post("/orders/gift-cards/bulk", async (req, res): Promise<void> => {
       return { kind: "balance" as const };
     }
 
-    const stockByProduct = new Map<string, (typeof giftCardInventoryTable.$inferSelect)>();
-    for (const productId of [...productIds].sort()) {
-      const [stock] = await tx
-        .select()
-        .from(giftCardInventoryTable)
-        .where(
-          and(
-            eq(giftCardInventoryTable.productId, productId),
-            eq(giftCardInventoryTable.status, "available"),
-            isNull(giftCardInventoryTable.orderId),
-          ),
-        )
-        .orderBy(giftCardInventoryTable.createdAt)
-        .limit(1)
-        .for("update", { skipLocked: true });
-      if (!stock) return { kind: "stock" as const };
-      stockByProduct.set(productId, stock);
-    }
-
     const orders = [];
-    for (const product of purchaseProducts) {
-      const stock = stockByProduct.get(product.id);
-      if (!stock) throw new Error("Selected gift-card stock was not locked.");
+    for (const reference of selectedStockRefs) {
+      const product = productsById.get(reference.productId);
+      const stock = stockById.get(reference.id);
+      if (!product || !stock) throw new Error("Selected gift-card stock was not locked.");
 
       const [order] = await tx
         .insert(giftCardOrdersTable)
@@ -598,6 +629,10 @@ router.post("/orders/gift-cards/bulk", async (req, res): Promise<void> => {
 
   if (result.kind === "missing") {
     res.status(404).json({ error: "One or more selected listings are no longer available." });
+    return;
+  }
+  if (result.kind === "duplicate-base") {
+    res.status(400).json({ error: "Choose no more than one card from each base." });
     return;
   }
   if (result.kind === "balance") {

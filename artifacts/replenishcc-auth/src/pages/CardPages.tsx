@@ -40,7 +40,7 @@ const baseSchema = z.object({
 });
 type BaseForm = z.infer<typeof baseSchema>;
 
-type CatalogColumn = 'state' | 'city' | 'regionZip' | 'cardType' | 'issuer' | 'brand' | 'price' | 'actions';
+type CatalogColumn = 'address' | 'state' | 'city' | 'regionZip' | 'cardType' | 'issuer' | 'brand' | 'price' | 'actions';
 type CatalogPriceFilter = 'all' | 'under-25' | '25-50' | '50-100' | '100-plus';
 type CatalogPresenceFilter = 'all' | 'yes' | 'no';
 type CatalogFilters = {
@@ -56,33 +56,29 @@ type CatalogFilters = {
   price: CatalogPriceFilter;
 };
 type PublicCardLocation = {
+  inventoryId: string;
   address: string;
   city: string;
   state: string;
   regionZip: string | null;
+  hasEmail: boolean;
+  hasPhone: boolean;
 };
-type ProductWithCardLocations = PublicCardLocation & {
+type ProductWithCardLocations = {
+  id: string;
+  name: string;
+  description: string;
+  brand: string;
+  cardType: string;
+  issuer: string;
+  priceCents: number;
+  hasEmail: boolean;
+  hasPhone: boolean;
   availableCardLocations: PublicCardLocation[];
 };
 
 function locationsForProduct(product: ProductWithCardLocations): PublicCardLocation[] {
-  return product.availableCardLocations.length > 0
-    ? product.availableCardLocations
-    : [{
-      address: product.address,
-      city: product.city,
-      state: product.state,
-      regionZip: product.regionZip,
-    }];
-}
-
-function productLocationValue(
-  product: ProductWithCardLocations,
-  field: 'city' | 'state' | 'regionZip',
-) {
-  const values = locationsForProduct(product).map((location) => (location[field] ?? '').trim());
-  if (new Set(values.map((value) => value.toLocaleLowerCase())).size > 1) return 'Varies';
-  return values[0] || '—';
+  return product.availableCardLocations;
 }
 
 const emptyCatalogFilters: CatalogFilters = {
@@ -93,17 +89,19 @@ const catalogColumns: { id: CatalogColumn; label: string }[] = [
   { id: 'brand', label: 'Brand' },
   { id: 'cardType', label: 'Type' },
   { id: 'issuer', label: 'Issuer' },
+  { id: 'address', label: 'Address' },
   { id: 'city', label: 'City' },
   { id: 'state', label: 'State' },
   { id: 'regionZip', label: 'ZIP' },
   { id: 'price', label: 'Price' },
   { id: 'actions', label: 'Actions' },
 ];
-const catalogColumnStorageKey = 'replenishcc-card-catalog-columns-v5';
-const previousCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v4';
-const legacyCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v3';
-const olderCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v2';
-const oldestCatalogColumnStorageKey = 'replenishcc-card-catalog-columns';
+const catalogColumnStorageKey = 'replenishcc-card-catalog-columns-v6';
+const previousCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v5';
+const legacyCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v4';
+const olderCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v3';
+const oldestCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v2';
+const originalCatalogColumnStorageKey = 'replenishcc-card-catalog-columns';
 const defaultCatalogColumns = catalogColumns.map((column) => column.id);
 
 function matchesCatalogPrice(priceCents: number, filter: CatalogPriceFilter) {
@@ -123,12 +121,13 @@ function readCatalogColumns(): CatalogColumn[] {
       ?? window.localStorage.getItem(previousCatalogColumnStorageKey)
       ?? window.localStorage.getItem(legacyCatalogColumnStorageKey)
       ?? window.localStorage.getItem(olderCatalogColumnStorageKey)
-      ?? window.localStorage.getItem(oldestCatalogColumnStorageKey);
+      ?? window.localStorage.getItem(oldestCatalogColumnStorageKey)
+      ?? window.localStorage.getItem(originalCatalogColumnStorageKey);
     if (preferenceValue === null) return defaultCatalogColumns;
     const parsed: unknown = JSON.parse(preferenceValue);
     if (!Array.isArray(parsed)) return defaultCatalogColumns;
     const newMetadataColumns: CatalogColumn[] = migratingPreferences
-      ? ['state', 'city', 'regionZip', 'cardType', 'issuer', 'brand', 'actions']
+      ? ['address', 'state', 'city', 'regionZip', 'cardType', 'issuer', 'brand', 'actions']
       : [];
     return catalogColumns.filter((column) => parsed.includes(column.id) || newMetadataColumns.includes(column.id)).map((column) => column.id);
   } catch {
@@ -161,6 +160,18 @@ export function BuyCardsPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<CatalogColumn[]>(readCatalogColumns);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const availableCardRows = useMemo(
+    () => products.flatMap((product) => locationsForProduct(product).map((card, index) => ({
+      product,
+      card,
+      cardNumber: index + 1,
+    }))),
+    [products],
+  );
+  const cardRowByInventoryId = useMemo(
+    () => new Map(availableCardRows.map((row) => [row.card.inventoryId, row])),
+    [availableCardRows],
+  );
   const infoProduct = products.find((product) => product.id === infoProductId) ?? null;
   const cardInfoFacts = infoProduct ? [
     { label: 'Brand', value: infoProduct.brand || 'Not specified' },
@@ -181,9 +192,9 @@ export function BuyCardsPage() {
     },
     { label: 'Phone number', available: infoProduct.hasPhone, testId: `text-card-info-phone-${infoProduct.id}` },
   ] : [];
-  const purchaseOne = (productId: string) => {
+  const purchaseOne = (productId: string, inventoryId: string) => {
     setNotice('');
-    purchase.mutate({ data: { productId, quantity: 1 } }, {
+    purchase.mutate({ data: { productId, inventoryId, quantity: 1 } }, {
       onSuccess: (result) => {
         setNotice(`${result.order.quantity} ${result.order.productName} card purchased for ${money(result.order.totalCents)}.`);
         void queryClient.invalidateQueries({ queryKey: getGetGiftCardProductsQueryKey() });
@@ -195,6 +206,33 @@ export function BuyCardsPage() {
     });
   };
   const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filterCardRows = (source: typeof availableCardRows, filters: CatalogFilters) => source.filter(({ product, card }) => {
+    const exactMatch = (value: string, selection: string) => !selection || value.trim().toLocaleLowerCase() === selection.toLocaleLowerCase();
+    const presenceMatch = (value: boolean, selection: CatalogPresenceFilter) => selection === 'all' || (selection === 'yes' ? value : !value);
+    const matchesBase = baseId === 'all' || product.id === baseId;
+    const matchesSearch = !normalizedSearch
+      || product.name.toLowerCase().includes(normalizedSearch)
+      || product.description.toLowerCase().includes(normalizedSearch)
+      || product.brand.toLowerCase().includes(normalizedSearch)
+      || product.cardType.toLowerCase().includes(normalizedSearch)
+      || product.issuer.toLowerCase().includes(normalizedSearch)
+      || card.address.toLowerCase().includes(normalizedSearch)
+      || card.city.toLowerCase().includes(normalizedSearch)
+      || card.state.toLowerCase().includes(normalizedSearch)
+      || (card.regionZip ?? '').toLowerCase().includes(normalizedSearch);
+    return matchesBase
+      && matchesSearch
+      && exactMatch(product.brand, filters.brand)
+      && exactMatch(product.cardType, filters.cardType)
+      && exactMatch(product.issuer, filters.issuer)
+      && exactMatch(card.state, filters.state)
+      && exactMatch(card.city, filters.city)
+      && (!filters.zip || (card.regionZip ?? '').toLowerCase().includes(filters.zip.trim().toLowerCase()))
+      && presenceMatch(Boolean(card.address.trim()), filters.address)
+      && presenceMatch(card.hasEmail, filters.email)
+      && presenceMatch(card.hasPhone, filters.phone)
+      && matchesCatalogPrice(product.priceCents, filters.price);
+  });
   const catalogOptions = useMemo(() => ({
     brand: [...new Set(products.map((product) => product.brand.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
     cardType: [...new Set(products.map((product) => product.cardType.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
@@ -202,64 +240,52 @@ export function BuyCardsPage() {
     state: [...new Set(products.flatMap(locationsForProduct).map((location) => location.state.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
     city: [...new Set(products.flatMap(locationsForProduct).map((location) => location.city.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
   }), [products]);
-  const searchFilteredProducts = useMemo(() => products.filter((product) => {
-    const matchesBase = baseId === 'all' || product.id === baseId;
-    const matchesLocation = locationsForProduct(product).some((location) =>
-      location.address.toLowerCase().includes(normalizedSearch)
-      || location.city.toLowerCase().includes(normalizedSearch)
-      || location.state.toLowerCase().includes(normalizedSearch)
-      || (location.regionZip ?? '').toLowerCase().includes(normalizedSearch),
-    );
-    const matchesSearch = !normalizedSearch
-      || product.name.toLowerCase().includes(normalizedSearch)
-      || product.description.toLowerCase().includes(normalizedSearch)
-      || product.brand.toLowerCase().includes(normalizedSearch)
-      || product.cardType.toLowerCase().includes(normalizedSearch)
-      || product.issuer.toLowerCase().includes(normalizedSearch)
-      || matchesLocation;
-    return matchesBase && matchesSearch;
-  }), [products, baseId, normalizedSearch]);
-  const filterProducts = (source: typeof products, filters: CatalogFilters) => source.filter((product) => {
-    const exactMatch = (value: string, selection: string) => !selection || value.trim().toLocaleLowerCase() === selection.toLocaleLowerCase();
-    const presenceMatch = (value: boolean, selection: CatalogPresenceFilter) => selection === 'all' || (selection === 'yes' ? value : !value);
-    const locations = locationsForProduct(product);
-    const matchesLocation = locations.some((location) =>
-      exactMatch(location.state, filters.state)
-      && exactMatch(location.city, filters.city)
-      && (!filters.zip || (location.regionZip ?? '').toLowerCase().includes(filters.zip.trim().toLowerCase())),
-    );
-    return exactMatch(product.brand, filters.brand)
-      && exactMatch(product.cardType, filters.cardType)
-      && exactMatch(product.issuer, filters.issuer)
-      && matchesLocation
-      && presenceMatch(locations.some((location) => Boolean(location.address.trim())), filters.address)
-      && presenceMatch(product.hasEmail, filters.email)
-      && presenceMatch(product.hasPhone, filters.phone)
-      && matchesCatalogPrice(product.priceCents, filters.price);
-  });
-  const filteredProducts = useMemo(
-    () => filterProducts(searchFilteredProducts, catalogFilters),
-    [searchFilteredProducts, catalogFilters],
+  const filteredCardRows = useMemo(
+    () => filterCardRows(availableCardRows, catalogFilters),
+    [availableCardRows, catalogFilters, baseId, normalizedSearch],
   );
   const draftResultCount = useMemo(
-    () => filterProducts(searchFilteredProducts, draftCatalogFilters).length,
-    [searchFilteredProducts, draftCatalogFilters],
+    () => filterCardRows(availableCardRows, draftCatalogFilters).length,
+    [availableCardRows, draftCatalogFilters, baseId, normalizedSearch],
   );
   const activeFilterCount = Object.entries(catalogFilters).filter(([key, value]) => key === 'price' ? value !== 'all' : key === 'address' || key === 'email' || key === 'phone' ? value !== 'all' : value !== '').length
     + (normalizedSearch ? 1 : 0) + (baseId !== 'all' ? 1 : 0);
-  const selectableProducts = filteredProducts.filter((product) => product.availableCount > 0);
-  const selectedProducts = selectedIds
-    .map((id) => products.find((product) => product.id === id))
-    .filter((product): product is NonNullable<typeof product> => Boolean(product && product.availableCount > 0));
-  const selectedTotalCents = selectedProducts.reduce((total, product) => total + product.priceCents, 0);
-  const allVisibleSelected = selectableProducts.length > 0 && selectableProducts.every((product) => selectedIds.includes(product.id));
-  const toggleSelection = (productId: string) => setSelectedIds((current) => current.includes(productId)
-    ? current.filter((id) => id !== productId)
-    : current.length < 50 ? [...current, productId] : current);
+  const selectedCardRows = selectedIds
+    .map((id) => cardRowByInventoryId.get(id))
+    .filter((row): row is (typeof availableCardRows)[number] => Boolean(row));
+  const selectedTotalCents = selectedCardRows.reduce((total, row) => total + row.product.priceCents, 0);
+  const visibleProductIds = [...new Set(filteredCardRows.map((row) => row.product.id))];
+  const selectedProductIds = new Set(selectedCardRows.map((row) => row.product.id));
+  const allVisibleSelected = visibleProductIds.length > 0 && visibleProductIds.every((id) => selectedProductIds.has(id));
+  const toggleSelection = (row: (typeof availableCardRows)[number]) => setSelectedIds((current) => {
+    if (current.includes(row.card.inventoryId)) return current.filter((id) => id !== row.card.inventoryId);
+    const baseAlreadySelected = current.some((id) => cardRowByInventoryId.get(id)?.product.id === row.product.id);
+    return !baseAlreadySelected && current.length < 50 ? [...current, row.card.inventoryId] : current;
+  });
+  const toggleAllVisible = () => setSelectedIds((current) => {
+    const visibleIds = new Set(visibleProductIds);
+    if (allVisibleSelected) {
+      return current.filter((id) => {
+        const row = cardRowByInventoryId.get(id);
+        return !row || !visibleIds.has(row.product.id);
+      });
+    }
+    const next = [...current];
+    const selectedBases = new Set(next
+      .map((id) => cardRowByInventoryId.get(id)?.product.id)
+      .filter((id): id is string => Boolean(id)));
+    for (const row of filteredCardRows) {
+      if (next.length >= 50) break;
+      if (selectedBases.has(row.product.id)) continue;
+      next.push(row.card.inventoryId);
+      selectedBases.add(row.product.id);
+    }
+    return next;
+  });
   const purchaseSelected = () => {
-    if (!selectedProducts.length || bulkPurchase.isPending) return;
+    if (!selectedCardRows.length || bulkPurchase.isPending) return;
     setNotice('');
-    bulkPurchase.mutate({ data: { productIds: selectedProducts.map((product) => product.id) } }, {
+    bulkPurchase.mutate({ data: { inventoryIds: selectedCardRows.map((row) => row.card.inventoryId) } }, {
       onSuccess: (result) => {
         setNotice(`${result.orders.length} card${result.orders.length === 1 ? '' : 's'} purchased for ${money(result.totalCents)}. Your updated balance is ${money(result.balanceCents)}.`);
         setSelectedIds([]);
@@ -298,8 +324,8 @@ export function BuyCardsPage() {
     catch { /* Column preferences remain usable for this visit when browser storage is unavailable. */ }
   }, [visibleColumns]);
   useEffect(() => {
-    setSelectedIds((current) => current.filter((id) => products.some((product) => product.id === id && product.availableCount > 0)).slice(0, 50));
-  }, [products]);
+    setSelectedIds((current) => current.filter((id) => cardRowByInventoryId.has(id)).slice(0, 50));
+  }, [cardRowByInventoryId]);
   useEffect(() => { document.title = 'Buy Cards | ReplenishCC'; }, []);
   return <MemberGuard title="Buy Cards">{() => <section className="gift-page">
     <header className="gift-heading">
@@ -397,16 +423,16 @@ export function BuyCardsPage() {
               <div className="catalog-filter-footer">
                 <button type="button" className="catalog-filter-reset" onClick={() => setDraftCatalogFilters(emptyCatalogFilters)} data-testid="button-reset-dialog-card-filters">Reset selections</button>
                 <button type="button" className="catalog-filter-apply" onClick={applyCatalogFilters} data-testid="button-show-filter-results">
-                  Show {draftResultCount} result{draftResultCount === 1 ? '' : 's'}
+                  Show {draftResultCount} card{draftResultCount === 1 ? '' : 's'}
                 </button>
               </div>
             </DialogContent>
           </Dialog>
         </div>
         <div className="catalog-selection-bar">
-          <div><strong>{selectedProducts.length} selected</strong><span>{selectedProducts.length ? ` · Estimated total ${money(selectedTotalCents)}` : ' · Choose one card from each listing'}</span></div>
-          <button type="button" className="catalog-buy-selected" onClick={purchaseSelected} disabled={!selectedProducts.length || bulkPurchase.isPending || purchase.isPending} data-testid="button-buy-selected">
-            <ShoppingCart aria-hidden="true" />{bulkPurchase.isPending ? 'Processing…' : `Buy Selected${selectedProducts.length ? ` (${selectedProducts.length})` : ''}`}
+          <div><strong>{selectedCardRows.length} selected</strong><span>{selectedCardRows.length ? ` · Estimated total ${money(selectedTotalCents)}` : ' · Choose one card from each base'}</span></div>
+          <button type="button" className="catalog-buy-selected" onClick={purchaseSelected} disabled={!selectedCardRows.length || bulkPurchase.isPending || purchase.isPending} data-testid="button-buy-selected">
+            <ShoppingCart aria-hidden="true" />{bulkPurchase.isPending ? 'Processing…' : `Buy Selected${selectedCardRows.length ? ` (${selectedCardRows.length})` : ''}`}
           </button>
         </div>
         <div className="gift-column-control catalog-columns-after">
@@ -414,7 +440,7 @@ export function BuyCardsPage() {
           <details className="column-chooser gift-column-chooser">
             <summary className="quiet-button" data-testid="button-choose-card-columns"><Columns3 /> Columns <ChevronRight className="chooser-chevron" /></summary>
             <div className="column-chooser-menu" role="group" aria-label="Choose visible card listing columns">
-              <p className="gift-column-note">Base stays visible. Choose which details and actions to show; private card credentials never appear as columns.</p>
+              <p className="gift-column-note">Card and base stay visible. Choose which details and actions to show; private card credentials never appear as columns.</p>
               {catalogColumns.map((column) => <label key={column.id} className="column-choice">
                 <input type="checkbox" checked={visibleColumns.includes(column.id)} onChange={() => toggleColumn(column.id)} data-testid={`checkbox-card-column-${column.id}`} />
                 <span>{column.label}</span>
@@ -423,31 +449,38 @@ export function BuyCardsPage() {
           </details>
         </div>
         <div className="gift-catalog-results" role="status" data-testid="text-card-catalog-results">
-          Showing <strong>{filteredProducts.length}</strong> of {products.length} listings
+          Showing <strong>{filteredCardRows.length}</strong> of {availableCardRows.length} cards
           {activeFilterCount > 0 && <button type="button" onClick={resetFilters} data-testid="button-clear-card-filters"><RotateCcw /> Clear filters</button>}
         </div>
-        {filteredProducts.length === 0 ? <div className="gift-empty gift-filter-empty" data-testid="empty-filtered-card-catalog"><Search /><h2>No matching listings</h2><p>Try changing the search text or filters.</p><button type="button" className="gift-primary-link" onClick={resetFilters} data-testid="button-reset-card-filters">Reset filters <RotateCcw /></button></div>
+        {filteredCardRows.length === 0 ? availableCardRows.length === 0
+          ? <div className="gift-empty gift-filter-empty" data-testid="empty-card-stock"><CreditCard /><h2>No cards available</h2><p>There are no cards in stock right now. Check back later.</p></div>
+          : <div className="gift-empty gift-filter-empty" data-testid="empty-filtered-card-catalog"><Search /><h2>No matching cards</h2><p>Try changing the search text or filters.</p><button type="button" className="gift-primary-link" onClick={resetFilters} data-testid="button-reset-card-filters">Reset filters <RotateCcw /></button></div>
           : <div className="gift-catalog-table-wrap" role="region" aria-label="Card listings" tabIndex={0}>
             <table className="gift-catalog-table">
-              <thead><tr><th scope="col" className="catalog-select-cell"><input type="checkbox" aria-label="Select all available filtered listings" checked={allVisibleSelected} disabled={!selectableProducts.length} onChange={() => setSelectedIds((current) => allVisibleSelected ? current.filter((id) => !selectableProducts.some((product) => product.id === id)) : [...new Set([...current, ...selectableProducts.map((product) => product.id)])].slice(0, 50))} /></th><th scope="col">Base</th>{visibleColumns.map((column) => <th scope="col" key={column} className={column === 'actions' ? 'catalog-actions-cell' : undefined}>{catalogColumns.find((item) => item.id === column)?.label}</th>)}</tr></thead>
-              <tbody>{filteredProducts.map((product) => <tr key={product.id} data-testid={`row-gift-product-${product.id}`}>
-                <td className="catalog-select-cell"><input type="checkbox" aria-label={`Select one ${product.name} card`} checked={selectedIds.includes(product.id)} disabled={product.availableCount < 1 || (selectedIds.length >= 50 && !selectedIds.includes(product.id))} onChange={() => toggleSelection(product.id)} data-testid={`checkbox-select-card-${product.id}`} /></td>
-                <td><div className="gift-catalog-product"><div><strong data-testid={`text-gift-product-name-${product.id}`}>{product.name}</strong></div></div></td>
-                {visibleColumns.includes('brand') && <td data-testid={`text-gift-card-brand-${product.id}`}>{product.brand || '—'}</td>}
-                {visibleColumns.includes('cardType') && <td data-testid={`text-gift-card-type-${product.id}`}>{product.cardType || '—'}</td>}
-                {visibleColumns.includes('issuer') && <td data-testid={`text-gift-card-issuer-${product.id}`}>{product.issuer || '—'}</td>}
-                {visibleColumns.includes('city') && <td data-testid={`text-gift-city-${product.id}`}>{productLocationValue(product, 'city')}</td>}
-                {visibleColumns.includes('state') && <td data-testid={`text-gift-state-${product.id}`}>{productLocationValue(product, 'state')}</td>}
-                {visibleColumns.includes('regionZip') && <td data-testid={`text-gift-region-zip-${product.id}`}>{productLocationValue(product, 'regionZip')}</td>}
-                {visibleColumns.includes('price') && <td className="gift-catalog-price" data-testid={`text-gift-member-price-${product.id}`}>{money(product.priceCents)}</td>}
+              <thead><tr><th scope="col" className="catalog-select-cell"><input type="checkbox" aria-label="Select one available card from each visible base" checked={allVisibleSelected} disabled={!filteredCardRows.length} onChange={toggleAllVisible} /></th><th scope="col">Card / Base</th>{visibleColumns.map((column) => <th scope="col" key={column} className={column === 'actions' ? 'catalog-actions-cell' : undefined}>{catalogColumns.find((item) => item.id === column)?.label}</th>)}</tr></thead>
+              <tbody>{filteredCardRows.map(({ product, card, cardNumber }) => {
+                const isSelected = selectedIds.includes(card.inventoryId);
+                const anotherCardFromBaseSelected = selectedCardRows.some((row) => row.product.id === product.id && row.card.inventoryId !== card.inventoryId);
+                return <tr key={card.inventoryId} data-testid={`row-gift-product-${product.id}-${card.inventoryId}`}>
+                <td className="catalog-select-cell"><input type="checkbox" aria-label={`Select card ${cardNumber} from ${product.name}`} checked={isSelected} disabled={anotherCardFromBaseSelected || (selectedIds.length >= 50 && !isSelected)} onChange={() => toggleSelection({ product, card, cardNumber })} data-testid={`checkbox-select-card-${card.inventoryId}`} /></td>
+                <td><div className="gift-catalog-product"><div><strong data-testid={`text-gift-product-name-${product.id}-${card.inventoryId}`}>Card {cardNumber}</strong><small>{product.name}</small></div></div></td>
+                {visibleColumns.includes('brand') && <td data-testid={`text-gift-card-brand-${card.inventoryId}`}>{product.brand || '—'}</td>}
+                {visibleColumns.includes('cardType') && <td data-testid={`text-gift-card-type-${card.inventoryId}`}>{product.cardType || '—'}</td>}
+                {visibleColumns.includes('issuer') && <td data-testid={`text-gift-card-issuer-${card.inventoryId}`}>{product.issuer || '—'}</td>}
+                {visibleColumns.includes('address') && <td data-testid={`text-gift-address-${card.inventoryId}`}>{card.address || '—'}</td>}
+                {visibleColumns.includes('city') && <td data-testid={`text-gift-city-${card.inventoryId}`}>{card.city || '—'}</td>}
+                {visibleColumns.includes('state') && <td data-testid={`text-gift-state-${card.inventoryId}`}>{card.state || '—'}</td>}
+                {visibleColumns.includes('regionZip') && <td data-testid={`text-gift-region-zip-${card.inventoryId}`}>{card.regionZip || '—'}</td>}
+                {visibleColumns.includes('price') && <td className="gift-catalog-price" data-testid={`text-gift-member-price-${card.inventoryId}`}>{money(product.priceCents)}</td>}
                 {visibleColumns.includes('actions') && <td className="catalog-actions-cell"><div className="gift-catalog-actions">
-                  <button className="gift-info-button" type="button" onClick={() => setInfoProductId(product.id)} data-testid={`button-info-card-${product.id}`}><Info /> Info</button>
-                  <button className="gift-purchase-button" type="button" disabled={purchase.isPending || bulkPurchase.isPending || product.availableCount < 1} onClick={() => purchaseOne(product.id)} aria-label={`Buy one ${product.name}`} data-testid={`button-purchase-card-${product.id}`}>{purchase.isPending ? 'Working…' : 'Buy 1'} <ShoppingCart /></button>
+                  <button className="gift-info-button" type="button" onClick={() => setInfoProductId(product.id)} data-testid={`button-info-card-${card.inventoryId}`}><Info /> Info</button>
+                  <button className="gift-purchase-button" type="button" disabled={purchase.isPending || bulkPurchase.isPending} onClick={() => purchaseOne(product.id, card.inventoryId)} aria-label={`Buy card ${cardNumber} from ${product.name}`} data-testid={`button-purchase-card-${card.inventoryId}`}>{purchase.isPending ? 'Working…' : 'Buy 1'} <ShoppingCart /></button>
                 </div></td>}
-              </tr>)}</tbody>
+              </tr>;
+              })}</tbody>
             </table>
           </div>}
-        {filteredProducts.length > 0 && <p className="gift-catalog-scroll-note">{visibleColumns.includes('actions') ? 'Swipe to browse columns. Info and Buy 1 are in the Actions column.' : 'Actions are hidden; turn on Actions in Columns to view Info and Buy 1.'}</p>}
+        {filteredCardRows.length > 0 && <p className="gift-catalog-scroll-note">{visibleColumns.includes('actions') ? 'Each stocked card has its own row. Select at most one card per base. Swipe to browse columns; Info and Buy 1 are in Actions.' : 'Each stocked card has its own row. Actions are hidden; turn on Actions in Columns to view Info and Buy 1.'}</p>}
       </>}
     <Dialog open={!!infoProduct} onOpenChange={(open) => { if (!open) setInfoProductId(null); }}>
       {infoProduct && <DialogContent className="card-detail-dialog" data-testid={`dialog-card-info-${infoProduct.id}`}>
