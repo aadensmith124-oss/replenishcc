@@ -6,3 +6,4 @@
 - [Coupon and deposit rules](coupon-and-deposit-rules.md) — Coupons discount balance-funded log orders; deposit minimums apply to manual and crypto deposits, not referrals.
 - [Vanilla gift-card store](vanilla-gift-card-store.md) — One atomic initial batch of up to 100 cards per base; location columns are public, credentials and contacts stay encrypted.
 - [Workflow port ownership](workflow-port-ownership.md) — Failed artifact launches can leave child dev servers holding ports; inspect listeners before retrying.
+- [TypeScript build-info cache](typescript-build-cache.md) — After dependency changes, rule out stale build info before editing source to fix contradictory type errors.
