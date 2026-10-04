@@ -200,13 +200,9 @@ export function BuyCardsPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const infoProduct = products.find((product) => product.id === infoProductId) ?? null;
   const cardInfoFacts = infoProduct ? [
-    { label: 'City', value: infoProduct.city || 'Not specified', testId: `text-card-info-city-${infoProduct.id}` },
-    { label: 'ZIP', value: infoProduct.regionZip || 'Not specified', testId: `text-card-info-region-zip-${infoProduct.id}` },
     { label: 'Brand', value: infoProduct.brand || 'Not specified' },
     { label: 'Type', value: infoProduct.cardType || 'Not specified' },
-    { label: 'State', value: infoProduct.state || 'Not specified', testId: `text-card-info-state-${infoProduct.id}` },
     { label: 'Issuer', value: infoProduct.issuer || 'Not specified' },
-    { label: 'Address', value: infoProduct.address || 'Not specified', testId: `text-card-info-address-${infoProduct.id}` },
     { label: 'Base', value: infoProduct.name },
     { label: 'Available stock', value: `${infoProduct.availableCount} cards`, testId: `text-card-info-stock-${infoProduct.id}` },
     { label: 'Price', value: money(infoProduct.priceCents), testId: `text-card-info-price-${infoProduct.id}` },
@@ -215,7 +211,9 @@ export function BuyCardsPage() {
     { label: 'Email address', available: infoProduct.hasEmail, testId: `text-card-info-email-${infoProduct.id}` },
     {
       label: 'Address details',
-      available: Boolean(infoProduct.address || infoProduct.city || infoProduct.state || infoProduct.regionZip),
+      available: infoProduct.availableCardLocations.some((location) =>
+        Boolean(location.address || location.city || location.state || location.regionZip),
+      ),
       testId: `text-card-info-address-availability-${infoProduct.id}`,
     },
     { label: 'Phone number', available: infoProduct.hasPhone, testId: `text-card-info-phone-${infoProduct.id}` },
@@ -475,9 +473,9 @@ export function BuyCardsPage() {
                 {visibleColumns.includes('brand') && <td data-testid={`text-gift-card-brand-${product.id}`}>{product.brand || '—'}</td>}
                 {visibleColumns.includes('cardType') && <td data-testid={`text-gift-card-type-${product.id}`}>{product.cardType || '—'}</td>}
                 {visibleColumns.includes('issuer') && <td data-testid={`text-gift-card-issuer-${product.id}`}>{product.issuer || '—'}</td>}
-                {visibleColumns.includes('city') && <td data-testid={`text-gift-city-${product.id}`}>{product.city || '—'}</td>}
-                {visibleColumns.includes('state') && <td data-testid={`text-gift-state-${product.id}`}>{product.state || '—'}</td>}
-                {visibleColumns.includes('regionZip') && <td data-testid={`text-gift-region-zip-${product.id}`}>{product.regionZip || '—'}</td>}
+                {visibleColumns.includes('city') && <td data-testid={`text-gift-city-${product.id}`}>{productLocationValue(product, 'city')}</td>}
+                {visibleColumns.includes('state') && <td data-testid={`text-gift-state-${product.id}`}>{productLocationValue(product, 'state')}</td>}
+                {visibleColumns.includes('regionZip') && <td data-testid={`text-gift-region-zip-${product.id}`}>{productLocationValue(product, 'regionZip')}</td>}
                 {visibleColumns.includes('price') && <td className="gift-catalog-price" data-testid={`text-gift-member-price-${product.id}`}>{money(product.priceCents)}</td>}
                 {visibleColumns.includes('actions') && <td className="catalog-actions-cell"><div className="gift-catalog-actions">
                   <button className="gift-info-button" type="button" onClick={() => setInfoProductId(product.id)} data-testid={`button-info-card-${product.id}`}><Info /> Info</button>
