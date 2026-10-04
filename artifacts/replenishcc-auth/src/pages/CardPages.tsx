@@ -474,13 +474,13 @@ export function BuyCardsPage() {
                 {visibleColumns.includes('price') && <td className="gift-catalog-price" data-testid={`text-gift-member-price-${card.inventoryId}`}>{money(product.priceCents)}</td>}
                 {visibleColumns.includes('actions') && <td className="catalog-actions-cell"><div className="gift-catalog-actions">
                   <button className="gift-info-button" type="button" onClick={() => setInfoProductId(product.id)} data-testid={`button-info-card-${card.inventoryId}`}><Info /> Info</button>
-                  <button className="gift-purchase-button" type="button" disabled={purchase.isPending || bulkPurchase.isPending} onClick={() => purchaseOne(product.id, card.inventoryId)} aria-label={`Buy card ${cardNumber} from ${product.name}`} data-testid={`button-purchase-card-${card.inventoryId}`}>{purchase.isPending ? 'Working…' : 'Buy 1'} <ShoppingCart /></button>
+                  <button className="gift-purchase-button" type="button" disabled={purchase.isPending || bulkPurchase.isPending} onClick={() => purchaseOne(product.id, card.inventoryId)} aria-label={`Buy card ${cardNumber} from ${product.name}`} data-testid={`button-purchase-card-${card.inventoryId}`}>{purchase.isPending ? 'Working…' : 'Buy'} <ShoppingCart /></button>
                 </div></td>}
               </tr>;
               })}</tbody>
             </table>
           </div>}
-        {filteredCardRows.length > 0 && <p className="gift-catalog-scroll-note">{visibleColumns.includes('actions') ? 'Each stocked card has its own row. Select at most one card per base. Swipe to browse columns; Info and Buy 1 are in Actions.' : 'Each stocked card has its own row. Actions are hidden; turn on Actions in Columns to view Info and Buy 1.'}</p>}
+        {filteredCardRows.length > 0 && <p className="gift-catalog-scroll-note">{visibleColumns.includes('actions') ? 'Each stocked card has its own row. Select at most one card per base. Swipe to browse columns; Info and Buy are in Actions.' : 'Each stocked card has its own row. Actions are hidden; turn on Actions in Columns to view Info and Buy.'}</p>}
       </>}
     <Dialog open={!!infoProduct} onOpenChange={(open) => { if (!open) setInfoProductId(null); }}>
       {infoProduct && <DialogContent className="card-detail-dialog" data-testid={`dialog-card-info-${infoProduct.id}`}>
@@ -492,20 +492,6 @@ export function BuyCardsPage() {
         <dl className="card-detail-facts">
           {cardInfoFacts.map((fact) => <div key={fact.label}><dt>{fact.label}</dt><dd data-testid={fact.testId}>{fact.value}</dd></div>)}
         </dl>
-        <section className="card-detail-locations" aria-labelledby={`card-info-locations-${infoProduct.id}`}>
-          <h3 id={`card-info-locations-${infoProduct.id}`}>Public locations</h3>
-          <p>One location is shown for each available card. Your order history will show the location for the card you receive.</p>
-          {infoProduct.availableCardLocations.length > 0
-            ? <ol>{infoProduct.availableCardLocations.map((location, index) => <li key={`${index}-${location.address}-${location.regionZip ?? ''}`} data-testid={`text-card-info-location-${infoProduct.id}-${index}`}>
-              <span>Card {index + 1}</span>
-              <address>
-                <strong>{location.address || 'Address not specified'}</strong>
-                <span>{[location.city, location.state].filter(Boolean).join(', ') || 'City/state not specified'}</span>
-                {location.regionZip && <span>{location.regionZip}</span>}
-              </address>
-            </li>)}</ol>
-            : <p>No cards are currently available.</p>}
-        </section>
         <section className="card-detail-features" aria-labelledby={`card-info-features-${infoProduct.id}`}>
           <h3 id={`card-info-features-${infoProduct.id}`}>Available Features</h3>
           <ul>

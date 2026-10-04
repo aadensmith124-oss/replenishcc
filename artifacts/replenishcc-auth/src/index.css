@@ -1036,15 +1036,6 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .card-detail-facts dt { color:#8a8c8c; font-size:14px; line-height:1.35; }
 .card-detail-facts dd { margin:0; color:#f4f4f4; font:500 17px/1.45 var(--app-font-sans); overflow-wrap:anywhere; }
 .card-detail-facts > div:last-child dd { font-weight:700; }
-.card-detail-locations { margin-top:18px; border:1px solid #292b2b; border-radius:5px; padding:14px; background:#0d0f0f; }
-.card-detail-locations h3 { margin:0 0 6px; color:#f4f4f4; font:600 16px/1.3 var(--app-font-sans); }
-.card-detail-locations > p { margin:0 0 11px; color:#a4a5a5; font-size:11px; line-height:1.5; }
-.card-detail-locations ol { display:grid; gap:6px; max-height:270px; overflow:auto; margin:0; padding:0 4px 0 0; list-style:none; }
-.card-detail-locations li { display:grid; grid-template-columns:54px minmax(0,1fr); align-items:start; gap:9px; border:1px solid #242626; border-radius:4px; padding:9px; }
-.card-detail-locations li > span { padding-top:1px; color:#a6a9a0; font-size:10px; }
-.card-detail-locations address { display:grid; gap:3px; min-width:0; color:#e4e5e1; font-size:11px; font-style:normal; line-height:1.4; overflow-wrap:anywhere; }
-.card-detail-locations address > strong { color:#f4f4f4; font-size:12px; font-weight:500; }
-.card-detail-locations address > span:last-child { color:#a4a5a5; }
 .card-detail-features { margin-top:19px; }
 .card-detail-features h3 { margin:0 0 13px; color:#f4f4f4; font:600 18px/1.3 var(--app-font-sans); }
 .card-detail-features ul { display:grid; gap:10px; margin:0; padding:0; list-style:none; }
