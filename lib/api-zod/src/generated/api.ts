@@ -1347,6 +1347,26 @@ export const DeleteAdminGiftCardProductResponse = zod.void()
 
 
 /**
+ * @summary Update the public redemption-region ZIP for a gift-card product
+ */
+export const UpdateAdminGiftCardProductRegionZipParams = zod.object({
+  "productId": zod.coerce.string().uuid()
+})
+
+export const updateAdminGiftCardProductRegionZipBodyRegionZipMax = 10;
+
+
+export const updateAdminGiftCardProductRegionZipBodyRegionZipRegExp = new RegExp('^[0-9]{5}(-[0-9]{4})?$');
+
+
+export const UpdateAdminGiftCardProductRegionZipBody = zod.object({
+  "regionZip": zod.string().max(updateAdminGiftCardProductRegionZipBodyRegionZipMax).regex(updateAdminGiftCardProductRegionZipBodyRegionZipRegExp).nullable()
+})
+
+export const UpdateAdminGiftCardProductRegionZipResponse = zod.void()
+
+
+/**
  * @summary Add a batch of prepaid gift cards to a product's available stock
  */
 export const AddAdminGiftCardStockParams = zod.object({

@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
-import { ArrowRight, Check, ChevronRight, Clipboard, Columns3, CreditCard, Info, LockKeyhole, RefreshCw, RotateCcw, Search, ShieldCheck, ShoppingCart, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { ArrowRight, Check, ChevronRight, Clipboard, Columns3, CreditCard, Info, LockKeyhole, Pencil, RefreshCw, RotateCcw, Search, ShieldCheck, ShoppingCart, SlidersHorizontal, Trash2 } from 'lucide-react';
 import {
   getGetAdminGiftCardProductsQueryKey, getGetGiftCardProductsQueryKey, getGetMyGiftCardOrdersQueryKey, getGetMyDepositsQueryKey,
   useAddAdminGiftCardStock, useCreateAdminGiftCardProduct, useDeleteAdminGiftCardProduct,
-  useGetAdminGiftCardProducts, useGetAuthMe, useGetGiftCardProducts, useGetMyGiftCardOrders, usePurchaseGiftCard,
+  useGetAdminGiftCardProducts, useGetAuthMe, useGetGiftCardProducts, useGetMyGiftCardOrders, usePurchaseGiftCard, useUpdateAdminGiftCardProductRegionZip,
   type AuthMeResponse,
   type GiftCardCredential,
 } from '@workspace/api-client-react';
@@ -298,7 +298,10 @@ export function AdminCardInventoryPage() {
   const create = useCreateAdminGiftCardProduct();
   const addStock = useAddAdminGiftCardStock();
   const remove = useDeleteAdminGiftCardProduct();
+  const updateRegionZip = useUpdateAdminGiftCardProductRegionZip();
   const [feedback, setFeedback] = useState('');
+  const [editingZip, setEditingZip] = useState<{ productId: string; productName: string } | null>(null);
+  const [regionZipDraft, setRegionZipDraft] = useState('');
   const form = useForm<CardForm>({ resolver: zodResolver(listingSchema), defaultValues: { name: '', description: '', regionZip: '', faceValue: 0, price: 0 } });
   const stockForm = useForm<StockForm>({ resolver: zodResolver(stockSchema), defaultValues: { productId: '', cards: '' } });
   const rows = products.data?.products ?? [];
@@ -306,6 +309,26 @@ export function AdminCardInventoryPage() {
   useEffect(() => { document.title = 'Card inventory | ReplenishCC Admin'; }, []);
   useEffect(() => { if (!session.isLoading && (session.isError || !session.data?.authenticated)) setLocation('/login'); else if (!session.isLoading && session.data?.user && !session.data.user.isDepositAdmin) setLocation('/dashboard'); }, [session.isLoading, session.isError, session.data?.authenticated, session.data?.user, setLocation]);
   const invalidate = () => { void queryClient.invalidateQueries({ queryKey: getGetAdminGiftCardProductsQueryKey() }); void queryClient.invalidateQueries({ queryKey: getGetGiftCardProductsQueryKey() }); };
+  const saveRegionZip = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingZip) return;
+    const regionZip = regionZipDraft.trim();
+    if (regionZip && !/^\d{5}(?:-\d{4})?$/.test(regionZip)) {
+      setFeedback('Enter a valid 5-digit ZIP or ZIP+4 for the product region.');
+      return;
+    }
+    updateRegionZip.mutate(
+      { productId: editingZip.productId, data: { regionZip: regionZip || null } },
+      {
+        onSuccess: () => {
+          setEditingZip(null);
+          invalidate();
+          setFeedback('Redemption region ZIP updated.');
+        },
+        onError: () => setFeedback('The product-region ZIP could not be updated. Try again.'),
+      },
+    );
+  };
   if (session.isLoading || !session.data?.user?.isDepositAdmin) return <MemberShell pageTitle="Card inventory" user={null} loading shellMode="force" />;
   return <section className="gift-admin">
     <header className="gift-admin-heading"><div><div className="gift-eyebrow">Restricted operations · inventory only</div><h2>Card inventory</h2><p>Manage listings and encrypted stock intake. Credentials are intentionally excluded from this table.</p></div><div className="gift-admin-stat"><small>Available cards</small><strong data-testid="text-admin-total-stock">{products.isLoading ? '—' : totalStock}</strong></div></header>
@@ -340,7 +363,20 @@ export function AdminCardInventoryPage() {
       {products.isLoading ? <div className="gift-admin-loading" data-testid="loading-admin-card-inventory"><i/><i/><i/></div>
       : products.isError ? <div className="gift-query-error" role="alert" data-testid="error-admin-card-inventory">Inventory unavailable. <button onClick={() => void products.refetch()} data-testid="button-retry-admin-card-inventory">Retry</button></div>
       : rows.length === 0 ? <div className="gift-admin-empty" data-testid="empty-admin-card-inventory">No listings created yet. Create a listing above to begin.</div>
-        : <div className="gift-table-wrap"><table className="gift-table"><thead><tr><th>Listing</th><th>Region ZIP</th><th>Face value</th><th>Member price</th><th>Available</th><th>Created</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{rows.map((product) => <tr key={product.id} data-testid={`row-card-inventory-${product.id}`}><td><strong>{product.name}</strong><small>{product.description || 'No description'}</small></td><td>{product.regionZip || '—'}</td><td>{money(product.faceValueCents)}</td><td>{money(product.priceCents)}</td><td><span className="gift-count-chip">{product.availableCount}</span></td><td>{date(product.createdAt)}</td><td><button className="gift-delete" disabled={product.availableCount !== 0 || remove.isPending} title={product.availableCount !== 0 ? 'Remove all available stock before deletion' : 'Deletion also requires no order history'} onClick={() => { if (window.confirm(`Delete listing “${product.name}”? It must have no inventory or order history.`)) remove.mutate({ productId: product.id }, { onSuccess: () => { invalidate(); setFeedback('Empty listing deleted.'); }, onError: () => setFeedback('Listing could not be deleted. It has remaining stock or order history.') }); }} data-testid={`button-delete-card-listing-${product.id}`}><Trash2 /> Delete</button></td></tr>)}</tbody></table></div>}
+        : <div className="gift-table-wrap"><table className="gift-table"><thead><tr><th>Listing</th><th>Region ZIP</th><th>Face value</th><th>Member price</th><th>Available</th><th>Created</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{rows.map((product) => <tr key={product.id} data-testid={`row-card-inventory-${product.id}`}><td><strong>{product.name}</strong><small>{product.description || 'No description'}</small></td><td>{product.regionZip || '—'}</td><td>{money(product.faceValueCents)}</td><td>{money(product.priceCents)}</td><td><span className="gift-count-chip">{product.availableCount}</span></td><td>{date(product.createdAt)}</td><td><button className="gift-edit" type="button" onClick={() => { setEditingZip({ productId: product.id, productName: product.name }); setRegionZipDraft(product.regionZip ?? ''); }} data-testid={`button-edit-card-region-zip-${product.id}`}><Pencil /> Edit ZIP</button> <button className="gift-delete" disabled={product.availableCount !== 0 || remove.isPending} title={product.availableCount !== 0 ? 'Remove all available stock before deletion' : 'Deletion also requires no order history'} onClick={() => { if (window.confirm(`Delete listing “${product.name}”? It must have no inventory or order history.`)) remove.mutate({ productId: product.id }, { onSuccess: () => { invalidate(); setFeedback('Empty listing deleted.'); }, onError: () => setFeedback('Listing could not be deleted. It has remaining stock or order history.') }); }} data-testid={`button-delete-card-listing-${product.id}`}><Trash2 /> Delete</button></td></tr>)}</tbody></table></div>}
     </section>
+      <Dialog open={!!editingZip} onOpenChange={(open) => { if (!open && !updateRegionZip.isPending) setEditingZip(null); }}>
+        <DialogContent className="gift-info-dialog">
+          <DialogHeader className="gift-info-dialog-head">
+            <div><DialogTitle>Edit redemption ZIP</DialogTitle><DialogDescription>{editingZip?.productName} · Public product region only; do not enter a billing address.</DialogDescription></div>
+          </DialogHeader>
+          <form className="gift-form" onSubmit={saveRegionZip}>
+            <label htmlFor="edit-card-region-zip">Redemption region ZIP</label>
+            <Input id="edit-card-region-zip" value={regionZipDraft} onChange={(event) => setRegionZipDraft(event.target.value)} inputMode="numeric" maxLength={10} placeholder="5-digit ZIP or ZIP+4" data-testid="input-edit-card-region-zip" />
+            <p className="gift-zip-note">Leave blank to remove the public region ZIP. Card numbers, security codes, PINs, and billing addresses stay private.</p>
+            <button type="submit" className="gift-admin-submit" disabled={updateRegionZip.isPending} data-testid="button-save-card-region-zip">{updateRegionZip.isPending ? 'Saving…' : 'Save ZIP'} <Check /></button>
+          </form>
+        </DialogContent>
+      </Dialog>
   </section>;
 }

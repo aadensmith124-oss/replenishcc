@@ -12,6 +12,8 @@ import {
   GetMyGiftCardOrdersResponse,
   PurchaseGiftCardBody,
   PurchaseGiftCardResponse,
+  UpdateAdminGiftCardProductRegionZipBody,
+  UpdateAdminGiftCardProductRegionZipParams,
 } from "@workspace/api-zod";
 import {
   accountLedgerTable,
@@ -349,6 +351,41 @@ router.post("/admin/gift-card-products", async (req, res): Promise<void> => {
     }),
   );
 });
+
+router.patch(
+  "/admin/gift-card-products/:productId/region-zip",
+  async (req, res): Promise<void> => {
+    const user = await getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: "Sign in to update a gift-card listing." });
+      return;
+    }
+    if (!isDepositAdmin(user)) {
+      res.status(403).json({ error: "Admin access is required." });
+      return;
+    }
+
+    const params = UpdateAdminGiftCardProductRegionZipParams.safeParse(
+      req.params,
+    );
+    const parsed = UpdateAdminGiftCardProductRegionZipBody.safeParse(req.body);
+    if (!params.success || !parsed.success) {
+      res.status(400).json({ error: "Enter a valid product-region ZIP." });
+      return;
+    }
+
+    const [updated] = await db
+      .update(giftCardProductsTable)
+      .set({ regionZip: parsed.data.regionZip })
+      .where(eq(giftCardProductsTable.id, params.data.productId))
+      .returning({ id: giftCardProductsTable.id });
+    if (!updated) {
+      res.status(404).json({ error: "Gift-card product not found." });
+      return;
+    }
+    res.status(204).end();
+  },
+);
 
 router.delete(
   "/admin/gift-card-products/:productId",

@@ -711,6 +711,10 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .gift-delete { display:inline-flex; align-items:center; gap:5px; border:1px solid #48413a; border-radius:4px; padding:6px 8px; color:#d3b49f; background:#241f1c; font-size:8px; cursor:pointer; }
 .gift-delete svg { width:12px; height:12px; }
 .gift-delete:disabled { opacity:.42; cursor:not-allowed; }
+.gift-edit { display:inline-flex; align-items:center; gap:5px; border:1px solid #41483d; border-radius:4px; padding:6px 8px; color:#cbd3b7; background:#1c221b; font-size:8px; cursor:pointer; }
+.gift-edit:hover { border-color:#79794c; color:#e4d995; }
+.gift-edit svg { width:12px; height:12px; }
+.gift-zip-note { margin:0; color:#8f988b; font-size:9px; line-height:1.5; }
 .gift-admin-empty { padding:28px 10px; color:#929a90; text-align:center; font-size:10px; }
 .gift-admin-loading { display:grid; gap:10px; padding:10px 0; }.gift-admin-loading i { height:34px; }
 .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }

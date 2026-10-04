@@ -945,6 +945,15 @@ export interface CreateGiftCardProductInput {
   priceCents: number;
 }
 
+export interface UpdateGiftCardProductRegionZipInput {
+  /**
+     * @maxLength 10
+     * @nullable
+     * @pattern ^[0-9]{5}(-[0-9]{4})?$
+     */
+  regionZip: string | null;
+}
+
 export interface GiftCardCredentialInput {
   /**
      * @minLength 13

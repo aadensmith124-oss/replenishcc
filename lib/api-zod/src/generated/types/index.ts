@@ -100,6 +100,7 @@ export * from './supportTicketRefundResponse';
 export * from './supportTicketStatus';
 export * from './supportTicketStatusInput';
 export * from './supportTicketStatusInputStatus';
+export * from './updateGiftCardProductRegionZipInput';
 export * from './user';
 export * from './weeklyLeaderboardEntry';
 export * from './weeklyLeaderboardResponse';
