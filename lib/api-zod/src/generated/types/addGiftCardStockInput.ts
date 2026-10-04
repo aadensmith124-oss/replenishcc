@@ -22,7 +22,7 @@ export interface AddGiftCardStockInput {
   city?: string;
   /**
      * @minItems 1
-     * @maxItems 1
+     * @maxItems 100
      */
   cards: GiftCardCredentialInput[];
 }

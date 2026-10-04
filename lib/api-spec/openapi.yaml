@@ -1123,7 +1123,7 @@ paths:
     post:
       operationId: createAdminGiftCardProduct
       tags: [giftCardStore]
-      summary: Create a prepaid gift-card product listing
+      summary: Create a card base with a per-card purchase price
       requestBody:
         required: true
         content:
@@ -1197,7 +1197,7 @@ paths:
     post:
       operationId: addAdminGiftCardStock
       tags: [giftCardStore]
-      summary: Add one prepaid gift card to a new product listing
+      summary: Add a batch of prepaid gift cards to a base
       parameters:
         - name: productId
           in: path
@@ -1211,7 +1211,7 @@ paths:
               $ref: "#/components/schemas/AddGiftCardStockInput"
       responses:
         "200":
-          description: One gift card added to the listing
+          description: All valid gift cards in the batch added to the base
           content:
             application/json:
               schema:
@@ -1225,7 +1225,7 @@ paths:
         "404":
           description: Product not found
         "409":
-          description: Listing already has or previously had inventory or orders
+          description: Base already has or previously had inventory or orders
   /admin/coupons:
     get:
       operationId: getAdminCoupons
@@ -2001,7 +2001,7 @@ components:
         cards:
           type: array
           minItems: 1
-          maxItems: 1
+          maxItems: 100
           items: { $ref: "#/components/schemas/GiftCardCredentialInput" }
       required: [cards]
     AddGiftCardStockResponse:

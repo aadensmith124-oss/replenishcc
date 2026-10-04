@@ -16,7 +16,7 @@ const sections = [
   { id: 'announcements', label: 'Announcements', hint: 'Member communications', icon: Megaphone, legacy: '/admin/announcements' },
   { id: 'deletions', label: 'Deletion requests', hint: 'Account review', icon: Trash2, legacy: '/admin/account-deletion-requests' },
   { id: 'inventory', label: 'Log inventory', hint: 'Products & stock', icon: PackageCheck, legacy: '/admin/license-products' },
-  { id: 'card-inventory', label: 'Card inventory', hint: 'Card stock', icon: CreditCard, legacy: '/admin/dashboard/card-inventory' },
+  { id: 'card-inventory', label: 'Bases', hint: 'Card bases', icon: CreditCard, legacy: '/admin/dashboard/card-inventory' },
   { id: 'coupons', label: 'Coupon codes', hint: 'Store discounts', icon: TicketPercent, legacy: '/admin/dashboard/coupons' },
   { id: 'tickets', label: 'Support inbox', hint: 'Member care', icon: Headphones, legacy: '/admin/support/tickets' },
 ] as const;

@@ -4418,7 +4418,7 @@ export const getCreateAdminGiftCardProductUrl = () => {
 }
 
 /**
- * @summary Create a prepaid gift-card product listing
+ * @summary Create a card base with a per-card purchase price
  */
 export const createAdminGiftCardProduct = async (createGiftCardProductInput: CreateGiftCardProductInput, options?: Parameters<typeof customFetch>[1]): Promise<GiftCardProduct> => {
 
@@ -4484,7 +4484,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type CreateAdminGiftCardProductMutationVariables = {data: BodyType<CreateGiftCardProductInput>}
 
     /**
- * @summary Create a prepaid gift-card product listing
+ * @summary Create a card base with a per-card purchase price
  */
 export const useCreateAdminGiftCardProduct = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminGiftCardProduct>>, TError,CreateAdminGiftCardProductMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -4669,7 +4669,7 @@ export const getAddAdminGiftCardStockUrl = (productId: string,) => {
 }
 
 /**
- * @summary Add one prepaid gift card to a new product listing
+ * @summary Add a batch of prepaid gift cards to a base
  */
 export const addAdminGiftCardStock = async (productId: string,
     addGiftCardStockInput: AddGiftCardStockInput, options?: Parameters<typeof customFetch>[1]): Promise<AddGiftCardStockResponse> => {
@@ -4736,7 +4736,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type AddAdminGiftCardStockMutationVariables = {productId: string;data: BodyType<AddGiftCardStockInput>}
 
     /**
- * @summary Add one prepaid gift card to a new product listing
+ * @summary Add a batch of prepaid gift cards to a base
  */
 export const useAddAdminGiftCardStock = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addAdminGiftCardStock>>, TError,AddAdminGiftCardStockMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}

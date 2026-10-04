@@ -35,6 +35,8 @@ import {
 
 const router: IRouter = Router();
 
+class DuplicateGiftCardBatchError extends Error {}
+
 async function listProducts(includeStockEligibility = false) {
   const availableCount = count(giftCardInventoryTable.id);
   const products = await db
@@ -758,13 +760,6 @@ router.post(
       return;
     }
     const credentials = cards as GiftCardCredential[];
-    if (credentials.length !== 1) {
-      res.status(400).json({
-        error:
-          "Upload exactly one card per listing. Create a new listing for each card.",
-      });
-      return;
-    }
     const hashes = credentials.map(hashGiftCardCredential);
     if (new Set(hashes).size !== hashes.length) {
       res.status(400).json({
@@ -783,46 +778,59 @@ router.post(
       hasPhone: Boolean(credential.phone),
       ...encryptGiftCardCredential(credential),
     }));
-    const stockResult = await db.transaction(async (tx) => {
-      const [product] = await tx
-        .select({ id: giftCardProductsTable.id })
-        .from(giftCardProductsTable)
-        .where(eq(giftCardProductsTable.id, params.data.productId))
-        .for("update")
-        .limit(1);
-      if (!product) return { kind: "missing" as const };
+    let stockResult:
+      | { kind: "missing" }
+      | { kind: "ineligible" }
+      | { kind: "success"; availableCount: number };
+    try {
+      stockResult = await db.transaction(async (tx) => {
+        const [product] = await tx
+          .select({ id: giftCardProductsTable.id })
+          .from(giftCardProductsTable)
+          .where(eq(giftCardProductsTable.id, params.data.productId))
+          .for("update")
+          .limit(1);
+        if (!product) return { kind: "missing" as const };
 
-      const [existingInventory, existingOrder] = await Promise.all([
-        tx
-          .select({ id: giftCardInventoryTable.id })
-          .from(giftCardInventoryTable)
-          .where(eq(giftCardInventoryTable.productId, product.id))
-          .limit(1),
-        tx
-          .select({ id: giftCardOrdersTable.id })
-          .from(giftCardOrdersTable)
-          .where(eq(giftCardOrdersTable.productId, product.id))
-          .limit(1),
-      ]);
-      if (existingInventory.length > 0 || existingOrder.length > 0) {
-        return { kind: "ineligible" as const };
-      }
+        const [existingInventory, existingOrder] = await Promise.all([
+          tx
+            .select({ id: giftCardInventoryTable.id })
+            .from(giftCardInventoryTable)
+            .where(eq(giftCardInventoryTable.productId, product.id))
+            .limit(1),
+          tx
+            .select({ id: giftCardOrdersTable.id })
+            .from(giftCardOrdersTable)
+            .where(eq(giftCardOrdersTable.productId, product.id))
+            .limit(1),
+        ]);
+        if (existingInventory.length > 0 || existingOrder.length > 0) {
+          return { kind: "ineligible" as const };
+        }
 
-      const inserted = await tx
-        .insert(giftCardInventoryTable)
-        .values(values)
-        .onConflictDoNothing({
-          target: giftCardInventoryTable.credentialHash,
-        })
-        .returning({ id: giftCardInventoryTable.id });
-      if (inserted.length !== values.length) {
-        return { kind: "duplicate" as const };
-      }
-      return {
-        kind: "success" as const,
-        availableCount: inserted.length,
-      };
-    });
+        const inserted = await tx
+          .insert(giftCardInventoryTable)
+          .values(values)
+          .onConflictDoNothing({
+            target: giftCardInventoryTable.credentialHash,
+          })
+          .returning({ id: giftCardInventoryTable.id });
+        if (inserted.length !== values.length) {
+          // Throw to roll back every row rather than commit a partial batch.
+          throw new DuplicateGiftCardBatchError();
+        }
+        return {
+          kind: "success" as const,
+          availableCount: inserted.length,
+        };
+      });
+    } catch (error) {
+      if (!(error instanceof DuplicateGiftCardBatchError)) throw error;
+      res.status(409).json({
+        error: "One or more cards already exist in inventory. No cards were added.",
+      });
+      return;
+    }
 
     if (stockResult.kind === "missing") {
       res.status(404).json({ error: "Gift-card product not found." });
@@ -831,19 +839,18 @@ router.post(
     if (stockResult.kind === "ineligible") {
       res.status(409).json({
         error:
-          "This listing already has or previously had inventory or orders. Create a new listing for each card.",
+          "This base already has or previously had inventory or orders. A base accepts one initial batch; create a new base for a separate upload.",
       });
       return;
     }
-    if (stockResult.kind === "duplicate") {
-      res.status(409).json({
-        error: "One or more cards already exist in the inventory.",
-      });
-      return;
-    }
-
-    // Only disclose a card's BIN prefix to the public lookup after stock was accepted.
-    const binLookup = await lookupBinMetadata(credentials[0]!.cardNumber.slice(0, 8));
+    // Only look up a shared BIN after the full batch has been accepted.
+    const binPrefixes = new Set(
+      credentials.map((credential) => credential.cardNumber.slice(0, 8)),
+    );
+    const binLookup =
+      binPrefixes.size === 1
+        ? await lookupBinMetadata([...binPrefixes][0]!)
+        : ({ kind: "not_found" } as const);
     if (binLookup.kind === "unavailable") {
       req.log.warn(
         { status: binLookup.status },

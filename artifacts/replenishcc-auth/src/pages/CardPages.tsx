@@ -62,6 +62,8 @@ function parseStockProductMetadata(line: string) {
   };
 }
 
+const MAX_CARDS_PER_BATCH = 100;
+
 function ContactIndicator({ available, label }: { available: boolean; label: string }) {
   return <span className={`gift-contact-indicator${available ? ' is-present' : ''}`} aria-label={`${label} ${available ? 'included' : 'not included'}`} title={`${label} ${available ? 'included' : 'not included'}`}>
     {available ? <Check aria-hidden="true" /> : <span aria-hidden="true">—</span>}
@@ -69,19 +71,13 @@ function ContactIndicator({ available, label }: { available: boolean; label: str
   </span>;
 }
 
-const cardSchema = z.object({
-  name: z.string().trim().min(1, 'Enter a listing name').max(100),
-  description: z.string().max(1000),
-  regionZip: z.string().trim().refine((value) => !value || /^\d{5}(?:-\d{4})?$/.test(value), 'Enter a 5-digit ZIP or ZIP+4'),
-  cardType: z.string().trim().max(80),
-  issuer: z.string().trim().max(80),
-  brand: z.string().trim().max(80),
-  faceValue: z.coerce.number().positive('Enter a positive denomination'),
-  price: z.coerce.number().positive('Enter a positive price'),
+const baseSchema = z.object({
+  name: z.string().trim().min(1, 'Enter a base name').max(100),
+  price: z.coerce.number().positive('Enter a positive price').max(10_000, 'Price cannot exceed $10,000'),
 });
-type CardForm = z.infer<typeof cardSchema>;
+type BaseForm = z.infer<typeof baseSchema>;
 
-type CatalogColumn = 'state' | 'city' | 'regionZip' | 'cardType' | 'issuer' | 'brand' | 'price';
+type CatalogColumn = 'state' | 'city' | 'regionZip' | 'cardType' | 'issuer' | 'brand' | 'price' | 'actions';
 type CatalogPriceFilter = 'all' | 'under-25' | '25-50' | '50-100' | '100-plus';
 const catalogColumns: { id: CatalogColumn; label: string }[] = [
   { id: 'brand', label: 'Brand' },
@@ -91,10 +87,12 @@ const catalogColumns: { id: CatalogColumn; label: string }[] = [
   { id: 'state', label: 'State' },
   { id: 'regionZip', label: 'ZIP' },
   { id: 'price', label: 'Price' },
+  { id: 'actions', label: 'Actions' },
 ];
-const catalogColumnStorageKey = 'replenishcc-card-catalog-columns-v4';
-const previousCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v3';
-const legacyCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v2';
+const catalogColumnStorageKey = 'replenishcc-card-catalog-columns-v5';
+const previousCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v4';
+const legacyCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v3';
+const olderCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v2';
 const oldestCatalogColumnStorageKey = 'replenishcc-card-catalog-columns';
 const defaultCatalogColumns = catalogColumns.map((column) => column.id);
 
@@ -114,12 +112,13 @@ function readCatalogColumns(): CatalogColumn[] {
     const preferenceValue = stored
       ?? window.localStorage.getItem(previousCatalogColumnStorageKey)
       ?? window.localStorage.getItem(legacyCatalogColumnStorageKey)
+      ?? window.localStorage.getItem(olderCatalogColumnStorageKey)
       ?? window.localStorage.getItem(oldestCatalogColumnStorageKey);
     if (preferenceValue === null) return defaultCatalogColumns;
     const parsed: unknown = JSON.parse(preferenceValue);
     if (!Array.isArray(parsed)) return defaultCatalogColumns;
     const newMetadataColumns: CatalogColumn[] = migratingPreferences
-      ? ['state', 'city', 'regionZip', 'cardType', 'issuer', 'brand']
+      ? ['state', 'city', 'regionZip', 'cardType', 'issuer', 'brand', 'actions']
       : [];
     return catalogColumns.filter((column) => parsed.includes(column.id) || newMetadataColumns.includes(column.id)).map((column) => column.id);
   } catch {
@@ -162,7 +161,6 @@ export function BuyCardsPage() {
     { label: 'Issuer', value: infoProduct.issuer || 'Not specified' },
     { label: 'Address', value: infoProduct.address || 'Not specified', testId: `text-card-info-address-${infoProduct.id}` },
     { label: 'Base', value: infoProduct.name },
-    { label: 'Face value', value: money(infoProduct.faceValueCents), testId: `text-card-info-value-${infoProduct.id}` },
     { label: 'Available stock', value: `${infoProduct.availableCount} cards`, testId: `text-card-info-stock-${infoProduct.id}` },
     { label: 'Price', value: money(infoProduct.priceCents), testId: `text-card-info-price-${infoProduct.id}` },
   ] : [];
@@ -319,7 +317,7 @@ export function BuyCardsPage() {
           <details className="column-chooser gift-column-chooser">
             <summary className="quiet-button" data-testid="button-choose-card-columns"><Columns3 /> Columns <ChevronRight className="chooser-chevron" /></summary>
             <div className="column-chooser-menu" role="group" aria-label="Choose visible card listing columns">
-              <p className="gift-column-note">Base and actions stay visible. Private card credentials are never catalog columns.</p>
+              <p className="gift-column-note">Base stays visible. Choose which details and actions to show; private card credentials never appear as columns.</p>
               {catalogColumns.map((column) => <label key={column.id} className="column-choice">
                 <input type="checkbox" checked={visibleColumns.includes(column.id)} onChange={() => toggleColumn(column.id)} data-testid={`checkbox-card-column-${column.id}`} />
                 <span>{column.label}</span>
@@ -334,7 +332,7 @@ export function BuyCardsPage() {
         {filteredProducts.length === 0 ? <div className="gift-empty gift-filter-empty" data-testid="empty-filtered-card-catalog"><Search /><h2>No matching listings</h2><p>Try changing the search text or filters.</p><button type="button" className="gift-primary-link" onClick={resetFilters} data-testid="button-reset-card-filters">Reset filters <RotateCcw /></button></div>
           : <div className="gift-catalog-table-wrap" role="region" aria-label="Card listings" tabIndex={0}>
             <table className="gift-catalog-table">
-              <thead><tr><th scope="col" className="catalog-select-cell"><input type="checkbox" aria-label="Select all available filtered listings" checked={allVisibleSelected} disabled={!selectableProducts.length} onChange={() => setSelectedIds((current) => allVisibleSelected ? current.filter((id) => !selectableProducts.some((product) => product.id === id)) : [...new Set([...current, ...selectableProducts.map((product) => product.id)])].slice(0, 50))} /></th><th scope="col">Base</th>{visibleColumns.map((column) => <th scope="col" key={column}>{catalogColumns.find((item) => item.id === column)?.label}</th>)}<th scope="col">Actions</th></tr></thead>
+              <thead><tr><th scope="col" className="catalog-select-cell"><input type="checkbox" aria-label="Select all available filtered listings" checked={allVisibleSelected} disabled={!selectableProducts.length} onChange={() => setSelectedIds((current) => allVisibleSelected ? current.filter((id) => !selectableProducts.some((product) => product.id === id)) : [...new Set([...current, ...selectableProducts.map((product) => product.id)])].slice(0, 50))} /></th><th scope="col">Base</th>{visibleColumns.map((column) => <th scope="col" key={column} className={column === 'actions' ? 'catalog-actions-cell' : undefined}>{catalogColumns.find((item) => item.id === column)?.label}</th>)}</tr></thead>
               <tbody>{filteredProducts.map((product) => <tr key={product.id} data-testid={`row-gift-product-${product.id}`}>
                 <td className="catalog-select-cell"><input type="checkbox" aria-label={`Select one ${product.name} card`} checked={selectedIds.includes(product.id)} disabled={product.availableCount < 1 || (selectedIds.length >= 50 && !selectedIds.includes(product.id))} onChange={() => toggleSelection(product.id)} data-testid={`checkbox-select-card-${product.id}`} /></td>
                 <td><div className="gift-catalog-product"><div><strong data-testid={`text-gift-product-name-${product.id}`}>{product.name}</strong></div></div></td>
@@ -345,14 +343,14 @@ export function BuyCardsPage() {
                 {visibleColumns.includes('state') && <td data-testid={`text-gift-state-${product.id}`}>{product.state || '—'}</td>}
                 {visibleColumns.includes('regionZip') && <td data-testid={`text-gift-region-zip-${product.id}`}>{product.regionZip || '—'}</td>}
                 {visibleColumns.includes('price') && <td className="gift-catalog-price" data-testid={`text-gift-member-price-${product.id}`}>{money(product.priceCents)}</td>}
-                <td><div className="gift-catalog-actions">
+                {visibleColumns.includes('actions') && <td className="catalog-actions-cell"><div className="gift-catalog-actions">
                   <button className="gift-info-button" type="button" onClick={() => setInfoProductId(product.id)} data-testid={`button-info-card-${product.id}`}><Info /> Info</button>
                   <button className="gift-purchase-button" type="button" disabled={purchase.isPending || bulkPurchase.isPending || product.availableCount < 1} onClick={() => purchaseOne(product.id)} aria-label={`Buy one ${product.name}`} data-testid={`button-purchase-card-${product.id}`}>{purchase.isPending ? 'Working…' : 'Buy 1'} <ShoppingCart /></button>
-                </div></td>
+                </div></td>}
               </tr>)}</tbody>
             </table>
           </div>}
-        {filteredProducts.length > 0 && <p className="gift-catalog-scroll-note">Swipe to browse columns. Info and Buy 1 stay visible.</p>}
+        {filteredProducts.length > 0 && <p className="gift-catalog-scroll-note">{visibleColumns.includes('actions') ? 'Swipe to browse columns. Info and Buy 1 are in the Actions column.' : 'Actions are hidden; turn on Actions in Columns to view Info and Buy 1.'}</p>}
       </>}
     <Dialog open={!!infoProduct} onOpenChange={(open) => { if (!open) setInfoProductId(null); }}>
       {infoProduct && <DialogContent className="card-detail-dialog" data-testid={`dialog-card-info-${infoProduct.id}`}>
@@ -402,7 +400,6 @@ export function MyCardOrdersPage() {
       `Listing: ${plainTextLine(order.productName)}`,
       `Description: ${plainTextLine(order.description)}`,
       `Quantity: ${order.quantity}`,
-      `Face value: ${money(order.faceValueCents)}`,
       `Unit price: ${money(order.unitPriceCents)}`,
       `Total paid: ${money(order.totalCents)}`,
       `Delivered cards (${order.deliveredCards.length}):`,
@@ -461,9 +458,17 @@ function Credential({ card, index, visible, toggle, copy, copied, orderId }: { c
   </section>;
 }
 
-const stockSchema = z.object({ productId: z.string().min(1, 'Choose a listing'), cards: z.string().min(1, 'Paste at least one card') });
+const stockSchema = z.object({
+  productId: z.string().min(1, 'Choose a base'),
+  cards: z.string()
+    .min(1, 'Paste at least one card')
+    .max(100_000, 'Keep the batch under 100 KB')
+    .refine(
+      (value) => value.split(/\r?\n/).filter((line) => line.trim()).length <= MAX_CARDS_PER_BATCH,
+      `Upload no more than ${MAX_CARDS_PER_BATCH} cards at a time.`,
+    ),
+});
 type StockForm = z.infer<typeof stockSchema>;
-const listingSchema = cardSchema;
 
 export function AdminCardInventoryPage() {
   const queryClient = useQueryClient();
@@ -477,17 +482,18 @@ export function AdminCardInventoryPage() {
   const [feedback, setFeedback] = useState('');
   const [editingMetadata, setEditingMetadata] = useState<{ productId: string; productName: string } | null>(null);
   const [metadataDraft, setMetadataDraft] = useState({ address: '', state: '', city: '', regionZip: '', cardType: '', issuer: '', brand: '' });
-  const form = useForm<CardForm>({ resolver: zodResolver(listingSchema), defaultValues: { name: '', description: '', regionZip: '', cardType: '', issuer: '', brand: '', faceValue: 0, price: 0 } });
+  const form = useForm<BaseForm>({ resolver: zodResolver(baseSchema), defaultValues: { name: '', price: 0 } });
   const stockForm = useForm<StockForm>({ resolver: zodResolver(stockSchema), defaultValues: { productId: '', cards: '' } });
   const stockText = stockForm.watch('cards');
-  const stockLine = stockText.split(/\r?\n/).find((line) => line.trim()) ?? '';
+  const stockLines = stockText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const stockLine = stockLines[0] ?? '';
   const stockFields = stockLine.split('|').map((field) => field.trim());
   const stockDetection = detectStockContactFields(stockFields[7] ?? '');
   const stockRedemptionZip = detectRedemptionRegionZip(stockLine);
   const rows = products.data?.products ?? [];
   const selectedStockProduct = rows.find((product) => product.id === stockForm.watch('productId'));
   const totalStock = useMemo(() => rows.reduce((sum, item) => sum + item.availableCount, 0), [rows]);
-  useEffect(() => { document.title = 'Card inventory | ReplenishCC Admin'; }, []);
+  useEffect(() => { document.title = 'Bases | ReplenishCC Admin'; }, []);
   useEffect(() => { if (!session.isLoading && (session.isError || !session.data?.authenticated)) setLocation('/login'); else if (!session.isLoading && session.data?.user && !session.data.user.isDepositAdmin) setLocation('/dashboard'); }, [session.isLoading, session.isError, session.data?.authenticated, session.data?.user, setLocation]);
   const invalidate = () => { void queryClient.invalidateQueries({ queryKey: getGetAdminGiftCardProductsQueryKey() }); void queryClient.invalidateQueries({ queryKey: getGetGiftCardProductsQueryKey() }); };
   const saveMetadata = (event: FormEvent<HTMLFormElement>) => {
@@ -495,7 +501,7 @@ export function AdminCardInventoryPage() {
     if (!editingMetadata) return;
     const regionZip = metadataDraft.regionZip.trim();
     if (regionZip && !/^\d{5}(?:-\d{4})?$/.test(regionZip)) {
-      setFeedback('Enter a valid 5-digit ZIP or ZIP+4 for the product region.');
+      setFeedback('Enter a valid 5-digit ZIP or ZIP+4 for the base region.');
       return;
     }
     const cardType = metadataDraft.cardType.trim();
@@ -518,33 +524,53 @@ export function AdminCardInventoryPage() {
         onSuccess: () => {
           setEditingMetadata(null);
           invalidate();
-          setFeedback('Public product metadata updated.');
+          setFeedback('Public base metadata updated.');
         },
-        onError: () => setFeedback('Product metadata could not be updated. Try again.'),
+        onError: () => setFeedback('Base metadata could not be updated. Try again.'),
       },
     );
   };
-  if (session.isLoading || !session.data?.user?.isDepositAdmin) return <MemberShell pageTitle="Card inventory" user={null} loading shellMode="force" />;
+  if (session.isLoading || !session.data?.user?.isDepositAdmin) return <MemberShell pageTitle="Bases" user={null} loading shellMode="force" />;
   return <section className="gift-admin">
-    <header className="gift-admin-heading"><div><div className="gift-eyebrow">Restricted operations · inventory only</div><h2>Card inventory</h2><p>Manage listings and encrypted stock intake. Credentials are intentionally excluded from this table.</p></div><div className="gift-admin-stat"><small>Available cards</small><strong data-testid="text-admin-total-stock">{products.isLoading ? '—' : totalStock}</strong></div></header>
+    <header className="gift-admin-heading"><div><div className="gift-eyebrow">Restricted operations · inventory only</div><h2>Bases</h2><p>Set a base name and per-card price, then upload encrypted card stock. Credentials are intentionally excluded from this table.</p></div><div className="gift-admin-stat"><small>Available cards</small><strong data-testid="text-admin-total-stock">{products.isLoading ? '—' : totalStock}</strong></div></header>
     {feedback && <div className="gift-notice" role="status" data-testid="status-admin-card-action">{feedback}<button onClick={() => setFeedback('')} aria-label="Dismiss message" data-testid="button-dismiss-admin-message">×</button></div>}
     <div className="gift-admin-forms">
-      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>01</span><div><h3>Create a listing</h3><p>Address, state, city, and ZIP from stock upload appear as public catalog columns. Card type, issuer, and brand can be filled from BIN data.</p></div></div>
-        <Form {...form}><form onSubmit={form.handleSubmit((values) => create.mutate({ data: { name: values.name.trim(), description: values.description.trim(), regionZip: values.regionZip || null, cardType: values.cardType.trim(), issuer: values.issuer.trim(), brand: values.brand.trim(), faceValueCents: Math.round(values.faceValue * 100), priceCents: Math.round(values.price * 100) } }, { onSuccess: () => { form.reset(); invalidate(); setFeedback('Listing created. Add one verified card to make it available to members.'); }, onError: () => setFeedback('Listing could not be created. Review the values and try again.') }))} className="gift-form">
-          <FormField control={form.control} name="name" render={({ field }) => <FormItem><FormLabel>Listing name</FormLabel><FormControl><Input {...field} placeholder="Gift card · $50" data-testid="input-admin-card-name" /></FormControl><FormMessage /></FormItem>} />
-          <FormField control={form.control} name="description" render={({ field }) => <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} placeholder="Short member-facing details" data-testid="input-admin-card-description" /></FormControl><FormMessage /></FormItem>} />
-          <FormField control={form.control} name="regionZip" render={({ field }) => <FormItem><FormLabel>ZIP</FormLabel><FormControl><Input {...field} inputMode="numeric" maxLength={10} placeholder="5-digit ZIP or ZIP+4" data-testid="input-admin-card-region-zip" /></FormControl><FormMessage /></FormItem>} />
-          <FormField control={form.control} name="cardType" render={({ field }) => <FormItem><FormLabel>Card type · optional</FormLabel><FormControl><Input {...field} maxLength={80} placeholder="Auto-detected from BIN when available" data-testid="input-admin-card-type" /></FormControl><FormMessage /></FormItem>} />
-          <FormField control={form.control} name="issuer" render={({ field }) => <FormItem><FormLabel>Issuer · optional</FormLabel><FormControl><Input {...field} maxLength={80} placeholder="Auto-detected from BIN when available" data-testid="input-admin-card-issuer" /></FormControl><FormMessage /></FormItem>} />
-          <FormField control={form.control} name="brand" render={({ field }) => <FormItem><FormLabel>Brand · optional</FormLabel><FormControl><Input {...field} maxLength={80} placeholder="Auto-detected from BIN when available" data-testid="input-admin-card-brand" /></FormControl><FormMessage /></FormItem>} />
-          <div className="gift-form-pair"><FormField control={form.control} name="faceValue" render={({ field }) => <FormItem><FormLabel>Face value (USD)</FormLabel><FormControl><Input {...field} type="number" min="0.01" step="0.01" data-testid="input-admin-face-value" /></FormControl><FormMessage /></FormItem>} /><FormField control={form.control} name="price" render={({ field }) => <FormItem><FormLabel>Price (USD)</FormLabel><FormControl><Input {...field} type="number" min="0.01" step="0.01" data-testid="input-admin-card-price" /></FormControl><FormMessage /></FormItem>} /></div>
-          <button className="gift-admin-submit" disabled={create.isPending} data-testid="button-create-card-listing">{create.isPending ? 'Creating…' : 'Create listing'} <ArrowRight /></button>
+      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>01</span><div><h3>Create a base</h3><p>The base name and Price apply to every card uploaded under it.</p></div></div>
+        <Form {...form}><form onSubmit={form.handleSubmit((values) => {
+          const priceCents = Math.round(values.price * 100);
+          create.mutate({ data: {
+            name: values.name.trim(),
+            description: '',
+            regionZip: null,
+            faceValueCents: priceCents,
+            priceCents,
+          } }, { onSuccess: () => { form.reset(); invalidate(); setFeedback('Base created. Upload verified cards, one per line, to add stock.'); }, onError: () => setFeedback('Base could not be created. Review the values and try again.') });
+        })} className="gift-form">
+          <div className="gift-form-pair">
+            <FormField control={form.control} name="name" render={({ field }) => <FormItem><FormLabel>Base name</FormLabel><FormControl><Input {...field} placeholder="Vanilla Visa · Standard" data-testid="input-admin-card-name" /></FormControl><FormMessage /></FormItem>} />
+            <FormField control={form.control} name="price" render={({ field }) => <FormItem><FormLabel>Price (USD)</FormLabel><FormControl><Input {...field} type="number" min="0.01" max="10000" step="0.01" data-testid="input-admin-card-price" /></FormControl><FormMessage /></FormItem>} />
+          </div>
+          <button className="gift-admin-submit" disabled={create.isPending} data-testid="button-create-card-listing">{create.isPending ? 'Creating…' : 'Create base'} <ArrowRight /></button>
         </form></Form>
       </section>
-      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload verified stock</h3><p>Use: number | expiration | security code | address | state | city | ZIP | optional email/phone. Address, state, city, and ZIP are public catalog columns.</p></div></div>
+      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload cards</h3><p>Paste up to {MAX_CARDS_PER_BATCH} cards, one per line: number | expiration | security code | address | state | city | ZIP | optional email/phone. Each base accepts one initial batch; use a new base for a separate upload.</p></div></div>
         <Form {...stockForm}><form onSubmit={stockForm.handleSubmit((values) => {
           const lines = values.cards.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-          if (lines.length !== 1) { setFeedback('Upload exactly one card per listing. Create a new listing for each card.'); return; }
+          if (!lines.length || lines.length > MAX_CARDS_PER_BATCH) { setFeedback(`Upload between 1 and ${MAX_CARDS_PER_BATCH} cards, one card per line.`); return; }
+          const metadataByLine = lines.map(parseStockProductMetadata);
+          const locationKeys = ['address', 'state', 'city', 'redemptionRegionZip'] as const;
+          const hasConflictingLocations = locationKeys.some((key) => {
+            const values = new Set<string>();
+            metadataByLine.forEach((metadata) => {
+              const value = metadata[key]?.trim();
+              if (value) values.add(value.toLowerCase());
+            });
+            return values.size > 1;
+          });
+          if (hasConflictingLocations) {
+            setFeedback('Cards in one base must share the same public address, state, city, and ZIP. Create separate bases for different locations.');
+            return;
+          }
           const cards: GiftCardCredential[] = lines.map((line) => {
             const fields = line.split('|').map((part) => part.trim());
             const detected = detectStockContactFields(fields[7] ?? '');
@@ -556,8 +582,14 @@ export function AdminCardInventoryPage() {
               phone: detected.phone,
             };
           });
-          if (!cards.length || cards.some((card) => !card.cardNumber || !card.expiration || !card.securityCode)) { setFeedback('Each line must include card number, expiration, and security code separated by |.'); return; }
-          const productMetadata = parseStockProductMetadata(lines[0] ?? '');
+          const invalidLineIndex = cards.findIndex((card) => !card.cardNumber || !card.expiration || !card.securityCode);
+          if (invalidLineIndex >= 0) { setFeedback(`Line ${invalidLineIndex + 1} must include card number, expiration, and security code separated by |.`); return; }
+          const productMetadata = {
+            address: metadataByLine.find((metadata) => metadata.address)?.address ?? '',
+            state: metadataByLine.find((metadata) => metadata.state)?.state ?? '',
+            city: metadataByLine.find((metadata) => metadata.city)?.city ?? '',
+            redemptionRegionZip: metadataByLine.find((metadata) => metadata.redemptionRegionZip)?.redemptionRegionZip ?? null,
+          };
           addStock.mutate({
             productId: values.productId,
             data: {
@@ -567,33 +599,33 @@ export function AdminCardInventoryPage() {
               ...(productMetadata.city ? { city: productMetadata.city } : {}),
               ...(productMetadata.redemptionRegionZip ? { redemptionRegionZip: productMetadata.redemptionRegionZip } : {}),
             },
-          }, { onSuccess: (result) => { stockForm.reset(); invalidate(); setFeedback(`${result.addedCount} card accepted. ${result.binMetadataApplied ? 'BIN metadata auto-filled.' : 'BIN metadata was unavailable; enter any missing values manually.'} ${result.locationMetadataApplied ? 'Public address/state/city columns updated.' : 'No address/state/city values supplied; existing columns were kept.'} ${result.redemptionZipApplied ? 'The detected ZIP was saved.' : 'No 5-digit ZIP detected; the existing ZIP was kept.'}`); }, onError: () => setFeedback('Stock upload was rejected. Check each line and try again.') });
+          }, { onSuccess: (result) => { stockForm.reset(); invalidate(); const label = `${result.addedCount} card${result.addedCount === 1 ? '' : 's'}`; setFeedback(`${label} added. ${result.binMetadataApplied ? 'BIN metadata auto-filled.' : 'BIN metadata was not applied; edit the base metadata if needed.'} ${result.locationMetadataApplied ? 'Public address/state/city columns updated.' : 'No address/state/city values supplied; existing columns were kept.'} ${result.redemptionZipApplied ? 'The detected ZIP was saved.' : 'No 5-digit ZIP detected; the existing ZIP was kept.'}`); }, onError: () => setFeedback('Stock upload was rejected. Check each line and try again.') });
         })} className="gift-form">
-          <FormField control={stockForm.control} name="productId" render={({ field }) => <FormItem><FormLabel>Listing</FormLabel><FormControl><select {...field} data-testid="select-admin-stock-product"><option value="">Select a listing</option>{rows.map((product) => <option key={product.id} value={product.id} disabled={!product.canReceiveStock}>{product.name} · {product.canReceiveStock ? 'ready for one card' : 'stock already assigned'}</option>)}</select></FormControl><FormMessage /></FormItem>} />
-          <FormField control={stockForm.control} name="cards" render={({ field }) => <FormItem><FormLabel>Card details</FormLabel><FormControl><Textarea {...field} rows={3} placeholder="number | exp | cvv | address | state | city | zip | email/phone" data-testid="input-admin-card-stock" /></FormControl><div className="gift-stock-detection" aria-live="polite"><span className={stockFields[3] ? 'is-detected' : ''}>{stockFields[3] ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Address {stockFields[3] ? 'detected' : 'not detected'}</span><span className={stockFields[4] ? 'is-detected' : ''}>{stockFields[4] ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}State {stockFields[4] ? 'detected' : 'not detected'}</span><span className={stockFields[5] ? 'is-detected' : ''}>{stockFields[5] ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}City {stockFields[5] ? 'detected' : 'not detected'}</span><span className={stockRedemptionZip ? 'is-detected' : ''}>{stockRedemptionZip ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}ZIP {stockRedemptionZip ? `detected · ${stockRedemptionZip}` : 'not detected'}</span><span className={stockDetection.email ? 'is-detected' : ''}>{stockDetection.email ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Email {stockDetection.email ? 'detected' : 'not detected'}</span><span className={stockDetection.phone ? 'is-detected' : ''}>{stockDetection.phone ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Phone {stockDetection.phone ? 'detected' : 'not detected'}</span></div><FormMessage /></FormItem>} />
-          <div className="gift-upload-note"><LockKeyhole /> Binlist receives only the first 8 card digits after stock is accepted. Address, state, city, and ZIP from the stock line become public listing columns.</div>
+          <FormField control={stockForm.control} name="productId" render={({ field }) => <FormItem><FormLabel>Base</FormLabel><FormControl><select {...field} data-testid="select-admin-stock-product"><option value="">Select a base</option>{rows.map((product) => <option key={product.id} value={product.id} disabled={!product.canReceiveStock}>{product.name} · {product.canReceiveStock ? 'ready for batch upload' : 'batch already uploaded'}</option>)}</select></FormControl><FormMessage /></FormItem>} />
+          <FormField control={stockForm.control} name="cards" render={({ field }) => <FormItem><FormLabel>Cards · one per line ({stockLines.length}/{MAX_CARDS_PER_BATCH})</FormLabel><FormControl><Textarea {...field} rows={8} maxLength={100_000} placeholder="number | expiration | security code | address | state | city | ZIP | email/phone&#10;One card on each line" data-testid="input-admin-card-stock" /></FormControl><div className="gift-stock-detection" aria-live="polite"><span className={stockFields[3] ? 'is-detected' : ''}>{stockFields[3] ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Address {stockFields[3] ? 'detected' : 'not detected'}</span><span className={stockFields[4] ? 'is-detected' : ''}>{stockFields[4] ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}State {stockFields[4] ? 'detected' : 'not detected'}</span><span className={stockFields[5] ? 'is-detected' : ''}>{stockFields[5] ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}City {stockFields[5] ? 'detected' : 'not detected'}</span><span className={stockRedemptionZip ? 'is-detected' : ''}>{stockRedemptionZip ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}ZIP {stockRedemptionZip ? `detected · ${stockRedemptionZip}` : 'not detected'}</span><span className={stockDetection.email ? 'is-detected' : ''}>{stockDetection.email ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Email {stockDetection.email ? 'detected' : 'not detected'}</span><span className={stockDetection.phone ? 'is-detected' : ''}>{stockDetection.phone ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Phone {stockDetection.phone ? 'detected' : 'not detected'}</span></div><FormMessage /></FormItem>} />
+          <div className="gift-upload-note"><LockKeyhole /> Public address, state, city, and ZIP are shared by the base; keep these fields consistent on every line. BIN lookup uses the first 8 digits only after the batch is accepted.</div>
           <div className="gift-upload-note"><LockKeyhole /> Card number, expiration, security code, and actual email/phone values are encrypted and revealed only to the purchaser.</div>
-          <button className="gift-admin-submit" disabled={addStock.isPending || !rows.some((product) => product.canReceiveStock) || !selectedStockProduct?.canReceiveStock} data-testid="button-upload-card-stock">{addStock.isPending ? 'Uploading…' : 'Upload one encrypted card'} <ArrowRight /></button>
+          <button className="gift-admin-submit" disabled={addStock.isPending || !rows.some((product) => product.canReceiveStock) || !selectedStockProduct?.canReceiveStock} data-testid="button-upload-card-stock">{addStock.isPending ? 'Uploading…' : `Upload ${stockLines.length || ''} card${stockLines.length === 1 ? '' : 's'}`} <ArrowRight /></button>
         </form></Form>
       </section>
     </div>
-     <section className="gift-inventory-panel"><header><div><h3>Listings & counts</h3><p>Metadata, contact-presence indicators, and available quantity only. Actual card details stay private.</p></div><button onClick={() => void products.refetch()} aria-label="Refresh inventory" data-testid="button-refresh-card-inventory"><RefreshCw /></button></header>
+      <section className="gift-inventory-panel"><header><div><h3>Bases</h3><p>Price, public metadata, contact-presence indicators, and available quantity only. Actual card details stay private.</p></div><button onClick={() => void products.refetch()} aria-label="Refresh bases" data-testid="button-refresh-card-inventory"><RefreshCw /></button></header>
       {products.isLoading ? <div className="gift-admin-loading" data-testid="loading-admin-card-inventory"><i/><i/><i/></div>
       : products.isError ? <div className="gift-query-error" role="alert" data-testid="error-admin-card-inventory">Inventory unavailable. <button onClick={() => void products.refetch()} data-testid="button-retry-admin-card-inventory">Retry</button></div>
-      : rows.length === 0 ? <div className="gift-admin-empty" data-testid="empty-admin-card-inventory">No listings created yet. Create a listing above to begin.</div>
+      : rows.length === 0 ? <div className="gift-admin-empty" data-testid="empty-admin-card-inventory">No bases created yet. Create a base above to begin.</div>
         : <div className="gift-table-wrap">
           <table className="gift-table">
-            <thead><tr><th>Listing</th><th>Address</th><th>State</th><th>City</th><th>ZIP</th><th>Card type</th><th>Issuer</th><th>Brand</th><th>Face value</th><th>Price</th><th>Email in stock</th><th>Phone in stock</th><th>Available</th><th>Stock eligibility</th><th>Created</th><th><span className="sr-only">Actions</span></th></tr></thead>
+            <thead><tr><th>Base</th><th>Address</th><th>State</th><th>City</th><th>ZIP</th><th>Card type</th><th>Issuer</th><th>Brand</th><th>Price</th><th>Email in stock</th><th>Phone in stock</th><th>Available</th><th>Batch status</th><th>Created</th><th><span className="sr-only">Actions</span></th></tr></thead>
             <tbody>{rows.map((product) => <tr key={product.id} data-testid={`row-card-inventory-${product.id}`}>
-              <td><strong>{product.name}</strong><small>{product.description || 'No description'}</small></td>
+              <td><strong>{product.name}</strong></td>
               <td>{product.address || '—'}</td><td>{product.state || '—'}</td><td>{product.city || '—'}</td><td>{product.regionZip || '—'}</td>
               <td>{product.cardType || '—'}</td><td>{product.issuer || '—'}</td><td>{product.brand || '—'}</td>
-              <td>{money(product.faceValueCents)}</td><td>{money(product.priceCents)}</td>
+              <td>{money(product.priceCents)}</td>
               <td><ContactIndicator available={product.hasEmail} label="Email" /></td><td><ContactIndicator available={product.hasPhone} label="Phone" /></td>
-              <td><span className="gift-count-chip">{product.availableCount}</span></td><td>{product.canReceiveStock ? 'Ready for one card' : 'Stock already assigned'}</td><td>{date(product.createdAt)}</td>
+              <td><span className="gift-count-chip">{product.availableCount}</span></td><td>{product.canReceiveStock ? 'Ready for first batch' : 'Batch already uploaded'}</td><td>{date(product.createdAt)}</td>
               <td>
                 <button className="gift-edit" type="button" onClick={() => { setEditingMetadata({ productId: product.id, productName: product.name }); setMetadataDraft({ address: product.address, state: product.state, city: product.city, regionZip: product.regionZip ?? '', cardType: product.cardType, issuer: product.issuer, brand: product.brand }); }} data-testid={`button-edit-card-metadata-${product.id}`}><Pencil /> Edit metadata</button>{' '}
-                <button className="gift-delete" disabled={!product.canReceiveStock || remove.isPending} title={!product.canReceiveStock ? 'Listings with inventory or order history cannot be deleted' : 'Delete this empty listing'} onClick={() => { if (window.confirm(`Delete listing “${product.name}”? It must have no inventory or order history.`)) remove.mutate({ productId: product.id }, { onSuccess: () => { invalidate(); setFeedback('Empty listing deleted.'); }, onError: () => setFeedback('Listing could not be deleted. It has remaining stock or order history.') }); }} data-testid={`button-delete-card-listing-${product.id}`}><Trash2 /> Delete</button>
+                <button className="gift-delete" disabled={!product.canReceiveStock || remove.isPending} title={!product.canReceiveStock ? 'Bases with inventory or order history cannot be deleted' : 'Delete this empty base'} onClick={() => { if (window.confirm(`Delete base “${product.name}”? It must have no inventory or order history.`)) remove.mutate({ productId: product.id }, { onSuccess: () => { invalidate(); setFeedback('Empty base deleted.'); }, onError: () => setFeedback('Base could not be deleted. It has remaining stock or order history.') }); }} data-testid={`button-delete-card-listing-${product.id}`}><Trash2 /> Delete</button>
               </td>
             </tr>)}</tbody>
           </table>
@@ -602,7 +634,7 @@ export function AdminCardInventoryPage() {
       <Dialog open={!!editingMetadata} onOpenChange={(open) => { if (!open && !updateMetadata.isPending) setEditingMetadata(null); }}>
         <DialogContent className="gift-info-dialog">
           <DialogHeader className="gift-info-dialog-head">
-            <div><DialogTitle>Edit listing metadata</DialogTitle><DialogDescription>{editingMetadata?.productName} · Address, state, city, and ZIP are public to catalog members.</DialogDescription></div>
+            <div><DialogTitle>Edit base metadata</DialogTitle><DialogDescription>{editingMetadata?.productName} · Address, state, city, and ZIP are public to catalog members.</DialogDescription></div>
           </DialogHeader>
           <form className="gift-form" onSubmit={saveMetadata}>
             <label htmlFor="edit-card-address">Address</label>

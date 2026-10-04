@@ -1040,8 +1040,8 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
   .gift-column-chooser .column-chooser-menu { right:auto; left:0; }
   .gift-catalog-table { min-width:720px; }
   .gift-catalog-product { min-width:110px; }
-  .gift-catalog-table th:last-child,.gift-catalog-table td:last-child { position:sticky; z-index:2; right:0; min-width:146px; background:#111411; box-shadow:-10px 0 14px #0b0d0d; }
-  .gift-catalog-table thead th:last-child { z-index:3; background:#151815; }
+  .gift-catalog-table th.catalog-actions-cell,.gift-catalog-table td.catalog-actions-cell { position:sticky; z-index:2; right:0; min-width:146px; background:#111411; box-shadow:-10px 0 14px #0b0d0d; }
+  .gift-catalog-table thead th.catalog-actions-cell { z-index:3; background:#151815; }
   .gift-catalog-actions { gap:3px; }
   .gift-info-button,.gift-purchase-button { min-height:30px; gap:3px; padding:0 6px; font-size:8px; }
   .gift-info-button svg,.gift-purchase-button svg { width:12px; height:12px; }

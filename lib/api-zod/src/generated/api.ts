@@ -1373,7 +1373,7 @@ export const GetAdminGiftCardProductsResponse = zod.object({
 
 
 /**
- * @summary Create a prepaid gift-card product listing
+ * @summary Create a card base with a per-card purchase price
  */
 export const createAdminGiftCardProductBodyNameMax = 100;
 
@@ -1502,7 +1502,7 @@ export const UpdateAdminGiftCardProductMetadataResponse = zod.void()
 
 
 /**
- * @summary Add one prepaid gift card to a new product listing
+ * @summary Add a batch of prepaid gift cards to a base
  */
 export const AddAdminGiftCardStockParams = zod.object({
   "productId": zod.coerce.string().uuid()
@@ -1535,7 +1535,7 @@ export const addAdminGiftCardStockBodyCardsItemEmailMax = 320;
 
 export const addAdminGiftCardStockBodyCardsItemPhoneMax = 40;
 
-export const addAdminGiftCardStockBodyCardsMax = 1;
+export const addAdminGiftCardStockBodyCardsMax = 100;
 
 
 
