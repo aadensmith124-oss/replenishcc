@@ -648,10 +648,21 @@ export function AdminCardInventoryPage() {
   const stockForm = useForm<StockForm>({ resolver: zodResolver(stockSchema), defaultValues: { productId: '', cards: '' } });
   const stockText = stockForm.watch('cards');
   const stockLines = stockText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  const stockLine = stockLines[0] ?? '';
-  const stockFields = stockLine.split('|').map((field) => field.trim());
-  const stockDetection = detectStockContactFields(stockFields[7] ?? '');
-  const stockRedemptionZip = detectRedemptionRegionZip(stockLine);
+  const stockMetadataByLine = stockLines.map(parseStockProductMetadata);
+  const stockContactByLine = stockLines.map((line) => {
+    const fields = line.split('|').map((field) => field.trim());
+    return detectStockContactFields(fields[7] ?? '');
+  });
+  const stockLocationCounts = {
+    address: stockMetadataByLine.filter((metadata) => metadata.address).length,
+    state: stockMetadataByLine.filter((metadata) => metadata.state).length,
+    city: stockMetadataByLine.filter((metadata) => metadata.city).length,
+    zip: stockMetadataByLine.filter((metadata) => metadata.redemptionRegionZip).length,
+  };
+  const stockContactCounts = {
+    email: stockContactByLine.filter((contact) => contact.email).length,
+    phone: stockContactByLine.filter((contact) => contact.phone).length,
+  };
   const rows = products.data?.products ?? [];
   const selectedStockProduct = rows.find((product) => product.id === stockForm.watch('productId'));
   const totalStock = useMemo(() => rows.reduce((sum, item) => sum + item.availableCount, 0), [rows]);
@@ -720,47 +731,38 @@ export function AdminCardInventoryPage() {
           const lines = values.cards.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
           if (!lines.length || lines.length > MAX_CARDS_PER_BATCH) { setFeedback(`Upload between 1 and ${MAX_CARDS_PER_BATCH} cards, one card per line.`); return; }
           const metadataByLine = lines.map(parseStockProductMetadata);
-          const locationKeys = ['address', 'state', 'city', 'redemptionRegionZip'] as const;
-          const hasConflictingLocations = locationKeys.some((key) => {
-            const values = new Set<string>();
-            metadataByLine.forEach((metadata) => {
-              const value = metadata[key]?.trim();
-              if (value) values.add(value.toLowerCase());
-            });
-            return values.size > 1;
-          });
-          if (hasConflictingLocations) {
-            setFeedback('Cards in one base must share the same public address, state, city, and ZIP. Create separate bases for different locations.');
+          const invalidLocationIndex = metadataByLine.findIndex((metadata) =>
+            metadata.address.length > 255
+            || metadata.state.length > 80
+            || metadata.city.length > 120,
+          );
+          if (invalidLocationIndex >= 0) {
+            setFeedback(`Line ${invalidLocationIndex + 1} has a location field that exceeds its maximum length.`);
             return;
           }
-          const cards: GiftCardCredential[] = lines.map((line) => {
+          const cards: GiftCardCredential[] = lines.map((line, index) => {
             const fields = line.split('|').map((part) => part.trim());
             const detected = detectStockContactFields(fields[7] ?? '');
+            const metadata = metadataByLine[index]!;
             return {
               cardNumber: fields[0] ?? '',
               expiration: fields[1] ?? '',
               securityCode: fields[2] ?? '',
               email: detected.email,
               phone: detected.phone,
+              publicLocation: {
+                address: metadata.address,
+                state: metadata.state,
+                city: metadata.city,
+                regionZip: metadata.redemptionRegionZip,
+              },
             };
           });
           const invalidLineIndex = cards.findIndex((card) => !card.cardNumber || !card.expiration || !card.securityCode);
           if (invalidLineIndex >= 0) { setFeedback(`Line ${invalidLineIndex + 1} must include card number, expiration, and security code separated by |.`); return; }
-          const productMetadata = {
-            address: metadataByLine.find((metadata) => metadata.address)?.address ?? '',
-            state: metadataByLine.find((metadata) => metadata.state)?.state ?? '',
-            city: metadataByLine.find((metadata) => metadata.city)?.city ?? '',
-            redemptionRegionZip: metadataByLine.find((metadata) => metadata.redemptionRegionZip)?.redemptionRegionZip ?? null,
-          };
           addStock.mutate({
             productId: values.productId,
-            data: {
-              cards,
-              ...(productMetadata.address ? { address: productMetadata.address } : {}),
-              ...(productMetadata.state ? { state: productMetadata.state } : {}),
-              ...(productMetadata.city ? { city: productMetadata.city } : {}),
-              ...(productMetadata.redemptionRegionZip ? { redemptionRegionZip: productMetadata.redemptionRegionZip } : {}),
-            },
+            data: { cards },
           }, { onSuccess: (result) => { stockForm.reset(); invalidate(); const label = `${result.addedCount} card${result.addedCount === 1 ? '' : 's'}`; setFeedback(`${label} added. ${result.binMetadataApplied ? 'BIN metadata auto-filled.' : 'BIN metadata was not applied; edit the base metadata if needed.'} ${result.locationMetadataApplied ? 'Public address/state/city columns updated.' : 'No address/state/city values supplied; existing columns were kept.'} ${result.redemptionZipApplied ? 'The detected ZIP was saved.' : 'No 5-digit ZIP detected; the existing ZIP was kept.'}`); }, onError: () => setFeedback('Stock upload was rejected. Check each line and try again.') });
         })} className="gift-form">
           <FormField control={stockForm.control} name="productId" render={({ field }) => <FormItem><FormLabel>Base</FormLabel><FormControl><select {...field} data-testid="select-admin-stock-product"><option value="">Select a base</option>{rows.map((product) => <option key={product.id} value={product.id} disabled={!product.canReceiveStock}>{product.name} · {product.canReceiveStock ? 'ready for batch upload' : 'batch already uploaded'}</option>)}</select></FormControl><FormMessage /></FormItem>} />
