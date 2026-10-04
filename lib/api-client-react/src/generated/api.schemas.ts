@@ -918,6 +918,8 @@ export interface GiftCardProduct {
   faceValueCents: number;
   priceCents: number;
   availableCount: number;
+  hasEmail: boolean;
+  hasPhone: boolean;
   createdAt: string;
 }
 
@@ -944,6 +946,8 @@ export interface AdminGiftCardProduct {
   faceValueCents: number;
   priceCents: number;
   availableCount: number;
+  hasEmail: boolean;
+  hasPhone: boolean;
   canReceiveStock: boolean;
   createdAt: string;
 }
@@ -1040,6 +1044,16 @@ export interface GiftCardCredentialInput {
      * @nullable
      */
   pin: string | null;
+  /**
+     * @maxLength 320
+     * @nullable
+     */
+  email?: string | null;
+  /**
+     * @maxLength 40
+     * @nullable
+     */
+  phone?: string | null;
 }
 
 export interface AddGiftCardStockInput {
@@ -1061,6 +1075,16 @@ export interface GiftCardCredential {
   securityCode: string;
   /** @nullable */
   pin: string | null;
+  /**
+     * @maxLength 320
+     * @nullable
+     */
+  email?: string | null;
+  /**
+     * @maxLength 40
+     * @nullable
+     */
+  phone?: string | null;
 }
 
 export interface PurchaseGiftCardInput {

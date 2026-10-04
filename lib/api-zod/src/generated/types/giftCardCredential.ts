@@ -12,4 +12,14 @@ export interface GiftCardCredential {
   securityCode: string;
   /** @nullable */
   pin: string | null;
+  /**
+     * @maxLength 320
+     * @nullable
+     */
+  email?: string | null;
+  /**
+     * @maxLength 40
+     * @nullable
+     */
+  phone?: string | null;
 }

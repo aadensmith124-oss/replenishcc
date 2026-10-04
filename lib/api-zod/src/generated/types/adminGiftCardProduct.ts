@@ -25,6 +25,8 @@ export interface AdminGiftCardProduct {
   faceValueCents: number;
   priceCents: number;
   availableCount: number;
+  hasEmail: boolean;
+  hasPhone: boolean;
   canReceiveStock: boolean;
   createdAt: Date;
 }

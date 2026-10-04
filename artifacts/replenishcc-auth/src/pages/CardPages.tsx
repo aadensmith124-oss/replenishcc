@@ -20,6 +20,52 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 
 const money = (cents: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 const date = (value: string) => new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+const emailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
+
+function detectStockContactFields(line: string) {
+  const extraFields = line.split('|').slice(3).map((field) => field.trim());
+  let email: string | null = null;
+  let phone: string | null = null;
+  let pin: string | null = null;
+
+  for (const [index, originalField] of extraFields.entries()) {
+    let remaining = originalField;
+    const labelledPin = /\bpin\s*[:=]\s*(\d{3,16})\b/i.exec(remaining);
+    if (!pin && labelledPin) pin = labelledPin[1] ?? null;
+    if (labelledPin) remaining = remaining.replace(labelledPin[0], ' ');
+
+    const emailMatch = emailPattern.exec(remaining);
+    if (!email && emailMatch) email = emailMatch[0];
+    if (emailMatch) remaining = remaining.replace(emailMatch[0], ' ');
+
+    const labelledPhone = /\b(?:phone|mobile|tel|telephone)\s*[:=]\s*(\+?\d[\d\s().-]{7,}\d)/i.exec(remaining);
+    if (!phone && labelledPhone) phone = labelledPhone[1]?.trim() ?? null;
+    if (labelledPhone) remaining = remaining.replace(labelledPhone[0], ' ');
+
+    const phoneCandidates = remaining.match(/\+?\d[\d\s().-]{7,}\d/g) ?? [];
+    const phoneCandidate = phoneCandidates.find((candidate) => {
+      const digits = candidate.replace(/\D/g, '').length;
+      return digits >= 10 && digits <= 15;
+    });
+    if (!phone && phoneCandidate && (index > 0 || /[+().\s-]/.test(phoneCandidate))) {
+      phone = phoneCandidate.trim();
+    }
+    if (phoneCandidate) remaining = remaining.replace(phoneCandidate, ' ');
+
+    remaining = remaining.replace(/\b(?:email|e-mail|phone|mobile|tel|telephone|pin)\b\s*[:=]?\s*/gi, ' ').trim();
+    if (!pin && /^\d{3,16}$/.test(remaining)) pin = remaining;
+  }
+
+  return { email, phone, pin };
+}
+
+function ContactIndicator({ available, label }: { available: boolean; label: string }) {
+  return <span className={`gift-contact-indicator${available ? ' is-present' : ''}`} aria-label={`${label} ${available ? 'included' : 'not included'}`} title={`${label} ${available ? 'included' : 'not included'}`}>
+    {available ? <Check aria-hidden="true" /> : <span aria-hidden="true">—</span>}
+    <span>{available ? 'Included' : 'Not included'}</span>
+  </span>;
+}
+
 const cardSchema = z.object({
   name: z.string().trim().min(1, 'Enter a listing name').max(100),
   description: z.string().max(1000),
@@ -247,7 +293,8 @@ export function BuyCardsPage() {
           <div><dt>Issuer</dt><dd>{infoProduct.issuer || 'Not specified'}</dd></div>
           <div><dt>Brand</dt><dd>{infoProduct.brand || 'Not specified'}</dd></div>
           <div><dt>Face value</dt><dd data-testid={`text-card-info-value-${infoProduct.id}`}>{money(infoProduct.faceValueCents)}</dd></div>
-          <div><dt>Member price</dt><dd data-testid={`text-card-info-price-${infoProduct.id}`}>{money(infoProduct.priceCents)}</dd></div>
+          <div><dt>Email in stock</dt><dd data-testid={`text-card-info-email-${infoProduct.id}`}><ContactIndicator available={infoProduct.hasEmail} label="Email" /></dd></div>
+          <div><dt>Phone in stock</dt><dd data-testid={`text-card-info-phone-${infoProduct.id}`}><ContactIndicator available={infoProduct.hasPhone} label="Phone" /></dd></div>
           <div><dt>Available stock</dt><dd data-testid={`text-card-info-stock-${infoProduct.id}`}>{infoProduct.availableCount} cards</dd></div>
         </dl>
         <section className="gift-info-features" aria-label="Purchase details">
@@ -300,6 +347,8 @@ function Credential({ card, index, visible, toggle, copy, copied, orderId }: { c
       ['Expiration', visible ? card.expiration : '•• / ••', card.expiration, 'expiration'],
       ['Security code', visible ? card.securityCode : '•••', card.securityCode, 'security'],
       ['PIN', card.pin ? (visible ? card.pin : '••••') : 'Not provided', card.pin ?? '', 'pin'],
+      ...(card.email ? [['Email', visible ? card.email : '••••••••', card.email, 'email']] : []),
+      ...(card.phone ? [['Phone', visible ? card.phone : '••••••••', card.phone, 'phone']] : []),
     ].map(([label, display, raw, field]) => <div className="gift-credential-field" key={field}><small>{label}</small><strong data-testid={`text-credential-${field}-${orderId}-${index}`}>{display}</strong>{visible && raw && <button onClick={() => copy(raw, field)} aria-label={`Copy ${label}`} data-testid={`button-copy-${field}-${orderId}-${index}`}>{copied === `${orderId}-${index}-${field}` ? <Check /> : <Clipboard />}<span>{copied === `${orderId}-${index}-${field}` ? 'Copied' : 'Copy'}</span></button>}{copied === `failed-${orderId}-${index}-${field}` && <small className="gift-copy-error" role="status">Clipboard unavailable. Select and copy manually.</small>}</div>)}</div>
   </section>;
 }
@@ -322,6 +371,10 @@ export function AdminCardInventoryPage() {
   const [metadataDraft, setMetadataDraft] = useState({ regionZip: '', cardType: '', issuer: '', brand: '' });
   const form = useForm<CardForm>({ resolver: zodResolver(listingSchema), defaultValues: { name: '', description: '', regionZip: '', cardType: '', issuer: '', brand: '', faceValue: 0, price: 0 } });
   const stockForm = useForm<StockForm>({ resolver: zodResolver(stockSchema), defaultValues: { productId: '', cards: '' } });
+  const stockText = stockForm.watch('cards');
+  const stockDetection = detectStockContactFields(
+    stockText.split(/\r?\n/).find((line) => line.trim()) ?? '',
+  );
   const rows = products.data?.products ?? [];
   const selectedStockProduct = rows.find((product) => product.id === stockForm.watch('productId'));
   const totalStock = useMemo(() => rows.reduce((sum, item) => sum + item.availableCount, 0), [rows]);
@@ -372,29 +425,37 @@ export function AdminCardInventoryPage() {
           <button className="gift-admin-submit" disabled={create.isPending} data-testid="button-create-card-listing">{create.isPending ? 'Creating…' : 'Create listing'} <ArrowRight /></button>
         </form></Form>
       </section>
-      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload verified stock</h3><p>One card per listing: number | expiration | security code | PIN (optional). Use a new listing for each card.</p></div></div>
+      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload verified stock</h3><p>One card per listing: number | expiration | security code | optional PIN | optional email or phone. Contact details are detected automatically.</p></div></div>
         <Form {...stockForm}><form onSubmit={stockForm.handleSubmit((values) => {
           const lines = values.cards.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
           if (lines.length !== 1) { setFeedback('Upload exactly one card per listing. Create a new listing for each card.'); return; }
           const cards: GiftCardCredential[] = lines.map((line) => {
-            const [cardNumber, expiration, securityCode, pin] = line.split('|').map((part) => part.trim());
-            return { cardNumber: cardNumber ?? '', expiration: expiration ?? '', securityCode: securityCode ?? '', pin: pin || null };
+            const [cardNumber, expiration, securityCode] = line.split('|').map((part) => part.trim());
+            const detected = detectStockContactFields(line);
+            return {
+              cardNumber: cardNumber ?? '',
+              expiration: expiration ?? '',
+              securityCode: securityCode ?? '',
+              pin: detected.pin,
+              email: detected.email,
+              phone: detected.phone,
+            };
           });
           if (!cards.length || cards.some((card) => !card.cardNumber || !card.expiration || !card.securityCode)) { setFeedback('Each line must include card number, expiration, and security code separated by |.'); return; }
           addStock.mutate({ productId: values.productId, data: { cards } }, { onSuccess: (result) => { stockForm.reset(); invalidate(); setFeedback(`${result.addedCount} cards accepted. ${result.availableCount} now available.`); }, onError: () => setFeedback('Stock upload was rejected. Check each line and try again.') });
         })} className="gift-form">
           <FormField control={stockForm.control} name="productId" render={({ field }) => <FormItem><FormLabel>Listing</FormLabel><FormControl><select {...field} data-testid="select-admin-stock-product"><option value="">Select a listing</option>{rows.map((product) => <option key={product.id} value={product.id} disabled={!product.canReceiveStock}>{product.name} · {product.canReceiveStock ? 'ready for one card' : 'stock already assigned'}</option>)}</select></FormControl><FormMessage /></FormItem>} />
-          <FormField control={stockForm.control} name="cards" render={({ field }) => <FormItem><FormLabel>Card details</FormLabel><FormControl><Textarea {...field} rows={3} placeholder="card number | MM/YY | security code | PIN (optional)" data-testid="input-admin-card-stock" /></FormControl><FormMessage /></FormItem>} />
+          <FormField control={stockForm.control} name="cards" render={({ field }) => <FormItem><FormLabel>Card details</FormLabel><FormControl><Textarea {...field} rows={3} placeholder="card number | MM/YY | security code | optional PIN | email or phone" data-testid="input-admin-card-stock" /></FormControl><div className="gift-stock-detection" aria-live="polite"><span className={stockDetection.email ? 'is-detected' : ''}>{stockDetection.email ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Email {stockDetection.email ? 'detected' : 'not detected'}</span><span className={stockDetection.phone ? 'is-detected' : ''}>{stockDetection.phone ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Phone {stockDetection.phone ? 'detected' : 'not detected'}</span></div><FormMessage /></FormItem>} />
           <div className="gift-upload-note"><LockKeyhole /> Stock is handled by the authorized service and stored encrypted. Details never appear in inventory rows.</div>
           <button className="gift-admin-submit" disabled={addStock.isPending || !rows.some((product) => product.canReceiveStock) || !selectedStockProduct?.canReceiveStock} data-testid="button-upload-card-stock">{addStock.isPending ? 'Uploading…' : 'Upload one encrypted card'} <ArrowRight /></button>
         </form></Form>
       </section>
     </div>
-    <section className="gift-inventory-panel"><header><div><h3>Listings & counts</h3><p>Metadata and available quantity only. No card credentials are displayed here.</p></div><button onClick={() => void products.refetch()} aria-label="Refresh inventory" data-testid="button-refresh-card-inventory"><RefreshCw /></button></header>
+     <section className="gift-inventory-panel"><header><div><h3>Listings & counts</h3><p>Metadata, contact-presence indicators, and available quantity only. Actual card details stay private.</p></div><button onClick={() => void products.refetch()} aria-label="Refresh inventory" data-testid="button-refresh-card-inventory"><RefreshCw /></button></header>
       {products.isLoading ? <div className="gift-admin-loading" data-testid="loading-admin-card-inventory"><i/><i/><i/></div>
       : products.isError ? <div className="gift-query-error" role="alert" data-testid="error-admin-card-inventory">Inventory unavailable. <button onClick={() => void products.refetch()} data-testid="button-retry-admin-card-inventory">Retry</button></div>
       : rows.length === 0 ? <div className="gift-admin-empty" data-testid="empty-admin-card-inventory">No listings created yet. Create a listing above to begin.</div>
-        : <div className="gift-table-wrap"><table className="gift-table"><thead><tr><th>Listing</th><th>Region ZIP</th><th>Card type</th><th>Issuer</th><th>Brand</th><th>Face value</th><th>Member price</th><th>Available</th><th>Stock eligibility</th><th>Created</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{rows.map((product) => <tr key={product.id} data-testid={`row-card-inventory-${product.id}`}><td><strong>{product.name}</strong><small>{product.description || 'No description'}</small></td><td>{product.regionZip || '—'}</td><td>{product.cardType || '—'}</td><td>{product.issuer || '—'}</td><td>{product.brand || '—'}</td><td>{money(product.faceValueCents)}</td><td>{money(product.priceCents)}</td><td><span className="gift-count-chip">{product.availableCount}</span></td><td>{product.canReceiveStock ? 'Ready for one card' : 'Stock already assigned'}</td><td>{date(product.createdAt)}</td><td><button className="gift-edit" type="button" onClick={() => { setEditingMetadata({ productId: product.id, productName: product.name }); setMetadataDraft({ regionZip: product.regionZip ?? '', cardType: product.cardType, issuer: product.issuer, brand: product.brand }); }} data-testid={`button-edit-card-metadata-${product.id}`}><Pencil /> Edit metadata</button> <button className="gift-delete" disabled={!product.canReceiveStock || remove.isPending} title={!product.canReceiveStock ? 'Listings with inventory or order history cannot be deleted' : 'Delete this empty listing'} onClick={() => { if (window.confirm(`Delete listing “${product.name}”? It must have no inventory or order history.`)) remove.mutate({ productId: product.id }, { onSuccess: () => { invalidate(); setFeedback('Empty listing deleted.'); }, onError: () => setFeedback('Listing could not be deleted. It has remaining stock or order history.') }); }} data-testid={`button-delete-card-listing-${product.id}`}><Trash2 /> Delete</button></td></tr>)}</tbody></table></div>}
+        : <div className="gift-table-wrap"><table className="gift-table"><thead><tr><th>Listing</th><th>Region ZIP</th><th>Card type</th><th>Issuer</th><th>Brand</th><th>Face value</th><th>Member price</th><th>Email in stock</th><th>Phone in stock</th><th>Available</th><th>Stock eligibility</th><th>Created</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{rows.map((product) => <tr key={product.id} data-testid={`row-card-inventory-${product.id}`}><td><strong>{product.name}</strong><small>{product.description || 'No description'}</small></td><td>{product.regionZip || '—'}</td><td>{product.cardType || '—'}</td><td>{product.issuer || '—'}</td><td>{product.brand || '—'}</td><td>{money(product.faceValueCents)}</td><td>{money(product.priceCents)}</td><td><ContactIndicator available={product.hasEmail} label="Email" /></td><td><ContactIndicator available={product.hasPhone} label="Phone" /></td><td><span className="gift-count-chip">{product.availableCount}</span></td><td>{product.canReceiveStock ? 'Ready for one card' : 'Stock already assigned'}</td><td>{date(product.createdAt)}</td><td><button className="gift-edit" type="button" onClick={() => { setEditingMetadata({ productId: product.id, productName: product.name }); setMetadataDraft({ regionZip: product.regionZip ?? '', cardType: product.cardType, issuer: product.issuer, brand: product.brand }); }} data-testid={`button-edit-card-metadata-${product.id}`}><Pencil /> Edit metadata</button> <button className="gift-delete" disabled={!product.canReceiveStock || remove.isPending} title={!product.canReceiveStock ? 'Listings with inventory or order history cannot be deleted' : 'Delete this empty listing'} onClick={() => { if (window.confirm(`Delete listing “${product.name}”? It must have no inventory or order history.`)) remove.mutate({ productId: product.id }, { onSuccess: () => { invalidate(); setFeedback('Empty listing deleted.'); }, onError: () => setFeedback('Listing could not be deleted. It has remaining stock or order history.') }); }} data-testid={`button-delete-card-listing-${product.id}`}><Trash2 /> Delete</button></td></tr>)}</tbody></table></div>}
     </section>
       <Dialog open={!!editingMetadata} onOpenChange={(open) => { if (!open && !updateMetadata.isPending) setEditingMetadata(null); }}>
         <DialogContent className="gift-info-dialog">

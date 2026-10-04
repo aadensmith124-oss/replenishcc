@@ -25,5 +25,7 @@ export interface GiftCardProduct {
   faceValueCents: number;
   priceCents: number;
   availableCount: number;
+  hasEmail: boolean;
+  hasPhone: boolean;
   createdAt: Date;
 }

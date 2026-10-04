@@ -695,6 +695,11 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .gift-admin-submit { width:100%; min-height:37px; margin-top:1px; }
 .gift-upload-note { display:flex; gap:8px; color:#92998e; font-size:8px; line-height:1.6; }
 .gift-upload-note svg { width:13px; height:13px; flex:0 0 auto; color:#c3ad5d; }
+.gift-stock-detection { display:flex; flex-wrap:wrap; gap:12px; margin-top:2px; color:#788278; font-size:8px; }
+.gift-stock-detection > span { display:inline-flex; align-items:center; gap:5px; }
+.gift-stock-detection svg,.gift-stock-detection i { width:12px; height:12px; }
+.gift-stock-detection svg { color:#90bd83; }
+.gift-stock-detection i { display:inline-block; border:1px solid #60695f; border-radius:50%; }
 .gift-inventory-panel > header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
 .gift-inventory-panel > header button { width:31px;height:31px;display:grid;place-items:center;border:1px solid #40463c;border-radius:5px;color:#c8b45d;background:#20241e;cursor:pointer; }
 .gift-inventory-panel > header button svg { width:14px; }
@@ -707,6 +712,10 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .gift-table td:first-child strong,.gift-table td:first-child small { display:block; }
 .gift-table td:first-child strong { color:#e2e5db; font-size:10px; }
 .gift-table td:first-child small { margin-top:4px; color:#828b81; font-size:8px; }
+.gift-contact-indicator { display:inline-flex; align-items:center; gap:5px; color:#808b80; font:500 8px/1.2 var(--app-font-sans); white-space:nowrap; }
+.gift-contact-indicator svg { width:13px; height:13px; color:#929b8f; }
+.gift-contact-indicator.is-present { color:#c2d8a4; }
+.gift-contact-indicator.is-present svg { color:#a5cf84; }
 .gift-count-chip { display:inline-grid; min-width:26px; min-height:23px; place-items:center; border:1px solid #41483c; border-radius:4px; color:#ced59b; background:#20261e; font-variant-numeric:tabular-nums; }
 .gift-delete { display:inline-flex; align-items:center; gap:5px; border:1px solid #48413a; border-radius:4px; padding:6px 8px; color:#d3b49f; background:#241f1c; font-size:8px; cursor:pointer; }
 .gift-delete svg { width:12px; height:12px; }

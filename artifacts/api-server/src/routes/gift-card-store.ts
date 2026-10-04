@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, isNull, sum } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, sql, sum } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import {
   AddAdminGiftCardStockBody,
@@ -47,6 +47,8 @@ async function listProducts(includeStockEligibility = false) {
       faceValueCents: giftCardProductsTable.faceValueCents,
       priceCents: giftCardProductsTable.priceCents,
       availableCount,
+      hasEmail: sql<boolean>`coalesce(bool_or(${giftCardInventoryTable.hasEmail}), false)`,
+      hasPhone: sql<boolean>`coalesce(bool_or(${giftCardInventoryTable.hasPhone}), false)`,
       createdAt: giftCardProductsTable.createdAt,
     })
     .from(giftCardProductsTable)
@@ -95,11 +97,21 @@ function normalizeCredential(
   const expiration = card.expiration.trim().replace("-", "/");
   const expirationMatch = /^(0[1-9]|1[0-2])\/(\d{2}|\d{4})$/.exec(expiration);
   const pin = card.pin?.trim() || null;
+  const email = card.email?.trim() || null;
+  const phone = card.phone?.trim() || null;
+  const phoneDigits = phone?.replace(/\D/g, "") ?? "";
   if (
     !/^\d{13,19}$/.test(cardNumber) ||
     !expirationMatch ||
     !/^\d{3,4}$/.test(card.securityCode) ||
-    (pin !== null && !/^\d{3,16}$/.test(pin))
+    (pin !== null && !/^\d{3,16}$/.test(pin)) ||
+    (email !== null &&
+      (email.length > 320 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) ||
+    (phone !== null &&
+      (phone.length > 40 ||
+        !/^\+?[\d\s().-]+$/.test(phone) ||
+        phoneDigits.length < 10 ||
+        phoneDigits.length > 15))
   ) {
     return null;
   }
@@ -108,6 +120,8 @@ function normalizeCredential(
     expiration,
     securityCode: card.securityCode,
     pin,
+    email,
+    phone,
   };
 }
 
@@ -383,6 +397,8 @@ router.post("/admin/gift-card-products", async (req, res): Promise<void> => {
       faceValueCents: created.faceValueCents,
       priceCents: created.priceCents,
       availableCount: 0,
+      hasEmail: false,
+      hasPhone: false,
       createdAt: created.createdAt.toISOString(),
     }),
   );
@@ -542,6 +558,8 @@ router.post(
 
     const values = credentials.map((credential) => ({
       productId: params.data.productId,
+      hasEmail: Boolean(credential.email),
+      hasPhone: Boolean(credential.phone),
       ...encryptGiftCardCredential(credential),
     }));
     const stockResult = await db.transaction(async (tx) => {

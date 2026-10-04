@@ -7,6 +7,6 @@ The card store is for authorized, unused Vanilla Visa prepaid gift cards. Admini
 
 The catalog’s public ZIP field describes the product’s redemption region, never a cardholder or billing address. It is product metadata rather than card inventory data.
 
-**Why:** The user confirmed the inventory is authorized prepaid Visa gift cards, asked for public product metadata, required credentials to stay private until purchase, and specified one card per listing with no restocking after sale.
+**Why:** The user confirmed the inventory is authorized prepaid Visa gift cards, asked for public product metadata, required credentials to stay private until purchase, specified one card per listing with no restocking after sale, and requested automatic email/phone detection.
 
-**How to apply:** Keep this catalog separate from log products. Encrypt card credentials at rest, do not expose them in public listings or admin stock views, and return full details only to the authenticated purchaser. Treat any public ZIP as a product redemption region, not a customer address. Enforce the one-card lifetime stock rule server-side under a product-row lock, and retain single-card checkout.
+**How to apply:** Keep this catalog separate from log products. Encrypt card credentials and optional email/phone values at rest. Public listings and admin inventory may show whether contact values are present, but never their contents; return full details only to the authenticated purchaser. Treat any public ZIP as a product redemption region, not a customer address. Enforce the one-card lifetime stock rule server-side under a product-row lock, and retain single-card checkout.

@@ -1216,6 +1216,8 @@ export const GetGiftCardProductsResponse = zod.object({
   "faceValueCents": zod.number().int(),
   "priceCents": zod.number().int(),
   "availableCount": zod.number().int(),
+  "hasEmail": zod.boolean(),
+  "hasPhone": zod.boolean(),
   "createdAt": zod.coerce.date()
 }))
 })
@@ -1224,6 +1226,12 @@ export const GetGiftCardProductsResponse = zod.object({
 /**
  * @summary List the signed-in user's gift-card orders and delivered cards
  */
+export const getMyGiftCardOrdersResponseOrdersItemDeliveredCardsItemEmailMax = 320;
+
+export const getMyGiftCardOrdersResponseOrdersItemDeliveredCardsItemPhoneMax = 40;
+
+
+
 export const GetMyGiftCardOrdersResponse = zod.object({
   "orders": zod.array(zod.object({
   "id": zod.string().uuid(),
@@ -1238,7 +1246,9 @@ export const GetMyGiftCardOrdersResponse = zod.object({
   "cardNumber": zod.string(),
   "expiration": zod.string(),
   "securityCode": zod.string(),
-  "pin": zod.string().nullable()
+  "pin": zod.string().nullable(),
+  "email": zod.string().email().max(getMyGiftCardOrdersResponseOrdersItemDeliveredCardsItemEmailMax).nullish(),
+  "phone": zod.string().max(getMyGiftCardOrdersResponseOrdersItemDeliveredCardsItemPhoneMax).nullish()
 })),
   "createdAt": zod.coerce.date()
 }))
@@ -1257,6 +1267,12 @@ export const PurchaseGiftCardBody = zod.object({
   "quantity": zod.number().int().min(1).max(purchaseGiftCardBodyQuantityMax)
 })
 
+export const purchaseGiftCardResponseOrderDeliveredCardsItemEmailMax = 320;
+
+export const purchaseGiftCardResponseOrderDeliveredCardsItemPhoneMax = 40;
+
+
+
 export const PurchaseGiftCardResponse = zod.object({
   "order": zod.object({
   "id": zod.string().uuid(),
@@ -1271,7 +1287,9 @@ export const PurchaseGiftCardResponse = zod.object({
   "cardNumber": zod.string(),
   "expiration": zod.string(),
   "securityCode": zod.string(),
-  "pin": zod.string().nullable()
+  "pin": zod.string().nullable(),
+  "email": zod.string().email().max(purchaseGiftCardResponseOrderDeliveredCardsItemEmailMax).nullish(),
+  "phone": zod.string().max(purchaseGiftCardResponseOrderDeliveredCardsItemPhoneMax).nullish()
 })),
   "createdAt": zod.coerce.date()
 }),
@@ -1306,6 +1324,8 @@ export const GetAdminGiftCardProductsResponse = zod.object({
   "faceValueCents": zod.number().int(),
   "priceCents": zod.number().int(),
   "availableCount": zod.number().int(),
+  "hasEmail": zod.boolean(),
+  "hasPhone": zod.boolean(),
   "canReceiveStock": zod.boolean(),
   "createdAt": zod.coerce.date()
 }))
@@ -1369,6 +1389,8 @@ export const CreateAdminGiftCardProductResponse = zod.object({
   "faceValueCents": zod.number().int(),
   "priceCents": zod.number().int(),
   "availableCount": zod.number().int(),
+  "hasEmail": zod.boolean(),
+  "hasPhone": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
 
@@ -1434,6 +1456,10 @@ export const addAdminGiftCardStockBodyCardsItemSecurityCodeMax = 4;
 export const addAdminGiftCardStockBodyCardsItemSecurityCodeRegExp = new RegExp('^[0-9]+$');
 export const addAdminGiftCardStockBodyCardsItemPinMax = 16;
 
+export const addAdminGiftCardStockBodyCardsItemEmailMax = 320;
+
+export const addAdminGiftCardStockBodyCardsItemPhoneMax = 40;
+
 export const addAdminGiftCardStockBodyCardsMax = 1;
 
 
@@ -1443,7 +1469,9 @@ export const AddAdminGiftCardStockBody = zod.object({
   "cardNumber": zod.string().min(addAdminGiftCardStockBodyCardsItemCardNumberMin).max(addAdminGiftCardStockBodyCardsItemCardNumberMax).regex(addAdminGiftCardStockBodyCardsItemCardNumberRegExp),
   "expiration": zod.string().min(addAdminGiftCardStockBodyCardsItemExpirationMin).max(addAdminGiftCardStockBodyCardsItemExpirationMax),
   "securityCode": zod.string().min(addAdminGiftCardStockBodyCardsItemSecurityCodeMin).max(addAdminGiftCardStockBodyCardsItemSecurityCodeMax).regex(addAdminGiftCardStockBodyCardsItemSecurityCodeRegExp),
-  "pin": zod.string().max(addAdminGiftCardStockBodyCardsItemPinMax).nullable()
+  "pin": zod.string().max(addAdminGiftCardStockBodyCardsItemPinMax).nullable(),
+  "email": zod.string().email().max(addAdminGiftCardStockBodyCardsItemEmailMax).nullish(),
+  "phone": zod.string().max(addAdminGiftCardStockBodyCardsItemPhoneMax).nullish()
 })).min(1).max(addAdminGiftCardStockBodyCardsMax)
 })
 

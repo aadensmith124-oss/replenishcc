@@ -1888,8 +1888,10 @@ components:
         faceValueCents: { type: integer }
         priceCents: { type: integer }
         availableCount: { type: integer }
+        hasEmail: { type: boolean }
+        hasPhone: { type: boolean }
         createdAt: { type: string, format: date-time }
-      required: [id, name, description, regionZip, cardType, issuer, brand, faceValueCents, priceCents, availableCount, createdAt]
+      required: [id, name, description, regionZip, cardType, issuer, brand, faceValueCents, priceCents, availableCount, hasEmail, hasPhone, createdAt]
     GiftCardProductsResponse:
       type: object
       properties:
@@ -1910,9 +1912,11 @@ components:
         faceValueCents: { type: integer }
         priceCents: { type: integer }
         availableCount: { type: integer }
+        hasEmail: { type: boolean }
+        hasPhone: { type: boolean }
         canReceiveStock: { type: boolean }
         createdAt: { type: string, format: date-time }
-      required: [id, name, description, regionZip, cardType, issuer, brand, faceValueCents, priceCents, availableCount, canReceiveStock, createdAt]
+      required: [id, name, description, regionZip, cardType, issuer, brand, faceValueCents, priceCents, availableCount, hasEmail, hasPhone, canReceiveStock, createdAt]
     AdminGiftCardProductsResponse:
       type: object
       properties:
@@ -1947,6 +1951,8 @@ components:
         expiration: { type: string, minLength: 4, maxLength: 7 }
         securityCode: { type: string, minLength: 3, maxLength: 4, pattern: "^[0-9]+$" }
         pin: { type: ["string", "null"], maxLength: 16 }
+        email: { type: ["string", "null"], format: email, maxLength: 320 }
+        phone: { type: ["string", "null"], maxLength: 40 }
       required: [cardNumber, expiration, securityCode, pin]
     AddGiftCardStockInput:
       type: object
@@ -1970,6 +1976,8 @@ components:
         expiration: { type: string }
         securityCode: { type: string }
         pin: { type: ["string", "null"] }
+        email: { type: ["string", "null"], format: email, maxLength: 320 }
+        phone: { type: ["string", "null"], maxLength: 40 }
       required: [cardNumber, expiration, securityCode, pin]
     PurchaseGiftCardInput:
       type: object

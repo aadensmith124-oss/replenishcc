@@ -2,6 +2,7 @@ import { createInsertSchema } from "drizzle-zod";
 import {
   index,
   integer,
+  boolean,
   pgTable,
   text,
   timestamp,
@@ -76,6 +77,8 @@ export const giftCardInventoryTable = pgTable(
     credentialIv: varchar("credential_iv", { length: 32 }).notNull(),
     credentialTag: varchar("credential_tag", { length: 32 }).notNull(),
     credentialHash: varchar("credential_hash", { length: 64 }).notNull(),
+    hasEmail: boolean("has_email").notNull().default(false),
+    hasPhone: boolean("has_phone").notNull().default(false),
     status: varchar("status", { length: 16 }).notNull().default("available"),
     orderId: uuid("order_id").references(() => giftCardOrdersTable.id, {
       onDelete: "cascade",
