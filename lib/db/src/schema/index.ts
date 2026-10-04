@@ -18,6 +18,7 @@
 //   export type Post = typeof postsTable.$inferSelect;
 
 export * from "./auth";
+export * from "./admin_access_changes";
 export * from "./redeem_codes";
 export * from "./deposits";
 export * from "./account_deletion_requests";

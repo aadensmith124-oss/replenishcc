@@ -27,6 +27,8 @@ import type {
   AddLicenseStockInput,
   AddLicenseStockResponse,
   AdminAccountDeletionRequestsResponse,
+  AdminBalanceAdjustmentInput,
+  AdminBalanceAdjustmentResponse,
   AdminCoupon,
   AdminCouponsResponse,
   AdminDepositsResponse,
@@ -35,6 +37,9 @@ import type {
   AdminRedeemCode,
   AdminRedeemCodesResponse,
   AdminSupportTicketListResponse,
+  AdminUserAccessInput,
+  AdminUserAccessResponse,
+  AdminUsersResponse,
   Announcement,
   AnnouncementInput,
   AnnouncementListResponse,
@@ -57,6 +62,7 @@ import type {
   DepositReviewInput,
   ErrorMessage,
   ForgotPasswordInput,
+  GetAdminUsersParams,
   GiftCardBaseRemovalResult,
   GiftCardBulkPurchaseResult,
   GiftCardProduct,
@@ -1193,6 +1199,268 @@ export const useReviewAccountDeletionRequest = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getReviewAccountDeletionRequestMutationOptions(options));
+    }
+
+export const getGetAdminUsersUrl = (params: GetAdminUsersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/users?${stringifiedParams}` : `/api/admin/users`
+}
+
+/**
+ * @summary Search member accounts by email
+ */
+export const getAdminUsers = async (params: GetAdminUsersParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminUsersResponse> => {
+
+  return customFetch<AdminUsersResponse>(getGetAdminUsersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminUsersQueryKey = (params?: GetAdminUsersParams,) => {
+    return [
+    `/api/admin/users`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetAdminUsersQueryOptions = <TData = Awaited<ReturnType<typeof getAdminUsers>>, TError = ErrorType<void>>(params: GetAdminUsersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminUsersQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminUsers>>> = ({ signal }) => getAdminUsers(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminUsers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminUsersQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminUsers>>>
+export type GetAdminUsersQueryError = ErrorType<void>
+
+
+/**
+ * @summary Search member accounts by email
+ */
+
+export function useGetAdminUsers<TData = Awaited<ReturnType<typeof getAdminUsers>>, TError = ErrorType<void>>(
+ params: GetAdminUsersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminUsersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateAdminUserAccessUrl = (userId: string,) => {
+
+
+
+
+  return `/api/admin/users/${userId}/access`
+}
+
+/**
+ * @summary Grant or revoke stored administrator access
+ */
+export const updateAdminUserAccess = async (userId: string,
+    adminUserAccessInput: AdminUserAccessInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminUserAccessResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AdminUserAccessResponse>(getUpdateAdminUserAccessUrl(userId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(adminUserAccessInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateAdminUserAccessMutationKey = () => ['updateAdminUserAccess'] as const;
+
+export const getUpdateAdminUserAccessMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminUserAccess>>, TError,UpdateAdminUserAccessMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminUserAccess>>, TError,UpdateAdminUserAccessMutationVariables, TContext> => {
+
+const mutationKey = getUpdateAdminUserAccessMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminUserAccess>>, UpdateAdminUserAccessMutationVariables> = (props) => {
+          const {userId,data} = props ?? {};
+
+          return  updateAdminUserAccess(userId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAdminUserAccessMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminUserAccess>>>
+    export type UpdateAdminUserAccessMutationBody = BodyType<AdminUserAccessInput>
+    export type UpdateAdminUserAccessMutationError = ErrorType<void>
+    export type UpdateAdminUserAccessMutationVariables = {userId: string;data: BodyType<AdminUserAccessInput>}
+
+    /**
+ * @summary Grant or revoke stored administrator access
+ */
+export const useUpdateAdminUserAccess = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminUserAccess>>, TError,UpdateAdminUserAccessMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminUserAccess>>,
+        TError,
+        UpdateAdminUserAccessMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateAdminUserAccessMutationOptions(options));
+    }
+
+export const getCreateAdminBalanceAdjustmentUrl = (userId: string,) => {
+
+
+
+
+  return `/api/admin/users/${userId}/balance-adjustments`
+}
+
+/**
+ * @summary Credit or debit a member balance with an audit reason
+ */
+export const createAdminBalanceAdjustment = async (userId: string,
+    adminBalanceAdjustmentInput: AdminBalanceAdjustmentInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminBalanceAdjustmentResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AdminBalanceAdjustmentResponse>(getCreateAdminBalanceAdjustmentUrl(userId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(adminBalanceAdjustmentInput)
+  }
+);}
+
+
+
+
+
+export const getCreateAdminBalanceAdjustmentMutationKey = () => ['createAdminBalanceAdjustment'] as const;
+
+export const getCreateAdminBalanceAdjustmentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminBalanceAdjustment>>, TError,CreateAdminBalanceAdjustmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAdminBalanceAdjustment>>, TError,CreateAdminBalanceAdjustmentMutationVariables, TContext> => {
+
+const mutationKey = getCreateAdminBalanceAdjustmentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminBalanceAdjustment>>, CreateAdminBalanceAdjustmentMutationVariables> = (props) => {
+          const {userId,data} = props ?? {};
+
+          return  createAdminBalanceAdjustment(userId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAdminBalanceAdjustmentMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminBalanceAdjustment>>>
+    export type CreateAdminBalanceAdjustmentMutationBody = BodyType<AdminBalanceAdjustmentInput>
+    export type CreateAdminBalanceAdjustmentMutationError = ErrorType<void>
+    export type CreateAdminBalanceAdjustmentMutationVariables = {userId: string;data: BodyType<AdminBalanceAdjustmentInput>}
+
+    /**
+ * @summary Credit or debit a member balance with an audit reason
+ */
+export const useCreateAdminBalanceAdjustment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminBalanceAdjustment>>, TError,CreateAdminBalanceAdjustmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAdminBalanceAdjustment>>,
+        TError,
+        CreateAdminBalanceAdjustmentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateAdminBalanceAdjustmentMutationOptions(options));
     }
 
 export const getGetAnnouncementsUrl = () => {

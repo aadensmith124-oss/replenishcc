@@ -18,6 +18,8 @@ tags:
     description: Published member announcements
   - name: adminAnnouncements
     description: Admin-only announcement publishing and archiving
+  - name: adminUsers
+    description: Admin-only member search, access control, and balance adjustments
   - name: leaderboard
     description: Weekly rankings from confirmed member deposits
   - name: deposits
@@ -292,6 +294,102 @@ paths:
           description: Admin access required
         "404":
           description: Request not found
+  /admin/users:
+    get:
+      operationId: getAdminUsers
+      tags: [adminUsers]
+      summary: Search member accounts by email
+      parameters:
+        - name: email
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 3
+            maxLength: 254
+      responses:
+        "200":
+          description: Matching members and their current account balances
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUsersResponse"
+        "400":
+          description: Search text is too short or invalid
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+  /admin/users/{userId}/access:
+    patch:
+      operationId: updateAdminUserAccess
+      tags: [adminUsers]
+      summary: Grant or revoke stored administrator access
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUserAccessInput"
+      responses:
+        "200":
+          description: Administrator access updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUserAccessResponse"
+        "400":
+          description: Invalid account or access change
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+        "404":
+          description: Member not found
+        "409":
+          description: Access is environment-managed or this would remove the last administrator
+  /admin/users/{userId}/balance-adjustments:
+    post:
+      operationId: createAdminBalanceAdjustment
+      tags: [adminUsers]
+      summary: Credit or debit a member balance with an audit reason
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminBalanceAdjustmentInput"
+      responses:
+        "200":
+          description: Balance adjustment recorded, or an idempotent retry returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminBalanceAdjustmentResponse"
+        "400":
+          description: Invalid adjustment
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+        "404":
+          description: Member not found
+        "409":
+          description: Insufficient balance or adjustment request conflicts with a prior request
   /announcements:
     get:
       operationId: getAnnouncements
@@ -1320,6 +1418,65 @@ components:
         isDepositAdmin:
           type: boolean
       required: [id, fullName, username, email, createdAt, isDepositAdmin]
+    AdminUser:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        fullName: { type: string }
+        username: { type: ["string", "null"] }
+        email: { type: string, format: email }
+        createdAt: { type: string, format: date-time }
+        balanceCents: { type: integer }
+        isAdmin: { type: boolean }
+        isEnvironmentAdmin: { type: boolean }
+      required: [id, fullName, username, email, createdAt, balanceCents, isAdmin, isEnvironmentAdmin]
+    AdminUsersResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items: { $ref: "#/components/schemas/AdminUser" }
+      required: [users]
+    AdminUserAccessInput:
+      type: object
+      properties:
+        isAdmin: { type: boolean }
+        reason: { type: string, minLength: 1, maxLength: 250 }
+      required: [isAdmin, reason]
+    AdminUserAccessResponse:
+      type: object
+      properties:
+        userId: { type: string, format: uuid }
+        isAdmin: { type: boolean }
+        changed: { type: boolean }
+      required: [userId, isAdmin, changed]
+    AdminBalanceAdjustmentInput:
+      type: object
+      properties:
+        action: { type: string, enum: [credit, debit] }
+        amountCents: { type: integer, minimum: 1, maximum: 2147483647 }
+        reason: { type: string, minLength: 1, maxLength: 250 }
+        requestId: { type: string, format: uuid }
+      required: [action, amountCents, reason, requestId]
+    AdminBalanceAdjustment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        action: { type: string, enum: [credit, debit] }
+        amountCents: { type: integer }
+        signedAmountCents: { type: integer }
+        reason: { type: string }
+        adminName: { type: string }
+        createdAt: { type: string, format: date-time }
+        balanceCents: { type: integer }
+        replayed: { type: boolean }
+      required: [id, userId, action, amountCents, signedAmountCents, reason, adminName, createdAt, balanceCents, replayed]
+    AdminBalanceAdjustmentResponse:
+      type: object
+      properties:
+        adjustment: { $ref: "#/components/schemas/AdminBalanceAdjustment" }
+      required: [adjustment]
     AuthMeResponse:
       type: object
       properties:

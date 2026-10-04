@@ -19,6 +19,85 @@ export interface User {
   isDepositAdmin: boolean;
 }
 
+export interface AdminUser {
+  id: string;
+  fullName: string;
+  /** @nullable */
+  username: string | null;
+  email: string;
+  createdAt: string;
+  balanceCents: number;
+  isAdmin: boolean;
+  isEnvironmentAdmin: boolean;
+}
+
+export interface AdminUsersResponse {
+  users: AdminUser[];
+}
+
+export interface AdminUserAccessInput {
+  isAdmin: boolean;
+  /**
+     * @minLength 1
+     * @maxLength 250
+     */
+  reason: string;
+}
+
+export interface AdminUserAccessResponse {
+  userId: string;
+  isAdmin: boolean;
+  changed: boolean;
+}
+
+export type AdminBalanceAdjustmentInputAction = typeof AdminBalanceAdjustmentInputAction[keyof typeof AdminBalanceAdjustmentInputAction];
+
+
+export const AdminBalanceAdjustmentInputAction = {
+  credit: 'credit',
+  debit: 'debit',
+} as const;
+
+export interface AdminBalanceAdjustmentInput {
+  action: AdminBalanceAdjustmentInputAction;
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  amountCents: number;
+  /**
+     * @minLength 1
+     * @maxLength 250
+     */
+  reason: string;
+  requestId: string;
+}
+
+export type AdminBalanceAdjustmentAction = typeof AdminBalanceAdjustmentAction[keyof typeof AdminBalanceAdjustmentAction];
+
+
+export const AdminBalanceAdjustmentAction = {
+  credit: 'credit',
+  debit: 'debit',
+} as const;
+
+export interface AdminBalanceAdjustment {
+  id: string;
+  userId: string;
+  action: AdminBalanceAdjustmentAction;
+  amountCents: number;
+  signedAmountCents: number;
+  reason: string;
+  adminName: string;
+  createdAt: string;
+  balanceCents: number;
+  replayed: boolean;
+}
+
+export interface AdminBalanceAdjustmentResponse {
+  adjustment: AdminBalanceAdjustment;
+}
+
 export interface AuthMeResponse {
   authenticated: boolean;
   user: User | null;
@@ -1204,4 +1283,12 @@ export interface GiftCardPurchaseResult {
   order: GiftCardOrder;
   balanceCents: number;
 }
+
+export type GetAdminUsersParams = {
+/**
+ * @minLength 3
+ * @maxLength 254
+ */
+email: string;
+};
 

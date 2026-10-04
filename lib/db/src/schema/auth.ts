@@ -1,6 +1,7 @@
 import { createInsertSchema } from "drizzle-zod";
 import {
   AnyPgColumn,
+  boolean,
   index,
   pgTable,
   text,
@@ -19,6 +20,7 @@ export const usersTable = pgTable(
     username: varchar("username", { length: 24 }),
     email: varchar("email", { length: 254 }).notNull(),
     passwordHash: text("password_hash").notNull(),
+    isAdmin: boolean("is_admin").notNull().default(false),
     referralCode: varchar("referral_code", { length: 16 }),
     referredById: uuid("referred_by_id").references(
       (): AnyPgColumn => usersTable.id,

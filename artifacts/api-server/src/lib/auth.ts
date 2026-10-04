@@ -12,12 +12,23 @@ export const SESSION_COOKIE_NAME = "replenishcc_session";
 const SHORT_SESSION_MS = 12 * 60 * 60 * 1000;
 const REMEMBERED_SESSION_MS = 30 * 24 * 60 * 60 * 1000;
 
-export function isDepositAdmin(user: Pick<UserRecord, "email">): boolean {
-  const allowedEmails = (process.env.DEPOSIT_ADMIN_EMAILS ?? "")
+export function getEnvironmentAdminEmails(): string[] {
+  return [...new Set(
+    (process.env.DEPOSIT_ADMIN_EMAILS ?? "")
     .split(",")
     .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
-  return allowedEmails.includes(user.email.toLowerCase());
+    .filter(Boolean),
+  )];
+}
+
+export function isEnvironmentAdminEmail(email: string): boolean {
+  return getEnvironmentAdminEmails().includes(email.trim().toLowerCase());
+}
+
+export function isDepositAdmin(
+  user: Pick<UserRecord, "email" | "isAdmin">,
+): boolean {
+  return user.isAdmin || isEnvironmentAdminEmail(user.email);
 }
 
 function getSessionSecret(): string {

@@ -756,7 +756,7 @@ router.patch(
       res.status(404).json({ error: "Gift-card product not found." });
       return;
     }
-    res.json(DeleteAdminGiftCardProductResponse.parse({ action: result.kind }));
+    res.status(204).end();
   },
 );
 
@@ -823,7 +823,7 @@ router.delete(
       return;
     }
 
-    res.status(204).end();
+    res.json(DeleteAdminGiftCardProductResponse.parse({ action: result.kind }));
   },
 );
 

@@ -794,11 +794,9 @@ export function AdminCardInventoryPage() {
                 {product.isArchived
                   ? <button className="gift-edit" disabled={restore.isPending || remove.isPending} title="Restore this base to member sales" onClick={() => restore.mutate({ productId: product.id }, { onSuccess: () => { invalidate(); setFeedback('Base restored to member sales. Its inventory and purchase history are unchanged.'); }, onError: () => setFeedback('Base could not be restored. Try again.') })} data-testid={`button-restore-card-listing-${product.id}`}><RotateCcw /> Restore</button>
                   : <button className="gift-delete" disabled={remove.isPending || restore.isPending} title={product.canReceiveStock ? 'Delete this empty base' : 'Archive while preserving its stock and purchase history'} onClick={() => {
-                    const confirmation = product.canReceiveStock
-                      ? `Delete base “${product.name}”? It has no inventory or order history.`
-                      : `Archive base “${product.name}”? It will be hidden from member sales, while inventory, purchased-card history, credentials, and accounting records are preserved.`;
+                    const confirmation = `Remove base “${product.name}”? Empty bases are deleted. Bases with inventory or order history are archived and preserved, including purchased-card history, credentials, and accounting records.`;
                     if (!window.confirm(confirmation)) return;
-                    remove.mutate({ productId: product.id }, { onSuccess: () => { invalidate(); setFeedback(product.canReceiveStock ? 'Empty base deleted.' : 'Base archived. Its stock, purchase history, credentials, and accounting are preserved.'); }, onError: () => setFeedback('Base could not be deleted or archived. Try again.') });
+                    remove.mutate({ productId: product.id }, { onSuccess: (result) => { invalidate(); setFeedback(result.action === 'archived' ? 'Base archived. Its stock, purchase history, credentials, and accounting are preserved.' : 'Empty base deleted.'); }, onError: () => setFeedback('Base could not be deleted or archived. Try again.') });
                   }} data-testid={product.canReceiveStock ? `button-delete-card-listing-${product.id}` : `button-archive-card-listing-${product.id}`}>{product.canReceiveStock ? <Trash2 /> : <Archive />} {product.canReceiveStock ? 'Delete' : 'Archive'}</button>}
               </td>
             </tr>)}</tbody>

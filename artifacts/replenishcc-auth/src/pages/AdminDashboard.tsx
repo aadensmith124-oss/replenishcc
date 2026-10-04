@@ -1,5 +1,5 @@
 import { useEffect, useRef, type KeyboardEvent } from 'react';
-import { Activity, Archive, Headphones, PackageCheck, ShieldCheck, Trash2, WalletCards, Megaphone, TicketPercent, CreditCard } from 'lucide-react';
+import { Activity, Archive, Headphones, PackageCheck, ShieldCheck, Trash2, WalletCards, Megaphone, TicketPercent, CreditCard, UsersRound } from 'lucide-react';
 import { useGetAuthMe } from '@workspace/api-client-react';
 import { useLocation } from 'wouter';
 import { MemberShell } from '../components/MemberShell';
@@ -10,6 +10,7 @@ import { AdminLicenseProductsPage } from './LicensePages';
 import { AdminSupportTicketsPage } from './SupportPages';
 import { AdminCouponsPage } from './AdminCouponsPage';
 import { AdminCardInventoryPage } from './CardPages';
+import { AdminUsersPage } from './AdminUsersPage';
 
 const sections = [
   { id: 'deposits', label: 'Deposits', hint: 'Payment review', icon: WalletCards, legacy: '/admin/deposits' },
@@ -19,6 +20,7 @@ const sections = [
   { id: 'card-inventory', label: 'Bases', hint: 'Card bases', icon: CreditCard, legacy: '/admin/dashboard/card-inventory' },
   { id: 'coupons', label: 'Coupon codes', hint: 'Store discounts', icon: TicketPercent, legacy: '/admin/dashboard/coupons' },
   { id: 'tickets', label: 'Support inbox', hint: 'Member care', icon: Headphones, legacy: '/admin/support/tickets' },
+  { id: 'users', label: 'Members', hint: 'Access & balances', icon: UsersRound, legacy: '/admin/dashboard/users' },
 ] as const;
 
 function sectionFromPath(path: string): (typeof sections)[number]['id'] {
@@ -60,7 +62,8 @@ export function AdminDashboardPage() {
     return <MemberShell pageTitle="Admin dashboard" user={null} loading shellMode="force" />;
   }
 
-  const ActiveSection = sectionId === 'card-inventory' ? AdminCardInventoryPage
+  const ActiveSection = sectionId === 'users' ? AdminUsersPage
+    : sectionId === 'card-inventory' ? AdminCardInventoryPage
     : sectionId === 'announcements' ? AdminAnnouncementsPage
     : sectionId === 'deletions' ? AdminAccountDeletionRequestsPage
       : sectionId === 'inventory' ? AdminLicenseProductsPage

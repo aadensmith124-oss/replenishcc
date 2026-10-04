@@ -270,6 +270,91 @@ export const ReviewAccountDeletionRequestResponse = zod.object({
 
 
 /**
+ * @summary Search member accounts by email
+ */
+export const getAdminUsersQueryEmailMin = 3;
+export const getAdminUsersQueryEmailMax = 254;
+
+
+
+export const GetAdminUsersQueryParams = zod.object({
+  "email": zod.coerce.string().min(getAdminUsersQueryEmailMin).max(getAdminUsersQueryEmailMax)
+})
+
+export const GetAdminUsersResponse = zod.object({
+  "users": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "fullName": zod.string(),
+  "username": zod.string().nullable(),
+  "email": zod.string().email(),
+  "createdAt": zod.coerce.date(),
+  "balanceCents": zod.number().int(),
+  "isAdmin": zod.boolean(),
+  "isEnvironmentAdmin": zod.boolean()
+}))
+})
+
+
+/**
+ * @summary Grant or revoke stored administrator access
+ */
+export const UpdateAdminUserAccessParams = zod.object({
+  "userId": zod.coerce.string().uuid()
+})
+
+export const updateAdminUserAccessBodyReasonMax = 250;
+
+
+
+export const UpdateAdminUserAccessBody = zod.object({
+  "isAdmin": zod.boolean(),
+  "reason": zod.string().min(1).max(updateAdminUserAccessBodyReasonMax)
+})
+
+export const UpdateAdminUserAccessResponse = zod.object({
+  "userId": zod.string().uuid(),
+  "isAdmin": zod.boolean(),
+  "changed": zod.boolean()
+})
+
+
+/**
+ * @summary Credit or debit a member balance with an audit reason
+ */
+export const CreateAdminBalanceAdjustmentParams = zod.object({
+  "userId": zod.coerce.string().uuid()
+})
+
+export const createAdminBalanceAdjustmentBodyAmountCentsMax = 2147483647;
+
+export const createAdminBalanceAdjustmentBodyReasonMax = 250;
+
+
+
+export const CreateAdminBalanceAdjustmentBody = zod.object({
+  "action": zod.enum(['credit', 'debit']),
+  "amountCents": zod.number().int().min(1).max(createAdminBalanceAdjustmentBodyAmountCentsMax),
+  "reason": zod.string().min(1).max(createAdminBalanceAdjustmentBodyReasonMax),
+  "requestId": zod.string().uuid()
+})
+
+export const CreateAdminBalanceAdjustmentResponse = zod.object({
+  "adjustment": zod.object({
+  "id": zod.string().uuid(),
+  "userId": zod.string().uuid(),
+  "action": zod.enum(['credit', 'debit']),
+  "amountCents": zod.number().int(),
+  "signedAmountCents": zod.number().int(),
+  "reason": zod.string(),
+  "adminName": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "balanceCents": zod.number().int(),
+  "replayed": zod.boolean()
+})
+})
+
+
+/**
  * @summary List published announcements for the signed-in member
  */
 export const getAnnouncementsResponseAnnouncementsItemTitleMax = 120;

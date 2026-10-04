@@ -9,6 +9,7 @@ import leaderboardRouter from "./leaderboard";
 import supportRouter from "./support";
 import licenseStoreRouter from "./license-store";
 import giftCardStoreRouter from "./gift-card-store";
+import adminUsersRouter from "./admin-users";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(leaderboardRouter);
 router.use(supportRouter);
 router.use(licenseStoreRouter);
 router.use(giftCardStoreRouter);
+router.use(adminUsersRouter);
 
 export default router;

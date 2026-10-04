@@ -106,6 +106,11 @@ export const accountLedgerTable = pgTable(
       () => giftCardOrdersTable.id,
       { onDelete: "cascade" },
     ),
+    actorUserId: uuid("actor_user_id").references(() => usersTable.id, {
+      onDelete: "set null",
+    }),
+    adminRequestId: uuid("admin_request_id"),
+    reason: varchar("reason", { length: 250 }),
     entryType: varchar("entry_type", { length: 32 }).notNull(),
     amountCents: integer("amount_cents").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -134,6 +139,9 @@ export const accountLedgerTable = pgTable(
     uniqueIndex("account_ledger_gift_card_order_entry_type_unique").on(
       table.giftCardOrderId,
       table.entryType,
+    ),
+    uniqueIndex("account_ledger_admin_request_id_unique").on(
+      table.adminRequestId,
     ),
   ],
 );
