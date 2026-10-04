@@ -1493,7 +1493,9 @@ export const DeleteAdminGiftCardProductParams = zod.object({
   "productId": zod.coerce.string().uuid()
 })
 
-export const DeleteAdminGiftCardProductResponse = zod.void()
+export const DeleteAdminGiftCardProductResponse = zod.object({
+  "action": zod.enum(['deleted', 'archived'])
+})
 
 
 /**

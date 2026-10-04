@@ -977,6 +977,18 @@ export interface AdminGiftCardProduct {
   createdAt: string;
 }
 
+export type GiftCardBaseRemovalResultAction = typeof GiftCardBaseRemovalResultAction[keyof typeof GiftCardBaseRemovalResultAction];
+
+
+export const GiftCardBaseRemovalResultAction = {
+  deleted: 'deleted',
+  archived: 'archived',
+} as const;
+
+export interface GiftCardBaseRemovalResult {
+  action: GiftCardBaseRemovalResultAction;
+}
+
 export interface AdminGiftCardProductsResponse {
   products: AdminGiftCardProduct[];
 }

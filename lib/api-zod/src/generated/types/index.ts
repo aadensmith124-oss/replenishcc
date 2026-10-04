@@ -58,6 +58,8 @@ export * from './depositReviewInputAction';
 export * from './depositStatus';
 export * from './errorMessage';
 export * from './forgotPasswordInput';
+export * from './giftCardBaseRemovalResult';
+export * from './giftCardBaseRemovalResultAction';
 export * from './giftCardBulkOrderSummary';
 export * from './giftCardBulkPurchaseResult';
 export * from './giftCardCredential';

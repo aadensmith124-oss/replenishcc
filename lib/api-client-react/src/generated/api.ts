@@ -57,6 +57,7 @@ import type {
   DepositReviewInput,
   ErrorMessage,
   ForgotPasswordInput,
+  GiftCardBaseRemovalResult,
   GiftCardBulkPurchaseResult,
   GiftCardProduct,
   GiftCardProductsResponse,
@@ -4508,9 +4509,9 @@ export const getDeleteAdminGiftCardProductUrl = (productId: string,) => {
 /**
  * @summary Delete an empty base or archive a base with inventory or order history
  */
-export const deleteAdminGiftCardProduct = async (productId: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+export const deleteAdminGiftCardProduct = async (productId: string, options?: Parameters<typeof customFetch>[1]): Promise<GiftCardBaseRemovalResult> => {
 
-  return customFetch<void>(getDeleteAdminGiftCardProductUrl(productId),
+  return customFetch<GiftCardBaseRemovalResult>(getDeleteAdminGiftCardProductUrl(productId),
   {
     ...options,
     method: 'DELETE'
