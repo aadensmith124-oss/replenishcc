@@ -1078,6 +1078,32 @@ paths:
           description: Product not found or no longer available
         "409":
           description: Insufficient balance or stock
+  /orders/gift-cards/bulk:
+    post:
+      operationId: bulkPurchaseGiftCards
+      tags: [giftCardStore]
+      summary: Purchase one card from each selected listing in a single atomic checkout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkPurchaseGiftCardsInput"
+      responses:
+        "201":
+          description: All selected cards purchased successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GiftCardBulkPurchaseResult"
+        "400":
+          description: Invalid or duplicate listing selections
+        "401":
+          description: Sign-in required
+        "404":
+          description: One or more listings no longer exist
+        "409":
+          description: Insufficient balance or stock for the entire selection
   /admin/gift-card-products:
     get:
       operationId: getAdminGiftCardProducts
@@ -2002,6 +2028,33 @@ components:
         productId: { type: string, format: uuid }
         quantity: { type: integer, minimum: 1, maximum: 1 }
       required: [productId, quantity]
+    BulkPurchaseGiftCardsInput:
+      type: object
+      properties:
+        productIds:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: { type: string, format: uuid }
+      required: [productIds]
+    GiftCardBulkOrderSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        productId: { type: string, format: uuid }
+        productName: { type: string }
+        totalCents: { type: integer }
+        createdAt: { type: string, format: date-time }
+      required: [id, productId, productName, totalCents, createdAt]
+    GiftCardBulkPurchaseResult:
+      type: object
+      properties:
+        orders:
+          type: array
+          items: { $ref: "#/components/schemas/GiftCardBulkOrderSummary" }
+        totalCents: { type: integer }
+        balanceCents: { type: integer }
+      required: [orders, totalCents, balanceCents]
     GiftCardOrder:
       type: object
       properties:

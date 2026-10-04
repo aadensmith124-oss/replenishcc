@@ -1305,6 +1305,30 @@ export const PurchaseGiftCardResponse = zod.object({
 
 
 /**
+ * @summary Purchase one card from each selected listing in a single atomic checkout
+ */
+export const bulkPurchaseGiftCardsBodyProductIdsMax = 50;
+
+
+
+export const BulkPurchaseGiftCardsBody = zod.object({
+  "productIds": zod.array(zod.string().uuid()).min(1).max(bulkPurchaseGiftCardsBodyProductIdsMax)
+})
+
+export const BulkPurchaseGiftCardsResponse = zod.object({
+  "orders": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "productId": zod.string().uuid(),
+  "productName": zod.string(),
+  "totalCents": zod.number().int(),
+  "createdAt": zod.coerce.date()
+})),
+  "totalCents": zod.number().int(),
+  "balanceCents": zod.number().int()
+})
+
+
+/**
  * @summary List prepaid gift-card products and inventory counts for an administrator
  */
 export const getAdminGiftCardProductsResponseProductsItemAddressMax = 255;

@@ -6,8 +6,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
 import { ArrowRight, Check, ChevronRight, Clipboard, Columns3, CreditCard, Download, Info, LockKeyhole, Pencil, RefreshCw, RotateCcw, Search, ShieldCheck, ShoppingCart, SlidersHorizontal, Trash2 } from 'lucide-react';
 import {
-  getGetAdminGiftCardProductsQueryKey, getGetGiftCardProductsQueryKey, getGetMyGiftCardOrdersQueryKey, getGetMyDepositsQueryKey,
-  useAddAdminGiftCardStock, useCreateAdminGiftCardProduct, useDeleteAdminGiftCardProduct,
+  getGetAdminGiftCardProductsQueryKey, getGetAuthMeQueryKey, getGetGiftCardProductsQueryKey, getGetMyGiftCardOrdersQueryKey, getGetMyDepositsQueryKey,
+  useAddAdminGiftCardStock, useCreateAdminGiftCardProduct, useDeleteAdminGiftCardProduct, useBulkPurchaseGiftCards,
   useGetAdminGiftCardProducts, useGetAuthMe, useGetGiftCardProducts, useGetMyGiftCardOrders, usePurchaseGiftCard, useUpdateAdminGiftCardProductMetadata,
   type AuthMeResponse,
   type GiftCardCredential,
@@ -81,17 +81,16 @@ const cardSchema = z.object({
 });
 type CardForm = z.infer<typeof cardSchema>;
 
-type CatalogColumn = 'address' | 'state' | 'city' | 'regionZip' | 'cardType' | 'issuer' | 'brand' | 'price';
+type CatalogColumn = 'state' | 'city' | 'regionZip' | 'cardType' | 'issuer' | 'brand' | 'price';
 type CatalogPriceFilter = 'all' | 'under-25' | '25-50' | '50-100' | '100-plus';
 const catalogColumns: { id: CatalogColumn; label: string }[] = [
-  { id: 'address', label: 'Address' },
-  { id: 'state', label: 'State' },
-  { id: 'city', label: 'City' },
-  { id: 'regionZip', label: 'ZIP' },
-  { id: 'cardType', label: 'Card type' },
-  { id: 'issuer', label: 'Issuer' },
   { id: 'brand', label: 'Brand' },
-  { id: 'price', label: 'Member price' },
+  { id: 'cardType', label: 'Type' },
+  { id: 'issuer', label: 'Issuer' },
+  { id: 'city', label: 'City' },
+  { id: 'state', label: 'State' },
+  { id: 'regionZip', label: 'ZIP' },
+  { id: 'price', label: 'Price' },
 ];
 const catalogColumnStorageKey = 'replenishcc-card-catalog-columns-v4';
 const previousCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v3';
@@ -112,7 +111,7 @@ function readCatalogColumns(): CatalogColumn[] {
     const parsed: unknown = JSON.parse(preferenceValue);
     if (!Array.isArray(parsed)) return defaultCatalogColumns;
     const newMetadataColumns: CatalogColumn[] = migratingPreferences
-      ? ['address', 'state', 'city', 'regionZip', 'cardType', 'issuer', 'brand']
+      ? ['state', 'city', 'regionZip', 'cardType', 'issuer', 'brand']
       : [];
     return catalogColumns.filter((column) => parsed.includes(column.id) || newMetadataColumns.includes(column.id)).map((column) => column.id);
   } catch {
@@ -134,6 +133,7 @@ export function BuyCardsPage() {
   const queryClient = useQueryClient();
   const productsQuery = useGetGiftCardProducts({ query: { queryKey: getGetGiftCardProductsQueryKey() } });
   const purchase = usePurchaseGiftCard();
+  const bulkPurchase = useBulkPurchaseGiftCards();
   const products = useMemo(() => productsQuery.data?.products ?? [], [productsQuery.data?.products]);
   const [infoProductId, setInfoProductId] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
@@ -143,6 +143,7 @@ export function BuyCardsPage() {
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all');
   const [priceFilter, setPriceFilter] = useState<CatalogPriceFilter>('all');
   const [visibleColumns, setVisibleColumns] = useState<CatalogColumn[]>(readCatalogColumns);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const infoProduct = products.find((product) => product.id === infoProductId) ?? null;
   const cardInfoFacts = infoProduct ? [
     { label: 'City', value: infoProduct.city || 'Not specified', testId: `text-card-info-city-${infoProduct.id}` },
@@ -174,6 +175,7 @@ export function BuyCardsPage() {
         void queryClient.invalidateQueries({ queryKey: getGetGiftCardProductsQueryKey() });
         void queryClient.invalidateQueries({ queryKey: getGetMyGiftCardOrdersQueryKey() });
         void queryClient.invalidateQueries({ queryKey: getGetMyDepositsQueryKey() });
+        void queryClient.invalidateQueries({ queryKey: getGetAuthMeQueryKey() });
       },
       onError: () => setNotice('Purchase could not be completed. Check your balance and available inventory, then try again.'),
     });
@@ -187,7 +189,13 @@ export function BuyCardsPage() {
     const matchesBase = baseId === 'all' || product.id === baseId;
     const matchesSearch = !normalizedSearch
       || product.name.toLowerCase().includes(normalizedSearch)
-      || product.description.toLowerCase().includes(normalizedSearch);
+      || product.description.toLowerCase().includes(normalizedSearch)
+      || product.brand.toLowerCase().includes(normalizedSearch)
+      || product.cardType.toLowerCase().includes(normalizedSearch)
+      || product.issuer.toLowerCase().includes(normalizedSearch)
+      || product.city.toLowerCase().includes(normalizedSearch)
+      || product.state.toLowerCase().includes(normalizedSearch)
+      || (product.regionZip ?? '').toLowerCase().includes(normalizedSearch);
     const matchesFaceValue = faceValueFilter === 'all' || product.faceValueCents === Number(faceValueFilter);
     const matchesStock = stockFilter === 'all'
       || (stockFilter === 'low' && product.availableCount > 0 && product.availableCount <= 5)
@@ -199,6 +207,30 @@ export function BuyCardsPage() {
       || (priceFilter === '100-plus' && product.priceCents >= 10000);
     return matchesBase && matchesSearch && matchesFaceValue && matchesStock && matchesPrice;
   }), [products, baseId, normalizedSearch, faceValueFilter, stockFilter, priceFilter]);
+  const selectableProducts = filteredProducts.filter((product) => product.availableCount > 0);
+  const selectedProducts = selectedIds
+    .map((id) => products.find((product) => product.id === id))
+    .filter((product): product is NonNullable<typeof product> => Boolean(product && product.availableCount > 0));
+  const selectedTotalCents = selectedProducts.reduce((total, product) => total + product.priceCents, 0);
+  const allVisibleSelected = selectableProducts.length > 0 && selectableProducts.every((product) => selectedIds.includes(product.id));
+  const toggleSelection = (productId: string) => setSelectedIds((current) => current.includes(productId)
+    ? current.filter((id) => id !== productId)
+    : current.length < 50 ? [...current, productId] : current);
+  const purchaseSelected = () => {
+    if (!selectedProducts.length || bulkPurchase.isPending) return;
+    setNotice('');
+    bulkPurchase.mutate({ data: { productIds: selectedProducts.map((product) => product.id) } }, {
+      onSuccess: (result) => {
+        setNotice(`${result.orders.length} card${result.orders.length === 1 ? '' : 's'} purchased for ${money(result.totalCents)}. Your updated balance is ${money(result.balanceCents)}.`);
+        setSelectedIds([]);
+        void queryClient.invalidateQueries({ queryKey: getGetGiftCardProductsQueryKey() });
+        void queryClient.invalidateQueries({ queryKey: getGetMyGiftCardOrdersQueryKey() });
+        void queryClient.invalidateQueries({ queryKey: getGetMyDepositsQueryKey() });
+        void queryClient.invalidateQueries({ queryKey: getGetAuthMeQueryKey() });
+      },
+      onError: (reason) => setNotice(`Selected purchase could not be completed. No cards were ordered. ${reason instanceof Error ? reason.message : 'Check your balance and available inventory, then try again.'}`),
+    });
+  };
   const toggleColumn = (columnId: CatalogColumn) => {
     setVisibleColumns((current) => current.includes(columnId)
       ? current.filter((column) => column !== columnId)
@@ -215,50 +247,39 @@ export function BuyCardsPage() {
     try { window.localStorage.setItem(catalogColumnStorageKey, JSON.stringify(visibleColumns)); }
     catch { /* Column preferences remain usable for this visit when browser storage is unavailable. */ }
   }, [visibleColumns]);
-  useEffect(() => { document.title = 'Cards | ReplenishCC'; }, []);
-  return <MemberGuard title="Card catalog">{() => <section className="gift-page">
+  useEffect(() => {
+    setSelectedIds((current) => current.filter((id) => products.some((product) => product.id === id && product.availableCount > 0)).slice(0, 50));
+  }, [products]);
+  useEffect(() => { document.title = 'Buy Cards | ReplenishCC'; }, []);
+  return <MemberGuard title="Buy Cards">{() => <section className="gift-page">
     <header className="gift-heading">
-      <div><div className="gift-eyebrow"><span className="gift-live-dot" /> Authorized inventory</div><h1>Cards</h1><p>Browse listings by denomination, availability, and member price.</p></div>
+      <div><div className="gift-eyebrow"><span className="gift-live-dot" /> Authorized inventory</div><h1>Buy Cards</h1><p>Browse authorized listings and purchase with your account balance.</p></div>
       <Link className="gift-orders-link" href="/my-card-orders" data-testid="link-card-order-history"><Clipboard /> My card orders <ArrowRight /></Link>
     </header>
     {notice && <div className="gift-notice" role="status" data-testid="status-card-purchase">{notice}<Link href="/my-card-orders">View order history</Link><button aria-label="Dismiss purchase notice" onClick={() => setNotice('')} data-testid="button-dismiss-purchase-notice">×</button></div>}
-    <section className="gift-catalog-bases" aria-label="Bases" data-testid="section-card-catalog-bases">
-      <div className="gift-catalog-base-heading"><span>Bases</span><small>Choose a listing</small></div>
-      <div className="gift-catalog-base-options">
-        <button type="button" disabled={productsQuery.isLoading || productsQuery.isError || products.length === 0} className={`gift-catalog-base-button${baseId === 'all' ? ' is-active' : ''}`} aria-pressed={baseId === 'all'} onClick={() => setBaseId('all')} data-testid="button-card-base-all">All bases <span>{products.length}</span></button>
-        {products.map((product) => <button type="button" key={product.id} className={`gift-catalog-base-button${baseId === product.id ? ' is-active' : ''}`} aria-pressed={baseId === product.id} onClick={() => setBaseId(product.id)} data-testid={`button-card-base-${product.id}`}>{product.name}<span>{product.availableCount}</span></button>)}
-        {productsQuery.isLoading && products.length === 0 && <p className="gift-bases-empty" role="status">Loading bases…</p>}
-        {productsQuery.isError && products.length === 0 && <p className="gift-bases-empty" role="status">Bases couldn’t be loaded.</p>}
-        {!productsQuery.isLoading && !productsQuery.isError && products.length === 0 && <p className="gift-bases-empty" role="status">No bases have been added yet.</p>}
-      </div>
+    <section className="catalog-primary-controls" aria-label="Search and choose a base">
+      <label className="gift-catalog-filter-field gift-catalog-search-field">
+        <span>Search listings</span>
+        <span className="gift-catalog-search-input"><Search aria-hidden="true" /><input type="search" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Name, brand, type, issuer or location" aria-label="Search card listings by name, description, brand, type, issuer, or location" data-testid="input-card-catalog-search" /></span>
+      </label>
+      <label className="gift-catalog-filter-field catalog-base-select">
+        <span>Base</span>
+        <select value={baseId} onChange={(event) => setBaseId(event.target.value)} aria-label="Choose a card base" data-testid="select-card-base" disabled={productsQuery.isLoading || productsQuery.isError || products.length === 0}>
+          <option value="all">All Bases</option>
+          {products.map((product) => <option value={product.id} key={product.id}>{product.name}</option>)}
+        </select>
+      </label>
     </section>
     {productsQuery.isLoading ? <div className="gift-grid" aria-label="Loading card listings" data-testid="loading-card-products">{[1,2,3].map((i) => <div className="gift-product-skeleton" key={i}><i/><i/><i/><i/></div>)}</div>
       : productsQuery.isError ? <div className="gift-query-error" role="alert" data-testid="error-card-products">Catalog couldn’t be loaded. <button onClick={() => void productsQuery.refetch()} data-testid="button-retry-card-products"><RefreshCw /> Try again</button></div>
       : products.length === 0 ? <div className="gift-empty" data-testid="empty-card-catalog"><CreditCard /><h2>No card listings yet</h2><p>Once a listing is added, it will appear here along with its base and filters.</p></div>
       : <>
         <div className="gift-catalog-controls">
-          <div className="gift-column-control">
-            <span className="gift-column-visibility-label">Column Visibility</span>
-            <details className="column-chooser gift-column-chooser">
-              <summary className="quiet-button" data-testid="button-choose-card-columns"><Columns3 /> Columns <ChevronRight className="chooser-chevron" /></summary>
-              <div className="column-chooser-menu" role="group" aria-label="Choose visible card listing columns">
-                <p className="gift-column-note">Base and actions stay visible. Private card credentials are never catalog columns.</p>
-                {catalogColumns.map((column) => <label key={column.id} className="column-choice">
-                  <input type="checkbox" checked={visibleColumns.includes(column.id)} onChange={() => toggleColumn(column.id)} data-testid={`checkbox-card-column-${column.id}`} />
-                  <span>{column.label}</span>
-                </label>)}
-              </div>
-            </details>
-          </div>
           <details className="gift-filter-disclosure">
             <summary className="quiet-button gift-filter-trigger" data-testid="button-toggle-card-filters"><SlidersHorizontal /> Filters <ChevronRight className="chooser-chevron" /></summary>
             <section className="gift-catalog-filter-panel" aria-label="Catalog filters">
-              <div className="gift-catalog-control-title"><span>Filter listings</span><small>Search and narrow by base, denomination, stock, or price</small></div>
+              <div className="gift-catalog-control-title"><span>Filter listings</span><small>Narrow by denomination, stock, or price</small></div>
               <div className="gift-catalog-toolbar">
-                <label className="gift-catalog-filter-field gift-catalog-search-field">
-                  <span>Search listings</span>
-                  <span className="gift-catalog-search-input"><Search aria-hidden="true" /><input type="search" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Name or description" aria-label="Search card listings" data-testid="input-card-catalog-search" /></span>
-                </label>
                 <label className="gift-catalog-filter-field">
                   <span>Face value</span>
                   <select value={faceValueFilter} onChange={(event) => setFaceValueFilter(event.target.value)} aria-label="Filter by face value" data-testid="select-card-face-value-filter">
@@ -282,6 +303,25 @@ export function BuyCardsPage() {
             </section>
           </details>
         </div>
+        <div className="catalog-selection-bar">
+          <div><strong>{selectedProducts.length} selected</strong><span>{selectedProducts.length ? ` · Estimated total ${money(selectedTotalCents)}` : ' · Choose one card from each listing'}</span></div>
+          <button type="button" className="catalog-buy-selected" onClick={purchaseSelected} disabled={!selectedProducts.length || bulkPurchase.isPending || purchase.isPending} data-testid="button-buy-selected">
+            <ShoppingCart aria-hidden="true" />{bulkPurchase.isPending ? 'Processing…' : `Buy Selected${selectedProducts.length ? ` (${selectedProducts.length})` : ''}`}
+          </button>
+        </div>
+        <div className="gift-column-control catalog-columns-after">
+          <span className="gift-column-visibility-label">Column Visibility</span>
+          <details className="column-chooser gift-column-chooser">
+            <summary className="quiet-button" data-testid="button-choose-card-columns"><Columns3 /> Columns <ChevronRight className="chooser-chevron" /></summary>
+            <div className="column-chooser-menu" role="group" aria-label="Choose visible card listing columns">
+              <p className="gift-column-note">Base and actions stay visible. Private card credentials are never catalog columns.</p>
+              {catalogColumns.map((column) => <label key={column.id} className="column-choice">
+                <input type="checkbox" checked={visibleColumns.includes(column.id)} onChange={() => toggleColumn(column.id)} data-testid={`checkbox-card-column-${column.id}`} />
+                <span>{column.label}</span>
+              </label>)}
+            </div>
+          </details>
+        </div>
         <div className="gift-catalog-results" role="status" data-testid="text-card-catalog-results">
           Showing <strong>{filteredProducts.length}</strong> of {products.length} listings
           {(normalizedSearch || baseId !== 'all' || faceValueFilter !== 'all' || stockFilter !== 'all' || priceFilter !== 'all') && <button type="button" onClick={resetFilters} data-testid="button-clear-card-filters"><RotateCcw /> Clear filters</button>}
@@ -289,20 +329,20 @@ export function BuyCardsPage() {
         {filteredProducts.length === 0 ? <div className="gift-empty gift-filter-empty" data-testid="empty-filtered-card-catalog"><Search /><h2>No matching listings</h2><p>Try changing the search text or filters.</p><button type="button" className="gift-primary-link" onClick={resetFilters} data-testid="button-reset-card-filters">Reset filters <RotateCcw /></button></div>
           : <div className="gift-catalog-table-wrap" role="region" aria-label="Card listings" tabIndex={0}>
             <table className="gift-catalog-table">
-              <thead><tr><th scope="col">Base</th>{visibleColumns.map((column) => <th scope="col" key={column}>{catalogColumns.find((item) => item.id === column)?.label}</th>)}<th scope="col">Actions</th></tr></thead>
+              <thead><tr><th scope="col" className="catalog-select-cell"><input type="checkbox" aria-label="Select all available filtered listings" checked={allVisibleSelected} disabled={!selectableProducts.length} onChange={() => setSelectedIds((current) => allVisibleSelected ? current.filter((id) => !selectableProducts.some((product) => product.id === id)) : [...new Set([...current, ...selectableProducts.map((product) => product.id)])].slice(0, 50))} /></th><th scope="col">Base</th>{visibleColumns.map((column) => <th scope="col" key={column}>{catalogColumns.find((item) => item.id === column)?.label}</th>)}<th scope="col">Actions</th></tr></thead>
               <tbody>{filteredProducts.map((product) => <tr key={product.id} data-testid={`row-gift-product-${product.id}`}>
+                <td className="catalog-select-cell"><input type="checkbox" aria-label={`Select one ${product.name} card`} checked={selectedIds.includes(product.id)} disabled={product.availableCount < 1 || (selectedIds.length >= 50 && !selectedIds.includes(product.id))} onChange={() => toggleSelection(product.id)} data-testid={`checkbox-select-card-${product.id}`} /></td>
                 <td><div className="gift-catalog-product"><div><strong data-testid={`text-gift-product-name-${product.id}`}>{product.name}</strong></div></div></td>
-                {visibleColumns.includes('address') && <td data-testid={`text-gift-address-${product.id}`}>{product.address || '—'}</td>}
-                {visibleColumns.includes('state') && <td data-testid={`text-gift-state-${product.id}`}>{product.state || '—'}</td>}
-                {visibleColumns.includes('city') && <td data-testid={`text-gift-city-${product.id}`}>{product.city || '—'}</td>}
-                {visibleColumns.includes('regionZip') && <td data-testid={`text-gift-region-zip-${product.id}`}>{product.regionZip || '—'}</td>}
+                {visibleColumns.includes('brand') && <td data-testid={`text-gift-card-brand-${product.id}`}>{product.brand || '—'}</td>}
                 {visibleColumns.includes('cardType') && <td data-testid={`text-gift-card-type-${product.id}`}>{product.cardType || '—'}</td>}
                 {visibleColumns.includes('issuer') && <td data-testid={`text-gift-card-issuer-${product.id}`}>{product.issuer || '—'}</td>}
-                {visibleColumns.includes('brand') && <td data-testid={`text-gift-card-brand-${product.id}`}>{product.brand || '—'}</td>}
+                {visibleColumns.includes('city') && <td data-testid={`text-gift-city-${product.id}`}>{product.city || '—'}</td>}
+                {visibleColumns.includes('state') && <td data-testid={`text-gift-state-${product.id}`}>{product.state || '—'}</td>}
+                {visibleColumns.includes('regionZip') && <td data-testid={`text-gift-region-zip-${product.id}`}>{product.regionZip || '—'}</td>}
                 {visibleColumns.includes('price') && <td className="gift-catalog-price" data-testid={`text-gift-member-price-${product.id}`}>{money(product.priceCents)}</td>}
                 <td><div className="gift-catalog-actions">
                   <button className="gift-info-button" type="button" onClick={() => setInfoProductId(product.id)} data-testid={`button-info-card-${product.id}`}><Info /> Info</button>
-                  <button className="gift-purchase-button" type="button" disabled={purchase.isPending || product.availableCount < 1} onClick={() => purchaseOne(product.id)} aria-label={`Buy one ${product.name}`} data-testid={`button-purchase-card-${product.id}`}>{purchase.isPending ? 'Working…' : 'Buy 1'} <ShoppingCart /></button>
+                  <button className="gift-purchase-button" type="button" disabled={purchase.isPending || bulkPurchase.isPending || product.availableCount < 1} onClick={() => purchaseOne(product.id)} aria-label={`Buy one ${product.name}`} data-testid={`button-purchase-card-${product.id}`}>{purchase.isPending ? 'Working…' : 'Buy 1'} <ShoppingCart /></button>
                 </div></td>
               </tr>)}</tbody>
             </table>

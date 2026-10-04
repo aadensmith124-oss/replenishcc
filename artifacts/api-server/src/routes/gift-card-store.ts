@@ -4,6 +4,8 @@ import {
   AddAdminGiftCardStockBody,
   AddAdminGiftCardStockParams,
   AddAdminGiftCardStockResponse,
+  BulkPurchaseGiftCardsBody,
+  BulkPurchaseGiftCardsResponse,
   CreateAdminGiftCardProductBody,
   CreateAdminGiftCardProductResponse,
   DeleteAdminGiftCardProductParams,
@@ -384,6 +386,146 @@ router.post("/orders/gift-cards", async (req, res): Promise<void> => {
         balanceCents: result.balanceCents,
       }),
     );
+});
+
+router.post("/orders/gift-cards/bulk", async (req, res): Promise<void> => {
+  const user = await getCurrentUser(req);
+  if (!user) {
+    res.status(401).json({ error: "Sign in to purchase gift cards." });
+    return;
+  }
+
+  const parsed = BulkPurchaseGiftCardsBody.safeParse(req.body);
+  if (!parsed.success || new Set(parsed.data?.productIds ?? []).size !== parsed.data?.productIds.length) {
+    res.status(400).json({ error: "Choose one or more different gift-card listings." });
+    return;
+  }
+
+  const productIds = parsed.data.productIds;
+  const result = await db.transaction(async (tx) => {
+    await tx
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.id, user.id))
+      .for("update")
+      .limit(1);
+
+    const selectedProducts = await tx
+      .select()
+      .from(giftCardProductsTable)
+      .where(inArray(giftCardProductsTable.id, productIds))
+      .orderBy(giftCardProductsTable.id)
+      .for("update");
+    if (selectedProducts.length !== productIds.length) {
+      return { kind: "missing" as const };
+    }
+
+    const productsById = new Map(selectedProducts.map((product) => [product.id, product]));
+    const purchaseProducts = productIds.map((productId) => productsById.get(productId)!);
+    const totalCents = purchaseProducts.reduce((total, product) => total + product.priceCents, 0);
+    const [balanceRow] = await tx
+      .select({ balanceCents: sum(accountLedgerTable.amountCents) })
+      .from(accountLedgerTable)
+      .where(eq(accountLedgerTable.userId, user.id));
+    const balanceCents = Number(balanceRow?.balanceCents ?? 0);
+    if (balanceCents < totalCents) {
+      return { kind: "balance" as const };
+    }
+
+    const stockByProduct = new Map<string, (typeof giftCardInventoryTable.$inferSelect)>();
+    for (const productId of [...productIds].sort()) {
+      const [stock] = await tx
+        .select()
+        .from(giftCardInventoryTable)
+        .where(
+          and(
+            eq(giftCardInventoryTable.productId, productId),
+            eq(giftCardInventoryTable.status, "available"),
+            isNull(giftCardInventoryTable.orderId),
+          ),
+        )
+        .orderBy(giftCardInventoryTable.createdAt)
+        .limit(1)
+        .for("update", { skipLocked: true });
+      if (!stock) return { kind: "stock" as const };
+      stockByProduct.set(productId, stock);
+    }
+
+    const orders = [];
+    for (const product of purchaseProducts) {
+      const stock = stockByProduct.get(product.id);
+      if (!stock) throw new Error("Selected gift-card stock was not locked.");
+
+      const [order] = await tx
+        .insert(giftCardOrdersTable)
+        .values({
+          userId: user.id,
+          productId: product.id,
+          productName: product.name,
+          description: product.description,
+          faceValueCents: product.faceValueCents,
+          quantity: 1,
+          unitPriceCents: product.priceCents,
+          totalCents: product.priceCents,
+        })
+        .returning();
+      if (!order) throw new Error("Gift-card order creation failed.");
+
+      await tx
+        .update(giftCardInventoryTable)
+        .set({ status: "sold", orderId: order.id, soldAt: order.createdAt })
+        .where(eq(giftCardInventoryTable.id, stock.id));
+
+      if (order.totalCents > 0) {
+        await tx.insert(accountLedgerTable).values({
+          userId: user.id,
+          depositId: null,
+          redeemCodeId: null,
+          supportRefundId: null,
+          orderId: null,
+          giftCardOrderId: order.id,
+          entryType: "gift_card_purchase",
+          amountCents: -order.totalCents,
+        });
+      }
+
+      orders.push({
+        id: order.id,
+        productId: order.productId,
+        productName: order.productName,
+        totalCents: order.totalCents,
+        createdAt: order.createdAt.toISOString(),
+      });
+    }
+
+    return {
+      kind: "success" as const,
+      totalCents,
+      balanceCents: balanceCents - totalCents,
+      orders,
+    };
+  });
+
+  if (result.kind === "missing") {
+    res.status(404).json({ error: "One or more selected listings are no longer available." });
+    return;
+  }
+  if (result.kind === "balance") {
+    res.status(409).json({ error: "Your account balance is too low for this selection." });
+    return;
+  }
+  if (result.kind === "stock") {
+    res.status(409).json({ error: "One or more selected cards are no longer in stock." });
+    return;
+  }
+
+  res.status(201).json(
+    BulkPurchaseGiftCardsResponse.parse({
+      orders: result.orders,
+      totalCents: result.totalCents,
+      balanceCents: result.balanceCents,
+    }),
+  );
 });
 
 router.get("/admin/gift-card-products", async (req, res): Promise<void> => {

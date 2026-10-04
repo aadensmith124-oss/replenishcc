@@ -1119,6 +1119,28 @@ export interface PurchaseGiftCardInput {
   quantity: number;
 }
 
+export interface BulkPurchaseGiftCardsInput {
+  /**
+     * @minItems 1
+     * @maxItems 50
+     */
+  productIds: string[];
+}
+
+export interface GiftCardBulkOrderSummary {
+  id: string;
+  productId: string;
+  productName: string;
+  totalCents: number;
+  createdAt: string;
+}
+
+export interface GiftCardBulkPurchaseResult {
+  orders: GiftCardBulkOrderSummary[];
+  totalCents: number;
+  balanceCents: number;
+}
+
 export interface GiftCardOrder {
   id: string;
   productId: string;
