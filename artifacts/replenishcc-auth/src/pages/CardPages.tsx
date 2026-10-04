@@ -697,7 +697,7 @@ export function AdminCardInventoryPage() {
         onSuccess: () => {
           setEditingMetadata(null);
           invalidate();
-          setFeedback('Public base metadata updated.');
+          setFeedback('Base location defaults and card metadata updated.');
         },
         onError: () => setFeedback('Base metadata could not be updated. Try again.'),
       },
@@ -773,13 +773,13 @@ export function AdminCardInventoryPage() {
         </form></Form>
       </section>
     </div>
-      <section className="gift-inventory-panel"><header><div><h3>Bases</h3><p>Price, public metadata, contact-presence indicators, and available quantity only. Actual card details stay private.</p></div><button onClick={() => void products.refetch()} aria-label="Refresh bases" data-testid="button-refresh-card-inventory"><RefreshCw /></button></header>
+      <section className="gift-inventory-panel"><header><div><h3>Bases</h3><p>Price, base location defaults, contact-presence indicators, and available quantity only. Actual card details stay private.</p></div><button onClick={() => void products.refetch()} aria-label="Refresh bases" data-testid="button-refresh-card-inventory"><RefreshCw /></button></header>
       {products.isLoading ? <div className="gift-admin-loading" data-testid="loading-admin-card-inventory"><i/><i/><i/></div>
       : products.isError ? <div className="gift-query-error" role="alert" data-testid="error-admin-card-inventory">Inventory unavailable. <button onClick={() => void products.refetch()} data-testid="button-retry-admin-card-inventory">Retry</button></div>
       : rows.length === 0 ? <div className="gift-admin-empty" data-testid="empty-admin-card-inventory">No bases created yet. Create a base above to begin.</div>
         : <div className="gift-table-wrap">
           <table className="gift-table">
-            <thead><tr><th>Base</th><th>Address</th><th>State</th><th>City</th><th>ZIP</th><th>Card type</th><th>Issuer</th><th>Brand</th><th>Price</th><th>Email in stock</th><th>Phone in stock</th><th>Available</th><th>Batch status</th><th>Created</th><th><span className="sr-only">Actions</span></th></tr></thead>
+            <thead><tr><th>Base</th><th>Default address</th><th>Default state</th><th>Default city</th><th>Default ZIP</th><th>Card type</th><th>Issuer</th><th>Brand</th><th>Price</th><th>Email in stock</th><th>Phone in stock</th><th>Available</th><th>Batch status</th><th>Created</th><th><span className="sr-only">Actions</span></th></tr></thead>
             <tbody>{rows.map((product) => <tr key={product.id} data-testid={`row-card-inventory-${product.id}`}>
               <td><strong>{product.name}</strong></td>
               <td>{product.address || '—'}</td><td>{product.state || '—'}</td><td>{product.city || '—'}</td><td>{product.regionZip || '—'}</td>
@@ -798,7 +798,7 @@ export function AdminCardInventoryPage() {
       <Dialog open={!!editingMetadata} onOpenChange={(open) => { if (!open && !updateMetadata.isPending) setEditingMetadata(null); }}>
         <DialogContent className="gift-info-dialog">
           <DialogHeader className="gift-info-dialog-head">
-            <div><DialogTitle>Edit base metadata</DialogTitle><DialogDescription>{editingMetadata?.productName} · Address, state, city, and ZIP are public to catalog members.</DialogDescription></div>
+            <div><DialogTitle>Edit base metadata</DialogTitle><DialogDescription>{editingMetadata?.productName} · Public fallback values used when an uploaded card omits a location field.</DialogDescription></div>
           </DialogHeader>
           <form className="gift-form" onSubmit={saveMetadata}>
             <label htmlFor="edit-card-address">Address</label>
@@ -815,7 +815,7 @@ export function AdminCardInventoryPage() {
             <Input id="edit-card-issuer" value={metadataDraft.issuer} onChange={(event) => setMetadataDraft((current) => ({ ...current, issuer: event.target.value }))} maxLength={80} data-testid="input-edit-card-issuer" />
             <label htmlFor="edit-card-brand">Brand</label>
             <Input id="edit-card-brand" value={metadataDraft.brand} onChange={(event) => setMetadataDraft((current) => ({ ...current, brand: event.target.value }))} maxLength={80} data-testid="input-edit-card-brand" />
-            <p className="gift-zip-note">Address, state, city, and ZIP appear as public catalog columns. Card number, expiration, security code, email, and phone stay private.</p>
+            <p className="gift-zip-note">These public defaults are used only for blank fields during upload; editing them does not change locations already saved on individual cards. Card number, expiration, security code, email, and phone stay private.</p>
             <button type="submit" className="gift-admin-submit" disabled={updateMetadata.isPending} data-testid="button-save-card-metadata">{updateMetadata.isPending ? 'Saving…' : 'Save metadata'} <Check /></button>
           </form>
         </DialogContent>
