@@ -2124,7 +2124,6 @@ components:
         id: { type: string, format: uuid }
         name: { type: string }
         description: { type: string }
-        address: { type: string, maxLength: 255 }
         state: { type: string, maxLength: 80 }
         city: { type: string, maxLength: 120 }
         regionZip: { type: ["string", "null"], maxLength: 10, pattern: "^[0-9]{5}(-[0-9]{4})?$" }
@@ -2140,19 +2139,19 @@ components:
         hasEmail: { type: boolean }
         hasPhone: { type: boolean }
         createdAt: { type: string, format: date-time }
-      required: [id, name, description, address, state, city, regionZip, cardType, issuer, brand, faceValueCents, priceCents, availableCount, availableCardLocations, hasEmail, hasPhone, createdAt]
+      required: [id, name, description, state, city, regionZip, cardType, issuer, brand, faceValueCents, priceCents, availableCount, availableCardLocations, hasEmail, hasPhone, createdAt]
     AvailableGiftCardLocation:
       type: object
       properties:
         inventoryId: { type: string, format: uuid }
         bin: { type: ["string", "null"], minLength: 6, maxLength: 6, pattern: "^[0-9]{6}$" }
-        address: { type: string }
+        lastFour: { type: ["string", "null"], minLength: 4, maxLength: 4, pattern: "^[0-9]{4}$" }
         city: { type: string }
         state: { type: string }
         regionZip: { type: ["string", "null"], maxLength: 10 }
         hasEmail: { type: boolean }
         hasPhone: { type: boolean }
-      required: [inventoryId, bin, address, city, state, regionZip, hasEmail, hasPhone]
+      required: [inventoryId, bin, lastFour, city, state, regionZip, hasEmail, hasPhone]
     GiftCardProductsResponse:
       type: object
       properties:

@@ -34,6 +34,7 @@ import {
   decryptGiftCardCredential,
   encryptGiftCardCredential,
   getGiftCardBinPrefix,
+  getGiftCardLastFour,
   hashGiftCardCredential,
   type GiftCardCredential,
 } from "../lib/gift-card-credentials";
@@ -47,10 +48,12 @@ async function listProducts({
   includeStockEligibility = false,
   includeArchived = false,
   includeBins = false,
+  includeBaseAddress = false,
 }: {
   includeStockEligibility?: boolean;
   includeArchived?: boolean;
   includeBins?: boolean;
+  includeBaseAddress?: boolean;
 } = {}) {
   const availableCount = count(giftCardInventoryTable.id);
   const products = await db
@@ -69,12 +72,11 @@ async function listProducts({
       priceCents: giftCardProductsTable.priceCents,
       isArchived: giftCardProductsTable.isArchived,
       availableCount,
-      availableCardLocations: sql<Omit<AvailableGiftCardLocation, "bin">[]>`
+      availableCardLocations: sql<Omit<AvailableGiftCardLocation, "bin" | "lastFour">[]>`
         COALESCE(
           json_agg(
             json_build_object(
               'inventoryId', ${giftCardInventoryTable.id},
-              'address', COALESCE(${giftCardInventoryTable.publicAddress}, ${giftCardProductsTable.address}),
               'city', COALESCE(${giftCardInventoryTable.publicCity}, ${giftCardProductsTable.city}),
               'state', COALESCE(${giftCardInventoryTable.publicState}, ${giftCardProductsTable.state}),
               'regionZip', COALESCE(${giftCardInventoryTable.publicRegionZip}, ${giftCardProductsTable.regionZip}),
@@ -107,7 +109,7 @@ async function listProducts({
     .orderBy(desc(giftCardProductsTable.createdAt));
 
   const productIds = products.map((product) => product.id);
-  const cardBins = new Map<string, string | null>();
+  const cardIdentifiers = new Map<string, { bin: string | null; lastFour: string | null }>();
   if (includeBins) {
     const inventoryIds = products.flatMap((product) =>
       product.availableCardLocations.map((card) => card.inventoryId),
@@ -124,7 +126,10 @@ async function listProducts({
         .where(inArray(giftCardInventoryTable.id, inventoryIds));
       for (const credential of inventoryCredentials) {
         const card = decryptGiftCardCredential(credential);
-        cardBins.set(credential.id, getGiftCardBinPrefix(card.cardNumber));
+        cardIdentifiers.set(credential.id, {
+          bin: getGiftCardBinPrefix(card.cardNumber),
+          lastFour: getGiftCardLastFour(card.cardNumber),
+        });
       }
     }
   }
@@ -147,7 +152,10 @@ async function listProducts({
   ]);
 
   return products.map((product) => {
-    const { isArchived, ...visibleProduct } = product;
+    const { isArchived, address, ...catalogProduct } = product;
+    const visibleProduct = includeBaseAddress
+      ? { ...catalogProduct, address }
+      : catalogProduct;
     return {
       ...visibleProduct,
       ...(includeBins
@@ -155,7 +163,8 @@ async function listProducts({
             availableCardLocations: visibleProduct.availableCardLocations.map(
               (card) => ({
                 ...card,
-                bin: cardBins.get(card.inventoryId) ?? null,
+                bin: cardIdentifiers.get(card.inventoryId)?.bin ?? null,
+                lastFour: cardIdentifiers.get(card.inventoryId)?.lastFour ?? null,
               }),
             ),
           }
@@ -701,6 +710,7 @@ router.get("/admin/gift-card-products", async (req, res): Promise<void> => {
   const products = await listProducts({
     includeStockEligibility: true,
     includeArchived: true,
+    includeBaseAddress: true,
   });
   res.json(GetAdminGiftCardProductsResponse.parse({ products }));
 });

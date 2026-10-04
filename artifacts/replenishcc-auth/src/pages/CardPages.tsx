@@ -57,6 +57,7 @@ type CatalogFilters = {
 type PublicCardLocation = {
   inventoryId: string;
   bin: string | null;
+  lastFour: string | null;
   city: string;
   state: string;
   regionZip: string | null;
@@ -85,7 +86,7 @@ const emptyCatalogFilters: CatalogFilters = {
   email: 'all', phone: 'all', price: 'all',
 };
 const catalogColumns: { id: CatalogColumn; label: string }[] = [
-  { id: 'name', label: 'Name' },
+  { id: 'name', label: 'Base' },
   { id: 'cardType', label: 'Type' },
   { id: 'issuer', label: 'Issuer' },
   { id: 'brand', label: 'Brand' },
@@ -164,10 +165,9 @@ export function BuyCardsPage() {
   const [visibleColumns, setVisibleColumns] = useState<CatalogColumn[]>(readCatalogColumns);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const availableCardRows = useMemo(
-    () => products.flatMap((product) => locationsForProduct(product).map((card, index) => ({
+    () => products.flatMap((product) => locationsForProduct(product).map((card) => ({
       product,
       card,
-      cardNumber: index + 1,
     }))),
     [products],
   );
@@ -455,12 +455,12 @@ export function BuyCardsPage() {
           : <div className="gift-catalog-table-wrap" role="region" aria-label="Card listings" tabIndex={0}>
             <table className="gift-catalog-table">
               <thead><tr><th scope="col" className="catalog-select-cell"><input type="checkbox" aria-label="Select one available card from each visible base" checked={allVisibleSelected} disabled={!filteredCardRows.length} onChange={toggleAllVisible} /></th><th scope="col">Card</th><th scope="col">BIN</th>{visibleColumns.map((column) => <th scope="col" key={column} className={column === 'actions' ? 'catalog-actions-cell' : undefined}>{catalogColumns.find((item) => item.id === column)?.label}</th>)}</tr></thead>
-              <tbody>{filteredCardRows.map(({ product, card, cardNumber }) => {
+              <tbody>{filteredCardRows.map(({ product, card }) => {
                 const isSelected = selectedIds.includes(card.inventoryId);
                 const anotherCardFromBaseSelected = selectedCardRows.some((row) => row.product.id === product.id && row.card.inventoryId !== card.inventoryId);
                 return <tr key={card.inventoryId} data-testid={`row-gift-product-${product.id}-${card.inventoryId}`}>
-                <td className="catalog-select-cell"><input type="checkbox" aria-label={`Select card ${cardNumber} from ${product.name}`} checked={isSelected} disabled={anotherCardFromBaseSelected || (selectedIds.length >= 50 && !isSelected)} onChange={() => toggleSelection({ product, card, cardNumber })} data-testid={`checkbox-select-card-${card.inventoryId}`} /></td>
-                <td><div className="gift-catalog-product"><div><strong>Card {cardNumber}</strong></div></div></td>
+                <td className="catalog-select-cell"><input type="checkbox" aria-label={`Select card ending in ${card.lastFour ?? 'unavailable'} from ${product.name}`} checked={isSelected} disabled={anotherCardFromBaseSelected || (selectedIds.length >= 50 && !isSelected)} onChange={() => toggleSelection({ product, card })} data-testid={`checkbox-select-card-${card.inventoryId}`} /></td>
+                <td><div className="gift-catalog-product"><div><strong data-testid={`text-gift-card-last-four-${card.inventoryId}`}>{card.lastFour ?? '—'}</strong></div></div></td>
                 <td data-testid={`text-gift-card-bin-${card.inventoryId}`}>{card.bin || '—'}</td>
                 {visibleColumns.map((column) => {
                   switch (column) {
@@ -483,7 +483,7 @@ export function BuyCardsPage() {
                     case 'actions':
                       return <td key={column} className="catalog-actions-cell"><div className="gift-catalog-actions">
                         <button className="gift-info-button" type="button" onClick={() => setInfoProductId(product.id)} data-testid={`button-info-card-${card.inventoryId}`}><Info /> Info</button>
-                        <button className="gift-purchase-button" type="button" disabled={purchase.isPending || bulkPurchase.isPending} onClick={() => purchaseOne(product.id, card.inventoryId)} aria-label={`Buy card ${cardNumber} from ${product.name}`} data-testid={`button-purchase-card-${card.inventoryId}`}>{purchase.isPending ? 'Working…' : 'Buy'} <ShoppingCart /></button>
+                        <button className="gift-purchase-button" type="button" disabled={purchase.isPending || bulkPurchase.isPending} onClick={() => purchaseOne(product.id, card.inventoryId)} aria-label={`Buy card ending in ${card.lastFour ?? 'unavailable'} from ${product.name}`} data-testid={`button-purchase-card-${card.inventoryId}`}>{purchase.isPending ? 'Working…' : 'Buy'} <ShoppingCart /></button>
                       </div></td>;
                   }
                 })}

@@ -19,6 +19,11 @@ export function getGiftCardBinPrefix(cardNumber: string): string | null {
   return digits.length >= 6 ? digits.slice(0, 6) : null;
 }
 
+export function getGiftCardLastFour(cardNumber: string): string | null {
+  const digits = cardNumber.replace(/\D/g, "");
+  return digits.length >= 4 ? digits.slice(-4) : null;
+}
+
 function sessionSecret(): string {
   const secret = process.env.SESSION_SECRET;
   if (!secret) throw new Error("SESSION_SECRET must be configured.");
