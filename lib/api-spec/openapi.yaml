@@ -1108,10 +1108,10 @@ paths:
     get:
       operationId: getAdminGiftCardProducts
       tags: [giftCardStore]
-      summary: List prepaid gift-card products and inventory counts for an administrator
+      summary: List prepaid gift-card products, including archived bases, for an administrator
       responses:
         "200":
-          description: All gift-card products, including products with no stock
+          description: All gift-card products, including archived products and products with no stock
           content:
             application/json:
               schema:
@@ -1147,7 +1147,7 @@ paths:
     delete:
       operationId: deleteAdminGiftCardProduct
       tags: [giftCardStore]
-      summary: Delete a gift-card product that has no inventory or order history
+      summary: Delete an empty base or archive a base with inventory or order history
       parameters:
         - name: productId
           in: path
@@ -1155,7 +1155,7 @@ paths:
           schema: { type: string, format: uuid }
       responses:
         "204":
-          description: Product deleted
+          description: Empty base deleted, or base with inventory or order history archived
         "400":
           description: Invalid product identifier
         "401":
@@ -1164,8 +1164,27 @@ paths:
           description: Admin access required
         "404":
           description: Product not found
-        "409":
-          description: Product has inventory or order history and cannot be deleted
+  /admin/gift-card-products/{productId}/restore:
+    post:
+      operationId: restoreAdminGiftCardProduct
+      tags: [giftCardStore]
+      summary: Restore an archived gift-card base to member sales
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Base restored
+        "400":
+          description: Invalid product identifier
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+        "404":
+          description: Product not found
   /admin/gift-card-products/{productId}/metadata:
     patch:
       operationId: updateAdminGiftCardProductMetadata
@@ -1950,8 +1969,9 @@ components:
         hasEmail: { type: boolean }
         hasPhone: { type: boolean }
         canReceiveStock: { type: boolean }
+        isArchived: { type: boolean }
         createdAt: { type: string, format: date-time }
-      required: [id, name, description, address, state, city, regionZip, cardType, issuer, brand, faceValueCents, priceCents, availableCount, hasEmail, hasPhone, canReceiveStock, createdAt]
+      required: [id, name, description, address, state, city, regionZip, cardType, issuer, brand, faceValueCents, priceCents, availableCount, hasEmail, hasPhone, canReceiveStock, isArchived, createdAt]
     AdminGiftCardProductsResponse:
       type: object
       properties:
