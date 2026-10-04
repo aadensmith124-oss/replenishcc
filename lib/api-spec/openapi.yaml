@@ -1850,11 +1850,12 @@ components:
         id: { type: string, format: uuid }
         name: { type: string }
         description: { type: string }
+        regionZip: { type: ["string", "null"], maxLength: 10, pattern: "^[0-9]{5}(-[0-9]{4})?$" }
         faceValueCents: { type: integer }
         priceCents: { type: integer }
         availableCount: { type: integer }
         createdAt: { type: string, format: date-time }
-      required: [id, name, description, faceValueCents, priceCents, availableCount, createdAt]
+      required: [id, name, description, regionZip, faceValueCents, priceCents, availableCount, createdAt]
     GiftCardProductsResponse:
       type: object
       properties:
@@ -1867,9 +1868,10 @@ components:
       properties:
         name: { type: string, minLength: 1, maxLength: 100 }
         description: { type: string, maxLength: 1000 }
+        regionZip: { type: ["string", "null"], maxLength: 10, pattern: "^[0-9]{5}(-[0-9]{4})?$" }
         faceValueCents: { type: integer, minimum: 1, maximum: 1000000 }
         priceCents: { type: integer, minimum: 1, maximum: 1000000 }
-      required: [name, description, faceValueCents, priceCents]
+      required: [name, description, regionZip, faceValueCents, priceCents]
     GiftCardCredentialInput:
       type: object
       properties:

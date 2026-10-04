@@ -23,30 +23,35 @@ const date = (value: string) => new Intl.DateTimeFormat('en-US', { dateStyle: 'm
 const cardSchema = z.object({
   name: z.string().trim().min(1, 'Enter a listing name').max(100),
   description: z.string().max(1000),
+  regionZip: z.string().trim().refine((value) => !value || /^\d{5}(?:-\d{4})?$/.test(value), 'Enter a 5-digit ZIP or ZIP+4'),
   faceValue: z.coerce.number().positive('Enter a positive denomination'),
   price: z.coerce.number().positive('Enter a positive price'),
 });
 type CardForm = z.infer<typeof cardSchema>;
 
-type CatalogColumn = 'description' | 'faceValue' | 'availability' | 'price';
+type CatalogColumn = 'description' | 'regionZip' | 'faceValue' | 'availability' | 'price';
 type CatalogPriceFilter = 'all' | 'under-25' | '25-50' | '50-100' | '100-plus';
 const catalogColumns: { id: CatalogColumn; label: string }[] = [
   { id: 'description', label: 'Description' },
+  { id: 'regionZip', label: 'Region ZIP' },
   { id: 'faceValue', label: 'Face value' },
   { id: 'availability', label: 'Available stock' },
   { id: 'price', label: 'Member price' },
 ];
-const catalogColumnStorageKey = 'replenishcc-card-catalog-columns';
+const catalogColumnStorageKey = 'replenishcc-card-catalog-columns-v2';
+const legacyCatalogColumnStorageKey = 'replenishcc-card-catalog-columns';
 const defaultCatalogColumns = catalogColumns.map((column) => column.id);
 
 function readCatalogColumns(): CatalogColumn[] {
   if (typeof window === 'undefined') return defaultCatalogColumns;
   try {
     const stored = window.localStorage.getItem(catalogColumnStorageKey);
-    if (stored === null) return defaultCatalogColumns;
-    const parsed: unknown = JSON.parse(stored);
+    const migratingLegacyPreferences = stored === null;
+    const preferenceValue = stored ?? window.localStorage.getItem(legacyCatalogColumnStorageKey);
+    if (preferenceValue === null) return defaultCatalogColumns;
+    const parsed: unknown = JSON.parse(preferenceValue);
     if (!Array.isArray(parsed)) return defaultCatalogColumns;
-    return catalogColumns.filter((column) => parsed.includes(column.id)).map((column) => column.id);
+    return catalogColumns.filter((column) => parsed.includes(column.id) || (migratingLegacyPreferences && column.id === 'regionZip')).map((column) => column.id);
   } catch {
     return defaultCatalogColumns;
   }
@@ -203,6 +208,7 @@ export function BuyCardsPage() {
               <tbody>{filteredProducts.map((product) => <tr key={product.id} data-testid={`row-gift-product-${product.id}`}>
                 <td><div className="gift-catalog-product"><div><strong data-testid={`text-gift-product-name-${product.id}`}>{product.name}</strong></div></div></td>
                 {visibleColumns.includes('description') && <td className="gift-catalog-description">{product.description || 'Authorized card listing'}</td>}
+                {visibleColumns.includes('regionZip') && <td data-testid={`text-gift-region-zip-${product.id}`}>{product.regionZip || '—'}</td>}
                 {visibleColumns.includes('faceValue') && <td className="gift-catalog-face" data-testid={`text-gift-face-value-${product.id}`}>{money(product.faceValueCents)}</td>}
                 {visibleColumns.includes('availability') && <td><span className={`gift-stock${product.availableCount === 0 ? ' is-out' : product.availableCount <= 5 ? ' is-low' : ''}`}><i />{product.availableCount} available</span></td>}
                 {visibleColumns.includes('price') && <td className="gift-catalog-price" data-testid={`text-gift-member-price-${product.id}`}>{money(product.priceCents)}</td>}
@@ -221,6 +227,7 @@ export function BuyCardsPage() {
         <p className="gift-info-description" data-testid={`text-card-info-description-${infoProduct.id}`}>{infoProduct.description || 'No additional description provided.'}</p>
         <dl className="gift-info-facts">
           <div><dt>Base</dt><dd>{infoProduct.name}</dd></div>
+          <div><dt>Redemption region ZIP</dt><dd data-testid={`text-card-info-region-zip-${infoProduct.id}`}>{infoProduct.regionZip || 'Not specified'}</dd></div>
           <div><dt>Face value</dt><dd data-testid={`text-card-info-value-${infoProduct.id}`}>{money(infoProduct.faceValueCents)}</dd></div>
           <div><dt>Member price</dt><dd data-testid={`text-card-info-price-${infoProduct.id}`}>{money(infoProduct.priceCents)}</dd></div>
           <div><dt>Available stock</dt><dd data-testid={`text-card-info-stock-${infoProduct.id}`}>{infoProduct.availableCount} cards</dd></div>
@@ -292,7 +299,7 @@ export function AdminCardInventoryPage() {
   const addStock = useAddAdminGiftCardStock();
   const remove = useDeleteAdminGiftCardProduct();
   const [feedback, setFeedback] = useState('');
-  const form = useForm<CardForm>({ resolver: zodResolver(listingSchema), defaultValues: { name: '', description: '', faceValue: 0, price: 0 } });
+  const form = useForm<CardForm>({ resolver: zodResolver(listingSchema), defaultValues: { name: '', description: '', regionZip: '', faceValue: 0, price: 0 } });
   const stockForm = useForm<StockForm>({ resolver: zodResolver(stockSchema), defaultValues: { productId: '', cards: '' } });
   const rows = products.data?.products ?? [];
   const totalStock = useMemo(() => rows.reduce((sum, item) => sum + item.availableCount, 0), [rows]);
@@ -304,10 +311,11 @@ export function AdminCardInventoryPage() {
     <header className="gift-admin-heading"><div><div className="gift-eyebrow">Restricted operations · inventory only</div><h2>Card inventory</h2><p>Manage listings and encrypted stock intake. Credentials are intentionally excluded from this table.</p></div><div className="gift-admin-stat"><small>Available cards</small><strong data-testid="text-admin-total-stock">{products.isLoading ? '—' : totalStock}</strong></div></header>
     {feedback && <div className="gift-notice" role="status" data-testid="status-admin-card-action">{feedback}<button onClick={() => setFeedback('')} aria-label="Dismiss message" data-testid="button-dismiss-admin-message">×</button></div>}
     <div className="gift-admin-forms">
-      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>01</span><div><h3>Create a listing</h3><p>Set the public denomination and member price.</p></div></div>
-        <Form {...form}><form onSubmit={form.handleSubmit((values) => create.mutate({ data: { name: values.name.trim(), description: values.description.trim(), faceValueCents: Math.round(values.faceValue * 100), priceCents: Math.round(values.price * 100) } }, { onSuccess: () => { form.reset(); invalidate(); setFeedback('Listing created. Add verified stock to make it available to members.'); }, onError: () => setFeedback('Listing could not be created. Review the values and try again.') }))} className="gift-form">
+      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>01</span><div><h3>Create a listing</h3><p>Set the public product value, price, and redemption region ZIP.</p></div></div>
+        <Form {...form}><form onSubmit={form.handleSubmit((values) => create.mutate({ data: { name: values.name.trim(), description: values.description.trim(), regionZip: values.regionZip || null, faceValueCents: Math.round(values.faceValue * 100), priceCents: Math.round(values.price * 100) } }, { onSuccess: () => { form.reset(); invalidate(); setFeedback('Listing created. Add verified stock to make it available to members.'); }, onError: () => setFeedback('Listing could not be created. Review the values and try again.') }))} className="gift-form">
           <FormField control={form.control} name="name" render={({ field }) => <FormItem><FormLabel>Listing name</FormLabel><FormControl><Input {...field} placeholder="Gift card · $50" data-testid="input-admin-card-name" /></FormControl><FormMessage /></FormItem>} />
           <FormField control={form.control} name="description" render={({ field }) => <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} placeholder="Short member-facing details" data-testid="input-admin-card-description" /></FormControl><FormMessage /></FormItem>} />
+          <FormField control={form.control} name="regionZip" render={({ field }) => <FormItem><FormLabel>Redemption region ZIP</FormLabel><FormControl><Input {...field} inputMode="numeric" maxLength={10} placeholder="ZIP for the product’s region" data-testid="input-admin-card-region-zip" /></FormControl><FormMessage /></FormItem>} />
           <div className="gift-form-pair"><FormField control={form.control} name="faceValue" render={({ field }) => <FormItem><FormLabel>Face value (USD)</FormLabel><FormControl><Input {...field} type="number" min="0.01" step="0.01" data-testid="input-admin-face-value" /></FormControl><FormMessage /></FormItem>} /><FormField control={form.control} name="price" render={({ field }) => <FormItem><FormLabel>Member price (USD)</FormLabel><FormControl><Input {...field} type="number" min="0.01" step="0.01" data-testid="input-admin-card-price" /></FormControl><FormMessage /></FormItem>} /></div>
           <button className="gift-admin-submit" disabled={create.isPending} data-testid="button-create-card-listing">{create.isPending ? 'Creating…' : 'Create listing'} <ArrowRight /></button>
         </form></Form>
@@ -332,7 +340,7 @@ export function AdminCardInventoryPage() {
       {products.isLoading ? <div className="gift-admin-loading" data-testid="loading-admin-card-inventory"><i/><i/><i/></div>
       : products.isError ? <div className="gift-query-error" role="alert" data-testid="error-admin-card-inventory">Inventory unavailable. <button onClick={() => void products.refetch()} data-testid="button-retry-admin-card-inventory">Retry</button></div>
       : rows.length === 0 ? <div className="gift-admin-empty" data-testid="empty-admin-card-inventory">No listings created yet. Create a listing above to begin.</div>
-       : <div className="gift-table-wrap"><table className="gift-table"><thead><tr><th>Listing</th><th>Face value</th><th>Member price</th><th>Available</th><th>Created</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{rows.map((product) => <tr key={product.id} data-testid={`row-card-inventory-${product.id}`}><td><strong>{product.name}</strong><small>{product.description || 'No description'}</small></td><td>{money(product.faceValueCents)}</td><td>{money(product.priceCents)}</td><td><span className="gift-count-chip">{product.availableCount}</span></td><td>{date(product.createdAt)}</td><td><button className="gift-delete" disabled={product.availableCount !== 0 || remove.isPending} title={product.availableCount !== 0 ? 'Remove all available stock before deletion' : 'Deletion also requires no order history'} onClick={() => { if (window.confirm(`Delete listing “${product.name}”? It must have no inventory or order history.`)) remove.mutate({ productId: product.id }, { onSuccess: () => { invalidate(); setFeedback('Empty listing deleted.'); }, onError: () => setFeedback('Listing could not be deleted. It has remaining stock or order history.') }); }} data-testid={`button-delete-card-listing-${product.id}`}><Trash2 /> Delete</button></td></tr>)}</tbody></table></div>}
+        : <div className="gift-table-wrap"><table className="gift-table"><thead><tr><th>Listing</th><th>Region ZIP</th><th>Face value</th><th>Member price</th><th>Available</th><th>Created</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{rows.map((product) => <tr key={product.id} data-testid={`row-card-inventory-${product.id}`}><td><strong>{product.name}</strong><small>{product.description || 'No description'}</small></td><td>{product.regionZip || '—'}</td><td>{money(product.faceValueCents)}</td><td>{money(product.priceCents)}</td><td><span className="gift-count-chip">{product.availableCount}</span></td><td>{date(product.createdAt)}</td><td><button className="gift-delete" disabled={product.availableCount !== 0 || remove.isPending} title={product.availableCount !== 0 ? 'Remove all available stock before deletion' : 'Deletion also requires no order history'} onClick={() => { if (window.confirm(`Delete listing “${product.name}”? It must have no inventory or order history.`)) remove.mutate({ productId: product.id }, { onSuccess: () => { invalidate(); setFeedback('Empty listing deleted.'); }, onError: () => setFeedback('Listing could not be deleted. It has remaining stock or order history.') }); }} data-testid={`button-delete-card-listing-${product.id}`}><Trash2 /> Delete</button></td></tr>)}</tbody></table></div>}
     </section>
   </section>;
 }

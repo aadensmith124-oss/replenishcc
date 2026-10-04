@@ -38,6 +38,7 @@ async function listProducts() {
       id: giftCardProductsTable.id,
       name: giftCardProductsTable.name,
       description: giftCardProductsTable.description,
+      regionZip: giftCardProductsTable.regionZip,
       faceValueCents: giftCardProductsTable.faceValueCents,
       priceCents: giftCardProductsTable.priceCents,
       availableCount,
@@ -327,6 +328,7 @@ router.post("/admin/gift-card-products", async (req, res): Promise<void> => {
     .values({
       name,
       description,
+      regionZip: parsed.data.regionZip,
       faceValueCents: parsed.data.faceValueCents,
       priceCents: parsed.data.priceCents,
       createdByUserId: user.id,
@@ -339,6 +341,7 @@ router.post("/admin/gift-card-products", async (req, res): Promise<void> => {
       id: created.id,
       name: created.name,
       description: created.description,
+      regionZip: created.regionZip,
       faceValueCents: created.faceValueCents,
       priceCents: created.priceCents,
       availableCount: 0,

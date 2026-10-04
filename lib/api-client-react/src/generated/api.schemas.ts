@@ -903,6 +903,12 @@ export interface GiftCardProduct {
   id: string;
   name: string;
   description: string;
+  /**
+     * @maxLength 10
+     * @nullable
+     * @pattern ^[0-9]{5}(-[0-9]{4})?$
+     */
+  regionZip: string | null;
   faceValueCents: number;
   priceCents: number;
   availableCount: number;
@@ -921,6 +927,12 @@ export interface CreateGiftCardProductInput {
   name: string;
   /** @maxLength 1000 */
   description: string;
+  /**
+     * @maxLength 10
+     * @nullable
+     * @pattern ^[0-9]{5}(-[0-9]{4})?$
+     */
+  regionZip: string | null;
   /**
      * @minimum 1
      * @maximum 1000000

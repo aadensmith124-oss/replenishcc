@@ -18,6 +18,7 @@ export const giftCardProductsTable = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     name: varchar("name", { length: 100 }).notNull(),
     description: text("description").notNull().default(""),
+    regionZip: varchar("region_zip", { length: 10 }),
     faceValueCents: integer("face_value_cents").notNull(),
     priceCents: integer("price_cents").notNull(),
     createdByUserId: uuid("created_by_user_id").references(
