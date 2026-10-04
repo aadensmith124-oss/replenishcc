@@ -496,6 +496,20 @@ export function BuyCardsPage() {
         <dl className="card-detail-facts">
           {cardInfoFacts.map((fact) => <div key={fact.label}><dt>{fact.label}</dt><dd data-testid={fact.testId}>{fact.value}</dd></div>)}
         </dl>
+        <section className="card-detail-locations" aria-labelledby={`card-info-locations-${infoProduct.id}`}>
+          <h3 id={`card-info-locations-${infoProduct.id}`}>Public locations</h3>
+          <p>One location is shown for each available card. Your order history will show the location for the card you receive.</p>
+          {infoProduct.availableCardLocations.length > 0
+            ? <ol>{infoProduct.availableCardLocations.map((location, index) => <li key={`${index}-${location.address}-${location.regionZip ?? ''}`} data-testid={`text-card-info-location-${infoProduct.id}-${index}`}>
+              <span>Card {index + 1}</span>
+              <address>
+                <strong>{location.address || 'Address not specified'}</strong>
+                <span>{[location.city, location.state].filter(Boolean).join(', ') || 'City/state not specified'}</span>
+                {location.regionZip && <span>{location.regionZip}</span>}
+              </address>
+            </li>)}</ol>
+            : <p>No cards are currently available.</p>}
+        </section>
         <section className="card-detail-features" aria-labelledby={`card-info-features-${infoProduct.id}`}>
           <h3 id={`card-info-features-${infoProduct.id}`}>Available Features</h3>
           <ul>
@@ -545,6 +559,12 @@ export function MyCardOrdersPage() {
           `Security code: ${plainTextLine(card.securityCode)}`,
           ...(card.email ? [`Email: ${plainTextLine(card.email)}`] : []),
           ...(card.phone ? [`Phone: ${plainTextLine(card.phone)}`] : []),
+          ...(card.publicLocation ? [`Public location: ${[
+            card.publicLocation.address,
+            card.publicLocation.city,
+            card.publicLocation.state,
+            card.publicLocation.regionZip,
+          ].filter(Boolean).map(plainTextLine).join(', ') || 'Not specified'}`] : []),
         ])
         : ['None']),
     ].join('\n'));
@@ -589,6 +609,14 @@ function Credential({ card, index, visible, toggle, copy, copied, orderId }: { c
       ...(card.email ? [['Email', visible ? card.email : '••••••••', card.email, 'email']] : []),
       ...(card.phone ? [['Phone', visible ? card.phone : '••••••••', card.phone, 'phone']] : []),
     ].map(([label, display, raw, field]) => <div className="gift-credential-field" key={field}><small>{label}</small><strong data-testid={`text-credential-${field}-${orderId}-${index}`}>{display}</strong>{visible && raw && <button onClick={() => copy(raw, field)} aria-label={`Copy ${label}`} data-testid={`button-copy-${field}-${orderId}-${index}`}>{copied === `${orderId}-${index}-${field}` ? <Check /> : <Clipboard />}<span>{copied === `${orderId}-${index}-${field}` ? 'Copied' : 'Copy'}</span></button>}{copied === `failed-${orderId}-${index}-${field}` && <small className="gift-copy-error" role="status">Clipboard unavailable. Select and copy manually.</small>}</div>)}</div>
+    {card.publicLocation && <div className="gift-card-public-location" data-testid={`text-card-public-location-${orderId}-${index}`}>
+      <small>Public location</small>
+      <strong>{[
+        card.publicLocation.address,
+        [card.publicLocation.city, card.publicLocation.state].filter(Boolean).join(', '),
+        card.publicLocation.regionZip,
+      ].filter(Boolean).join(' · ') || 'Not specified'}</strong>
+    </div>}
   </section>;
 }
 
