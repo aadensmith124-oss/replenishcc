@@ -4,10 +4,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
-import { ArrowRight, Check, ChevronRight, Clipboard, Columns3, CreditCard, Download, Info, LockKeyhole, Pencil, RefreshCw, RotateCcw, Search, ShieldCheck, ShoppingCart, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { Archive, ArrowRight, Check, ChevronRight, Clipboard, Columns3, CreditCard, Download, Info, LockKeyhole, Pencil, RefreshCw, RotateCcw, Search, ShieldCheck, ShoppingCart, SlidersHorizontal, Trash2 } from 'lucide-react';
 import {
   getGetAdminGiftCardProductsQueryKey, getGetAuthMeQueryKey, getGetGiftCardProductsQueryKey, getGetMyGiftCardOrdersQueryKey, getGetMyDepositsQueryKey,
-  useAddAdminGiftCardStock, useCreateAdminGiftCardProduct, useDeleteAdminGiftCardProduct, useBulkPurchaseGiftCards,
+  useAddAdminGiftCardStock, useCreateAdminGiftCardProduct, useDeleteAdminGiftCardProduct, useRestoreAdminGiftCardProduct, useBulkPurchaseGiftCards,
   useGetAdminGiftCardProducts, useGetAuthMe, useGetGiftCardProducts, useGetMyGiftCardOrders, usePurchaseGiftCard, useUpdateAdminGiftCardProductMetadata,
   type AuthMeResponse,
   type GiftCardCredential,
@@ -640,6 +640,7 @@ export function AdminCardInventoryPage() {
   const create = useCreateAdminGiftCardProduct();
   const addStock = useAddAdminGiftCardStock();
   const remove = useDeleteAdminGiftCardProduct();
+  const restore = useRestoreAdminGiftCardProduct();
   const updateMetadata = useUpdateAdminGiftCardProductMetadata();
   const [feedback, setFeedback] = useState('');
   const [editingMetadata, setEditingMetadata] = useState<{ productId: string; productName: string } | null>(null);
@@ -665,7 +666,7 @@ export function AdminCardInventoryPage() {
   };
   const rows = products.data?.products ?? [];
   const selectedStockProduct = rows.find((product) => product.id === stockForm.watch('productId'));
-  const totalStock = useMemo(() => rows.reduce((sum, item) => sum + item.availableCount, 0), [rows]);
+  const totalStock = useMemo(() => rows.reduce((sum, item) => sum + (item.isArchived ? 0 : item.availableCount), 0), [rows]);
   useEffect(() => { document.title = 'Bases | ReplenishCC Admin'; }, []);
   useEffect(() => { if (!session.isLoading && (session.isError || !session.data?.authenticated)) setLocation('/login'); else if (!session.isLoading && session.data?.user && !session.data.user.isDepositAdmin) setLocation('/dashboard'); }, [session.isLoading, session.isError, session.data?.authenticated, session.data?.user, setLocation]);
   const invalidate = () => { void queryClient.invalidateQueries({ queryKey: getGetAdminGiftCardProductsQueryKey() }); void queryClient.invalidateQueries({ queryKey: getGetGiftCardProductsQueryKey() }); };
@@ -765,7 +766,7 @@ export function AdminCardInventoryPage() {
             data: { cards },
           }, { onSuccess: (result) => { stockForm.reset(); invalidate(); const label = `${result.addedCount} card${result.addedCount === 1 ? '' : 's'}`; setFeedback(`${label} added. ${result.binMetadataApplied ? 'BIN metadata auto-filled.' : 'BIN metadata was not applied; edit the base metadata if needed.'} ${result.locationMetadataApplied ? 'Per-card public locations saved.' : 'Base location defaults were used.'} ${result.redemptionZipApplied ? 'Per-card ZIP values saved.' : 'Base ZIP defaults were used where available.'}`); }, onError: () => setFeedback('Stock upload was rejected. Check each line and try again.') });
         })} className="gift-form">
-          <FormField control={stockForm.control} name="productId" render={({ field }) => <FormItem><FormLabel>Base</FormLabel><FormControl><select {...field} data-testid="select-admin-stock-product"><option value="">Select a base</option>{rows.map((product) => <option key={product.id} value={product.id} disabled={!product.canReceiveStock}>{product.name} · {product.canReceiveStock ? 'ready for batch upload' : 'batch already uploaded'}</option>)}</select></FormControl><FormMessage /></FormItem>} />
+           <FormField control={stockForm.control} name="productId" render={({ field }) => <FormItem><FormLabel>Base</FormLabel><FormControl><select {...field} data-testid="select-admin-stock-product"><option value="">Select a base</option>{rows.map((product) => <option key={product.id} value={product.id} disabled={!product.canReceiveStock}>{product.name} · {product.isArchived ? 'archived — restore before use' : product.canReceiveStock ? 'ready for batch upload' : 'batch already uploaded'}</option>)}</select></FormControl><FormMessage /></FormItem>} />
           <FormField control={stockForm.control} name="cards" render={({ field }) => <FormItem><FormLabel>Cards · one per line ({stockLines.length}/{MAX_CARDS_PER_BATCH})</FormLabel><FormControl><Textarea {...field} rows={8} maxLength={100_000} placeholder="number | expiration | security code | address | state | city | ZIP | email/phone&#10;One card on each line" data-testid="input-admin-card-stock" /></FormControl><div className="gift-stock-detection" aria-live="polite"><span className={stockLocationCounts.address ? 'is-detected' : ''}>{stockLocationCounts.address ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Address {stockLocationCounts.address}/{stockLines.length}</span><span className={stockLocationCounts.state ? 'is-detected' : ''}>{stockLocationCounts.state ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}State {stockLocationCounts.state}/{stockLines.length}</span><span className={stockLocationCounts.city ? 'is-detected' : ''}>{stockLocationCounts.city ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}City {stockLocationCounts.city}/{stockLines.length}</span><span className={stockLocationCounts.zip ? 'is-detected' : ''}>{stockLocationCounts.zip ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}ZIP {stockLocationCounts.zip}/{stockLines.length}</span><span className={stockContactCounts.email ? 'is-detected' : ''}>{stockContactCounts.email ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Email {stockContactCounts.email}/{stockLines.length}</span><span className={stockContactCounts.phone ? 'is-detected' : ''}>{stockContactCounts.phone ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Phone {stockContactCounts.phone}/{stockLines.length}</span></div><FormMessage /></FormItem>} />
           <div className="gift-upload-note"><LockKeyhole /> Address, state, city, and ZIP are public per card; lines may use different locations. Blank fields use the base defaults. BIN lookup uses the first 8 digits only after the batch is accepted.</div>
           <div className="gift-upload-note"><LockKeyhole /> Card number, expiration, security code, and actual email/phone values are encrypted and revealed only to the purchaser.</div>
@@ -773,23 +774,32 @@ export function AdminCardInventoryPage() {
         </form></Form>
       </section>
     </div>
-      <section className="gift-inventory-panel"><header><div><h3>Bases</h3><p>Price, base location defaults, contact-presence indicators, and available quantity only. Actual card details stay private.</p></div><button onClick={() => void products.refetch()} aria-label="Refresh bases" data-testid="button-refresh-card-inventory"><RefreshCw /></button></header>
+      <section className="gift-inventory-panel"><header><div><h3>Bases</h3><p>Price, base location defaults, contact-presence indicators, and available quantity only. Archived bases are hidden from members; their stock and purchase history are preserved. Actual card details stay private.</p></div><button onClick={() => void products.refetch()} aria-label="Refresh bases" data-testid="button-refresh-card-inventory"><RefreshCw /></button></header>
       {products.isLoading ? <div className="gift-admin-loading" data-testid="loading-admin-card-inventory"><i/><i/><i/></div>
       : products.isError ? <div className="gift-query-error" role="alert" data-testid="error-admin-card-inventory">Inventory unavailable. <button onClick={() => void products.refetch()} data-testid="button-retry-admin-card-inventory">Retry</button></div>
       : rows.length === 0 ? <div className="gift-admin-empty" data-testid="empty-admin-card-inventory">No bases created yet. Create a base above to begin.</div>
         : <div className="gift-table-wrap">
           <table className="gift-table">
-            <thead><tr><th>Base</th><th>Default address</th><th>Default state</th><th>Default city</th><th>Default ZIP</th><th>Card type</th><th>Issuer</th><th>Brand</th><th>Price</th><th>Email in stock</th><th>Phone in stock</th><th>Available</th><th>Batch status</th><th>Created</th><th><span className="sr-only">Actions</span></th></tr></thead>
+             <thead><tr><th>Base</th><th>Status</th><th>Default address</th><th>Default state</th><th>Default city</th><th>Default ZIP</th><th>Card type</th><th>Issuer</th><th>Brand</th><th>Price</th><th>Email in stock</th><th>Phone in stock</th><th>Available</th><th>Batch status</th><th>Created</th><th><span className="sr-only">Actions</span></th></tr></thead>
             <tbody>{rows.map((product) => <tr key={product.id} data-testid={`row-card-inventory-${product.id}`}>
-              <td><strong>{product.name}</strong></td>
+               <td><strong>{product.name}</strong></td>
+               <td><span data-testid={`text-card-base-status-${product.id}`}>{product.isArchived ? 'Archived' : 'Active'}</span></td>
               <td>{product.address || '—'}</td><td>{product.state || '—'}</td><td>{product.city || '—'}</td><td>{product.regionZip || '—'}</td>
               <td>{product.cardType || '—'}</td><td>{product.issuer || '—'}</td><td>{product.brand || '—'}</td>
               <td>{money(product.priceCents)}</td>
               <td><ContactIndicator available={product.hasEmail} label="Email" /></td><td><ContactIndicator available={product.hasPhone} label="Phone" /></td>
-              <td><span className="gift-count-chip">{product.availableCount}</span></td><td>{product.canReceiveStock ? 'Ready for first batch' : 'Batch already uploaded'}</td><td>{date(product.createdAt)}</td>
+               <td><span className="gift-count-chip">{product.availableCount}</span></td><td>{product.isArchived ? 'Archived' : product.canReceiveStock ? 'Ready for first batch' : 'Batch already uploaded'}</td><td>{date(product.createdAt)}</td>
               <td>
                 <button className="gift-edit" type="button" onClick={() => { setEditingMetadata({ productId: product.id, productName: product.name }); setMetadataDraft({ address: product.address, state: product.state, city: product.city, regionZip: product.regionZip ?? '', cardType: product.cardType, issuer: product.issuer, brand: product.brand }); }} data-testid={`button-edit-card-metadata-${product.id}`}><Pencil /> Edit metadata</button>{' '}
-                <button className="gift-delete" disabled={!product.canReceiveStock || remove.isPending} title={!product.canReceiveStock ? 'Bases with inventory or order history cannot be deleted' : 'Delete this empty base'} onClick={() => { if (window.confirm(`Delete base “${product.name}”? It must have no inventory or order history.`)) remove.mutate({ productId: product.id }, { onSuccess: () => { invalidate(); setFeedback('Empty base deleted.'); }, onError: () => setFeedback('Base could not be deleted. It has remaining stock or order history.') }); }} data-testid={`button-delete-card-listing-${product.id}`}><Trash2 /> Delete</button>
+                {product.isArchived
+                  ? <button className="gift-edit" disabled={restore.isPending || remove.isPending} title="Restore this base to member sales" onClick={() => restore.mutate({ productId: product.id }, { onSuccess: () => { invalidate(); setFeedback('Base restored to member sales. Its inventory and purchase history are unchanged.'); }, onError: () => setFeedback('Base could not be restored. Try again.') })} data-testid={`button-restore-card-listing-${product.id}`}><RotateCcw /> Restore</button>
+                  : <button className="gift-delete" disabled={remove.isPending || restore.isPending} title={product.canReceiveStock ? 'Delete this empty base' : 'Archive while preserving its stock and purchase history'} onClick={() => {
+                    const confirmation = product.canReceiveStock
+                      ? `Delete base “${product.name}”? It has no inventory or order history.`
+                      : `Archive base “${product.name}”? It will be hidden from member sales, while inventory, purchased-card history, credentials, and accounting records are preserved.`;
+                    if (!window.confirm(confirmation)) return;
+                    remove.mutate({ productId: product.id }, { onSuccess: () => { invalidate(); setFeedback(product.canReceiveStock ? 'Empty base deleted.' : 'Base archived. Its stock, purchase history, credentials, and accounting are preserved.'); }, onError: () => setFeedback('Base could not be deleted or archived. Try again.') });
+                  }} data-testid={product.canReceiveStock ? `button-delete-card-listing-${product.id}` : `button-archive-card-listing-${product.id}`}>{product.canReceiveStock ? <Trash2 /> : <Archive />} {product.canReceiveStock ? 'Delete' : 'Archive'}</button>}
               </td>
             </tr>)}</tbody>
           </table>
