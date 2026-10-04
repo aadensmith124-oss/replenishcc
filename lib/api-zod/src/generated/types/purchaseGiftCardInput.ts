@@ -8,6 +8,7 @@
 
 export interface PurchaseGiftCardInput {
   productId: string;
+  inventoryId: string;
   /**
      * @minimum 1
      * @maximum 1

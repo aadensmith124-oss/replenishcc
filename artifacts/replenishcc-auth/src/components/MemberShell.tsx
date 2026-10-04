@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  ChevronDown, ChevronRight, CircleDollarSign, ClipboardList, CreditCard, Crown, FileText,
+  ChevronDown, ChevronRight, CircleDollarSign, ClipboardList, CreditCard, FileText,
   Gift, Headphones, Home, LoaderCircle, LockKeyhole, LogOut, Menu, MessageSquare, Moon,
   Package, Settings2, ShieldCheck, ShoppingBag, Sparkles, Sun, Trophy, WalletCards, X,
 } from 'lucide-react';
@@ -237,7 +237,6 @@ export function MemberShell({
         <Link href="/referrals" className={`nav-row${location === '/referrals' ? ' active' : ''}`} aria-current={location === '/referrals' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-referrals"><Gift aria-hidden="true" /><span>Referrals</span></Link>
         {user?.isDepositAdmin && <Link href="/admin/dashboard" className={`nav-row${location.startsWith('/admin/') ? ' active' : ''}`} aria-current={location.startsWith('/admin/') ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-admin-dashboard"><ShieldCheck aria-hidden="true" /><span>Admin Dashboard</span></Link>}
         <Link href="/redeem-code" className={`nav-row${location === '/redeem-code' ? ' active' : ''}`} aria-current={location === '/redeem-code' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-redeem-code"><Gift aria-hidden="true" /><span>Redeem Code</span></Link>
-        <UnavailableNav icon={<Crown />} label="VIP & Free CC" />
         <Link href="/leaderboard" className={`nav-row${location === '/leaderboard' ? ' active' : ''}`} aria-current={location === '/leaderboard' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-leaderboard"><Trophy aria-hidden="true" /><span>Leaderboard</span></Link>
         <div className="nav-section-label">Shopping</div>
         <button className={`nav-row nav-group${isBuyLogsPage || isBuyCardsPage ? ' active' : ''}`} type="button" onClick={() => toggleGroup('shop')} aria-expanded={expanded.shop} data-testid="button-toggle-shop">
@@ -246,7 +245,6 @@ export function MemberShell({
         {expanded.shop && <div className="nav-children">
           <Link href="/buy-logs" className={`nav-row${isBuyLogsPage ? ' active' : ''}`} aria-current={isBuyLogsPage ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-buy-logs"><ClipboardList aria-hidden="true" /><span>Buy Logs</span></Link>
           <Link href="/buy-cards" className={`nav-row${location === '/buy-cards' ? ' active' : ''}`} aria-current={location === '/buy-cards' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-buy-cards"><CreditCard aria-hidden="true" /><span>Buy Cards</span></Link>
-          <UnavailableNav icon={<Package />} label="Bulk Cards" />
         </div>}
         <button className={`nav-row nav-group${isMyLogOrdersPage || isMyCardOrdersPage ? ' active' : ''}`} type="button" onClick={() => toggleGroup('orders')} aria-expanded={expanded.orders} data-testid="button-toggle-orders">
           <Package aria-hidden="true" /><span>My Orders</span><ChevronDown className={`nav-chevron${expanded.orders ? ' is-open' : ''}`} aria-hidden="true" />
@@ -254,7 +252,6 @@ export function MemberShell({
         {expanded.orders && <div className="nav-children">
           <Link href="/my-log-orders" className={`nav-row${isMyLogOrdersPage ? ' active' : ''}`} aria-current={isMyLogOrdersPage ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-my-log-orders"><ClipboardList aria-hidden="true" /><span>My Log Orders</span></Link>
           <Link href="/my-card-orders" className={`nav-row${location === '/my-card-orders' ? ' active' : ''}`} aria-current={location === '/my-card-orders' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-my-card-orders"><CreditCard aria-hidden="true" /><span>My Card Orders</span></Link>
-          <UnavailableNav icon={<Package />} label="My Bulk Card Purchases" />
         </div>}
         <div className="nav-section-label">Support</div>
         <button className={`nav-row nav-group${isSupportPage ? ' active' : ''}`} type="button" onClick={() => toggleGroup('support')} aria-expanded={expanded.support} data-testid="button-toggle-support">

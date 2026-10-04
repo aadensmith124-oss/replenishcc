@@ -48,6 +48,7 @@ export * from './announcementStatusInput';
 export * from './announcementStatusInputAction';
 export * from './authMeResponse';
 export * from './authResponse';
+export * from './availableGiftCardLocation';
 export * from './bulkPurchaseGiftCardsInput';
 export * from './changePasswordInput';
 export * from './createCouponInput';

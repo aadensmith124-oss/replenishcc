@@ -2099,11 +2099,22 @@ components:
         availableCount: { type: integer }
         availableCardLocations:
           type: array
-          items: { $ref: "#/components/schemas/GiftCardPublicLocation" }
+          items: { $ref: "#/components/schemas/AvailableGiftCardLocation" }
         hasEmail: { type: boolean }
         hasPhone: { type: boolean }
         createdAt: { type: string, format: date-time }
       required: [id, name, description, address, state, city, regionZip, cardType, issuer, brand, faceValueCents, priceCents, availableCount, availableCardLocations, hasEmail, hasPhone, createdAt]
+    AvailableGiftCardLocation:
+      type: object
+      properties:
+        inventoryId: { type: string, format: uuid }
+        address: { type: string }
+        city: { type: string }
+        state: { type: string }
+        regionZip: { type: ["string", "null"], maxLength: 10 }
+        hasEmail: { type: boolean }
+        hasPhone: { type: boolean }
+      required: [inventoryId, address, city, state, regionZip, hasEmail, hasPhone]
     GiftCardProductsResponse:
       type: object
       properties:
@@ -2225,17 +2236,18 @@ components:
       type: object
       properties:
         productId: { type: string, format: uuid }
+        inventoryId: { type: string, format: uuid }
         quantity: { type: integer, minimum: 1, maximum: 1 }
-      required: [productId, quantity]
+      required: [productId, inventoryId, quantity]
     BulkPurchaseGiftCardsInput:
       type: object
       properties:
-        productIds:
+        inventoryIds:
           type: array
           minItems: 1
           maxItems: 50
           items: { type: string, format: uuid }
-      required: [productIds]
+      required: [inventoryIds]
     GiftCardBulkOrderSummary:
       type: object
       properties:

@@ -1313,10 +1313,13 @@ export const GetGiftCardProductsResponse = zod.object({
   "priceCents": zod.number().int(),
   "availableCount": zod.number().int(),
   "availableCardLocations": zod.array(zod.object({
+  "inventoryId": zod.string().uuid(),
   "address": zod.string(),
   "city": zod.string(),
   "state": zod.string(),
-  "regionZip": zod.string().max(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemRegionZipMax).nullable()
+  "regionZip": zod.string().max(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemRegionZipMax).nullable(),
+  "hasEmail": zod.boolean(),
+  "hasPhone": zod.boolean()
 })),
   "hasEmail": zod.boolean(),
   "hasPhone": zod.boolean(),
@@ -1373,6 +1376,7 @@ export const purchaseGiftCardBodyQuantityMax = 1;
 
 export const PurchaseGiftCardBody = zod.object({
   "productId": zod.string().uuid(),
+  "inventoryId": zod.string().uuid(),
   "quantity": zod.number().int().min(1).max(purchaseGiftCardBodyQuantityMax)
 })
 
@@ -1416,12 +1420,12 @@ export const PurchaseGiftCardResponse = zod.object({
 /**
  * @summary Purchase one card from each selected listing in a single atomic checkout
  */
-export const bulkPurchaseGiftCardsBodyProductIdsMax = 50;
+export const bulkPurchaseGiftCardsBodyInventoryIdsMax = 50;
 
 
 
 export const BulkPurchaseGiftCardsBody = zod.object({
-  "productIds": zod.array(zod.string().uuid()).min(1).max(bulkPurchaseGiftCardsBodyProductIdsMax)
+  "inventoryIds": zod.array(zod.string().uuid()).min(1).max(bulkPurchaseGiftCardsBodyInventoryIdsMax)
 })
 
 export const BulkPurchaseGiftCardsResponse = zod.object({
@@ -1561,10 +1565,13 @@ export const CreateAdminGiftCardProductResponse = zod.object({
   "priceCents": zod.number().int(),
   "availableCount": zod.number().int(),
   "availableCardLocations": zod.array(zod.object({
+  "inventoryId": zod.string().uuid(),
   "address": zod.string(),
   "city": zod.string(),
   "state": zod.string(),
-  "regionZip": zod.string().max(createAdminGiftCardProductResponseAvailableCardLocationsItemRegionZipMax).nullable()
+  "regionZip": zod.string().max(createAdminGiftCardProductResponseAvailableCardLocationsItemRegionZipMax).nullable(),
+  "hasEmail": zod.boolean(),
+  "hasPhone": zod.boolean()
 })),
   "hasEmail": zod.boolean(),
   "hasPhone": zod.boolean(),

@@ -11,5 +11,5 @@ export interface BulkPurchaseGiftCardsInput {
      * @minItems 1
      * @maxItems 50
      */
-  productIds: string[];
+  inventoryIds: string[];
 }

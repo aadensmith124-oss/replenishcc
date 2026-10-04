@@ -19,7 +19,6 @@ import {
   CircleDollarSign,
   FileText,
   Gift,
-  Crown,
   Trophy,
   ShoppingBag,
   CreditCard,
@@ -847,7 +846,6 @@ function DashboardPage() {
         <Link href="/referrals" className="nav-row" onClick={() => setMobileNavOpen(false)} data-testid="link-referrals"><Gift aria-hidden="true" /><span>Referrals</span></Link>
         {user?.isDepositAdmin && <Link href="/admin/dashboard" className="nav-row" onClick={() => setMobileNavOpen(false)} data-testid="link-admin-dashboard"><ShieldCheck aria-hidden="true" /><span>Admin Dashboard</span></Link>}
         <Link href="/redeem-code" className={`nav-row${window.location.pathname === '/redeem-code' ? ' active' : ''}`} aria-current={window.location.pathname === '/redeem-code' ? 'page' : undefined} onClick={() => setMobileNavOpen(false)} data-testid="link-redeem-code"><Gift aria-hidden="true" /><span>Redeem Code</span></Link>
-        <UnavailableNav icon={<Crown />} label="VIP & Free CC" />
         <Link href="/leaderboard" className={`nav-row${window.location.pathname === '/leaderboard' ? ' active' : ''}`} aria-current={window.location.pathname === '/leaderboard' ? 'page' : undefined} onClick={() => setMobileNavOpen(false)} data-testid="link-leaderboard"><Trophy aria-hidden="true" /><span>Leaderboard</span></Link>
 
         <div className="nav-section-label">Shopping</div>
@@ -857,7 +855,6 @@ function DashboardPage() {
         {expanded.shop && <div className="nav-children">
           <Link href="/buy-logs" className="nav-row" onClick={() => setMobileNavOpen(false)} data-testid="link-buy-logs"><ClipboardList aria-hidden="true" /><span>Buy Logs</span></Link>
           <UnavailableNav icon={<CreditCard />} label="Buy Cards" />
-          <UnavailableNav icon={<Package />} label="Bulk Cards" />
         </div>}
         <button className="nav-row nav-group" type="button" onClick={() => toggleGroup('orders')} aria-expanded={expanded.orders} data-testid="button-toggle-orders">
           <Package aria-hidden="true" /><span>My Orders</span><ChevronDown className={`nav-chevron${expanded.orders ? ' is-open' : ''}`} aria-hidden="true" />
@@ -865,7 +862,6 @@ function DashboardPage() {
         {expanded.orders && <div className="nav-children">
           <Link href="/my-log-orders" className="nav-row" onClick={() => setMobileNavOpen(false)} data-testid="link-my-log-orders"><ClipboardList aria-hidden="true" /><span>My Log Orders</span></Link>
           <UnavailableNav icon={<CreditCard />} label="My Card Orders" />
-          <UnavailableNav icon={<Package />} label="My Bulk Card Purchases" />
         </div>}
 
         <div className="nav-section-label">Support</div>
