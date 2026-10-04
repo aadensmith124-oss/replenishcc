@@ -37,6 +37,7 @@ import {
 } from "../lib/gift-card-credentials";
 
 const router: IRouter = Router();
+const MAX_AVAILABLE_CARDS_PER_BASE = 1_000;
 
 class DuplicateGiftCardBatchError extends Error {}
 
@@ -123,7 +124,8 @@ async function listProducts({
       ...visibleProduct,
       ...(includeStockEligibility
         ? {
-            canReceiveStock: !isArchived,
+            canReceiveStock:
+              !isArchived && product.availableCount < MAX_AVAILABLE_CARDS_PER_BASE,
             hasHistory: productsWithHistory.has(product.id),
             isArchived,
           }
@@ -911,6 +913,7 @@ router.post(
     let stockResult:
       | { kind: "missing" }
       | { kind: "archived" }
+      | { kind: "capacity"; remainingCount: number }
       | { kind: "success"; availableCount: number };
     try {
       stockResult = await db.transaction(async (tx) => {
@@ -929,6 +932,24 @@ router.post(
           .limit(1);
         if (!product) return { kind: "missing" as const };
         if (product.isArchived) return { kind: "archived" as const };
+
+        const [currentStock] = await tx
+          .select({ count: count() })
+          .from(giftCardInventoryTable)
+          .where(
+            and(
+              eq(giftCardInventoryTable.productId, product.id),
+              eq(giftCardInventoryTable.status, "available"),
+            ),
+          );
+        const currentAvailableCount = Number(currentStock?.count ?? 0);
+        const remainingCount = Math.max(
+          0,
+          MAX_AVAILABLE_CARDS_PER_BASE - currentAvailableCount,
+        );
+        if (credentials.length > remainingCount) {
+          return { kind: "capacity" as const, remainingCount };
+        }
 
         const values = credentials.map((credential, index) => ({
           productId: product.id,
@@ -981,6 +1002,15 @@ router.post(
     if (stockResult.kind === "archived") {
       res.status(409).json({
         error: "Restore this base before uploading stock.",
+      });
+      return;
+    }
+    if (stockResult.kind === "capacity") {
+      res.status(409).json({
+        error:
+          stockResult.remainingCount > 0
+            ? `This base has room for ${stockResult.remainingCount} more available card${stockResult.remainingCount === 1 ? "" : "s"} (maximum ${MAX_AVAILABLE_CARDS_PER_BASE}).`
+            : `This base is at its ${MAX_AVAILABLE_CARDS_PER_BASE}-card available-stock limit. Sell some cards before adding more.`,
       });
       return;
     }

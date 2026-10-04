@@ -784,6 +784,7 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .gift-form select { height:37px; }
 .gift-form input:focus,.gift-form textarea:focus,.gift-form select:focus { outline:1px solid #a69147; outline-offset:1px; }
 .gift-form [data-slot="form-message"] { color:#d4aa91; font-size:9px; }
+.gift-stock-capacity-note { margin:0; color:#899388; font-size:8px; line-height:1.5; }
 .gift-form-pair { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 .gift-admin-submit { width:100%; min-height:37px; margin-top:1px; }
 .gift-upload-note { display:flex; gap:8px; color:#92998e; font-size:8px; line-height:1.6; }

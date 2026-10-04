@@ -23,6 +23,7 @@ import { parseCardStockInput } from '../lib/card-stock-import';
 const money = (cents: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 const date = (value: string) => new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 const MAX_CARDS_PER_BATCH = 100;
+const MAX_CARDS_PER_BASE = 1_000;
 const MAX_STOCK_FILE_BYTES = 100_000;
 const STOCK_FILE_EXTENSIONS = new Set(['txt', 'text', 'csv', 'tsv', 'json', 'jsonl', 'ndjson', 'log', 'dat']);
 
@@ -625,6 +626,9 @@ export function AdminCardInventoryPage() {
   };
   const rows = products.data?.products ?? [];
   const selectedStockProduct = rows.find((product) => product.id === stockForm.watch('productId'));
+  const selectedRemainingCapacity = selectedStockProduct
+    ? Math.max(0, MAX_CARDS_PER_BASE - selectedStockProduct.availableCount)
+    : 0;
   const totalStock = useMemo(() => rows.reduce((sum, item) => sum + (item.isArchived ? 0 : item.availableCount), 0), [rows]);
   useEffect(() => { document.title = 'Bases | ReplenishCC Admin'; }, []);
   useEffect(() => { if (!session.isLoading && (session.isError || !session.data?.authenticated)) setLocation('/login'); else if (!session.isLoading && session.data?.user && !session.data.user.isDepositAdmin) setLocation('/dashboard'); }, [session.isLoading, session.isError, session.data?.authenticated, session.data?.user, setLocation]);
@@ -718,7 +722,7 @@ export function AdminCardInventoryPage() {
           <button className="gift-admin-submit" disabled={create.isPending} data-testid="button-create-card-listing">{create.isPending ? 'Creating…' : 'Create base'} <ArrowRight /></button>
         </form></Form>
       </section>
-      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload cards</h3><p>Import or paste up to {MAX_CARDS_PER_BATCH} cards per batch. Fields are detected from common headers, delimiters, and labeled text. Active bases can receive additional batches.</p></div></div>
+      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload cards</h3><p>Import or paste up to {MAX_CARDS_PER_BATCH} cards per batch. Each active base can hold up to {MAX_CARDS_PER_BASE.toLocaleString()} available cards; sold cards remain in history and free space for restocking.</p></div></div>
         <Form {...stockForm}><form onSubmit={stockForm.handleSubmit((values) => {
           const parsedBatch = parseCardStockInput(values.cards);
           if (!parsedBatch.cards.length) {
@@ -736,6 +740,16 @@ export function AdminCardInventoryPage() {
           }
           if (selectedStockProduct?.isArchived) {
             setFeedback('Restore this base before uploading more cards.');
+            return;
+          }
+          if (!selectedStockProduct) {
+            setFeedback('Select an active base before uploading cards.');
+            return;
+          }
+          if (parsedBatch.cards.length > selectedRemainingCapacity) {
+            setFeedback(selectedRemainingCapacity === 0
+              ? `This base is at the ${MAX_CARDS_PER_BASE}-card available-stock limit. Sell cards or choose another base.`
+              : `This base has room for ${selectedRemainingCapacity} more available card${selectedRemainingCapacity === 1 ? '' : 's'}. Split the upload to stay within the ${MAX_CARDS_PER_BASE}-card limit.`);
             return;
           }
           const cards: GiftCardCredential[] = parsedBatch.cards.map((card) => ({
@@ -761,10 +775,10 @@ export function AdminCardInventoryPage() {
             if (stockFileInput.current) stockFileInput.current.value = '';
             invalidate();
             const label = `${result.addedCount} card${result.addedCount === 1 ? '' : 's'}`;
-            setFeedback(`${label} added. This base now has ${result.availableCount} available. ${result.binMetadataApplied ? 'BIN metadata auto-filled.' : 'BIN metadata was not applied; edit the base metadata if needed.'} ${result.locationMetadataApplied ? 'Per-card public locations saved.' : 'Base location defaults were used.'} ${result.redemptionZipApplied ? 'Per-card ZIP values saved.' : 'Base ZIP defaults were used where available.'}`);
-          }, onError: () => setFeedback('Stock upload was rejected. Check the preview and try again.') });
+            setFeedback(`${label} added. This base now has ${result.availableCount}/${MAX_CARDS_PER_BASE} available. ${result.binMetadataApplied ? 'BIN metadata auto-filled.' : 'BIN metadata was not applied; edit the base metadata if needed.'} ${result.locationMetadataApplied ? 'Per-card public locations saved.' : 'Base location defaults were used.'} ${result.redemptionZipApplied ? 'Per-card ZIP values saved.' : 'Base ZIP defaults were used where available.'}`);
+          }, onError: () => setFeedback('Stock upload was rejected. Check the preview, duplicates, and the base’s remaining capacity.') });
         })} className="gift-form">
-           <FormField control={stockForm.control} name="productId" render={({ field }) => <FormItem><FormLabel>Base</FormLabel><FormControl><select {...field} data-testid="select-admin-stock-product"><option value="">Select a base</option>{rows.map((product) => <option key={product.id} value={product.id} disabled={product.isArchived}>{product.name} · {product.isArchived ? 'archived — restore before use' : 'ready for more cards'}</option>)}</select></FormControl><FormMessage /></FormItem>} />
+           <FormField control={stockForm.control} name="productId" render={({ field }) => <FormItem><FormLabel>Base</FormLabel><FormControl><select {...field} data-testid="select-admin-stock-product"><option value="">Select a base</option>{rows.map((product) => <option key={product.id} value={product.id} disabled={!product.canReceiveStock}>{product.name} · {product.isArchived ? 'archived — restore before use' : product.canReceiveStock ? `${product.availableCount}/${MAX_CARDS_PER_BASE} available` : `${MAX_CARDS_PER_BASE}/${MAX_CARDS_PER_BASE} available — cap reached`}</option>)}</select></FormControl><FormMessage />{selectedStockProduct && <p className="gift-stock-capacity-note" aria-live="polite">{selectedRemainingCapacity.toLocaleString()} of {MAX_CARDS_PER_BASE.toLocaleString()} available-card spaces remain for this base.</p>}</FormItem>} />
            <div className="gift-stock-file">
              <label htmlFor="input-admin-card-stock-file">Choose a card file</label>
              <input ref={stockFileInput} id="input-admin-card-stock-file" type="file" accept=".txt,.text,.csv,.tsv,.json,.jsonl,.ndjson,.log,.dat,text/*,application/json" onChange={(event) => void loadStockFile(event)} data-testid="input-admin-card-stock-file" />
@@ -787,9 +801,10 @@ export function AdminCardInventoryPage() {
              </div>
              <FormMessage />
            </FormItem>} />
-           <div className="gift-upload-note"><LockKeyhole /> Address, state, city, and ZIP are public per card; each card can have a different location. Blank fields use the base defaults. BIN lookup uses the first 8 digits only after the batch is accepted.</div>
+            {stockCards.length > selectedRemainingCapacity && selectedStockProduct && <p className="gift-stock-file-error" role="alert">This batch exceeds the base’s remaining capacity of {selectedRemainingCapacity} card{selectedRemainingCapacity === 1 ? '' : 's'}.</p>}
+            <div className="gift-upload-note"><LockKeyhole /> Address, state, city, and ZIP are public per card; each card can have a different location. Blank fields use the base defaults. BIN lookup uses the first 8 digits only after the batch is accepted.</div>
            <div className="gift-upload-note"><LockKeyhole /> Parsing stays in your browser. On upload, card credentials are sent to ReplenishCC and encrypted; actual credentials are revealed only to the purchaser.</div>
-           <button className="gift-admin-submit" disabled={addStock.isPending || !rows.some((product) => !product.isArchived) || !selectedStockProduct || selectedStockProduct.isArchived || stockCards.length === 0 || stockCards.length > MAX_CARDS_PER_BATCH || stockIssueCount > 0 || Boolean(stockImport.message)} data-testid="button-upload-card-stock">{addStock.isPending ? 'Uploading…' : `Upload ${stockCards.length || ''} card${stockCards.length === 1 ? '' : 's'}`} <ArrowRight /></button>
+            <button className="gift-admin-submit" disabled={addStock.isPending || !rows.some((product) => product.canReceiveStock) || !selectedStockProduct || !selectedStockProduct.canReceiveStock || stockCards.length === 0 || stockCards.length > MAX_CARDS_PER_BATCH || stockCards.length > selectedRemainingCapacity || stockIssueCount > 0 || Boolean(stockImport.message)} data-testid="button-upload-card-stock">{addStock.isPending ? 'Uploading…' : `Upload ${stockCards.length || ''} card${stockCards.length === 1 ? '' : 's'}`} <ArrowRight /></button>
          </form></Form>
       </section>
     </div>
@@ -799,7 +814,7 @@ export function AdminCardInventoryPage() {
       : rows.length === 0 ? <div className="gift-admin-empty" data-testid="empty-admin-card-inventory">No bases created yet. Create a base above to begin.</div>
         : <div className="gift-table-wrap">
           <table className="gift-table">
-             <thead><tr><th>Base</th><th>Status</th><th>Default address</th><th>Default state</th><th>Default city</th><th>Default ZIP</th><th>Card type</th><th>Issuer</th><th>Brand</th><th>Price</th><th>Email in stock</th><th>Phone in stock</th><th>Available</th><th>Batch status</th><th>Created</th><th><span className="sr-only">Actions</span></th></tr></thead>
+              <thead><tr><th>Base</th><th>Status</th><th>Default address</th><th>Default state</th><th>Default city</th><th>Default ZIP</th><th>Card type</th><th>Issuer</th><th>Brand</th><th>Price</th><th>Email in stock</th><th>Phone in stock</th><th>Available / cap</th><th>Stock status</th><th>Created</th><th><span className="sr-only">Actions</span></th></tr></thead>
             <tbody>{rows.map((product) => <tr key={product.id} data-testid={`row-card-inventory-${product.id}`}>
                <td><strong>{product.name}</strong></td>
                <td><span data-testid={`text-card-base-status-${product.id}`}>{product.isArchived ? 'Archived' : 'Active'}</span></td>
@@ -807,7 +822,7 @@ export function AdminCardInventoryPage() {
               <td>{product.cardType || '—'}</td><td>{product.issuer || '—'}</td><td>{product.brand || '—'}</td>
               <td>{money(product.priceCents)}</td>
               <td><ContactIndicator available={product.hasEmail} label="Email" /></td><td><ContactIndicator available={product.hasPhone} label="Phone" /></td>
-                <td><span className="gift-count-chip">{product.availableCount}</span></td><td>{product.isArchived ? 'Archived' : product.hasHistory ? 'Ready for more cards' : 'Ready for first upload'}</td><td>{date(product.createdAt)}</td>
+                 <td><span className="gift-count-chip">{product.availableCount}/{MAX_CARDS_PER_BASE}</span></td><td>{product.isArchived ? 'Archived' : product.canReceiveStock ? product.hasHistory ? 'Ready for more cards' : 'Ready for first upload' : '1,000-card limit reached'}</td><td>{date(product.createdAt)}</td>
               <td>
                 <button className="gift-edit" type="button" onClick={() => { setEditingMetadata({ productId: product.id, productName: product.name }); setMetadataDraft({ address: product.address, state: product.state, city: product.city, regionZip: product.regionZip ?? '', cardType: product.cardType, issuer: product.issuer, brand: product.brand }); }} data-testid={`button-edit-card-metadata-${product.id}`}><Pencil /> Edit metadata</button>{' '}
                 {product.isArchived
