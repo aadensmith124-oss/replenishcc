@@ -15,7 +15,13 @@ export interface AvailableGiftCardLocation {
      * @pattern ^[0-9]{6}$
      */
   bin: string | null;
-  address: string;
+  /**
+     * @minLength 4
+     * @maxLength 4
+     * @nullable
+     * @pattern ^[0-9]{4}$
+     */
+  lastFour: string | null;
   city: string;
   state: string;
   /**

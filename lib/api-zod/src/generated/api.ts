@@ -1335,8 +1335,6 @@ export const AddAdminLicenseStockResponse = zod.object({
 /**
  * @summary List prepaid gift-card products that have available stock
  */
-export const getGiftCardProductsResponseProductsItemAddressMax = 255;
-
 export const getGiftCardProductsResponseProductsItemStateMax = 80;
 
 export const getGiftCardProductsResponseProductsItemCityMax = 120;
@@ -1356,6 +1354,11 @@ export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBi
 
 
 export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBinRegExp = new RegExp('^[0-9]{6}$');
+export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemLastFourMin = 4;
+export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemLastFourMax = 4;
+
+
+export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemLastFourRegExp = new RegExp('^[0-9]{4}$');
 export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemRegionZipMax = 10;
 
 
@@ -1365,7 +1368,6 @@ export const GetGiftCardProductsResponse = zod.object({
   "id": zod.string().uuid(),
   "name": zod.string(),
   "description": zod.string(),
-  "address": zod.string().max(getGiftCardProductsResponseProductsItemAddressMax),
   "state": zod.string().max(getGiftCardProductsResponseProductsItemStateMax),
   "city": zod.string().max(getGiftCardProductsResponseProductsItemCityMax),
   "regionZip": zod.string().max(getGiftCardProductsResponseProductsItemRegionZipMax).regex(getGiftCardProductsResponseProductsItemRegionZipRegExp).nullable(),
@@ -1378,7 +1380,7 @@ export const GetGiftCardProductsResponse = zod.object({
   "availableCardLocations": zod.array(zod.object({
   "inventoryId": zod.string().uuid(),
   "bin": zod.string().min(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBinMin).max(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBinMax).regex(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBinRegExp).nullable(),
-  "address": zod.string(),
+  "lastFour": zod.string().min(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemLastFourMin).max(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemLastFourMax).regex(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemLastFourRegExp).nullable(),
   "city": zod.string(),
   "state": zod.string(),
   "regionZip": zod.string().max(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemRegionZipMax).nullable(),
@@ -1610,13 +1612,6 @@ export const createAdminGiftCardProductResponseIssuerMax = 80;
 
 export const createAdminGiftCardProductResponseBrandMax = 80;
 
-export const createAdminGiftCardProductResponseAvailableCardLocationsItemBinMin = 6;
-export const createAdminGiftCardProductResponseAvailableCardLocationsItemBinMax = 6;
-
-
-export const createAdminGiftCardProductResponseAvailableCardLocationsItemBinRegExp = new RegExp('^[0-9]{6}$');
-export const createAdminGiftCardProductResponseAvailableCardLocationsItemRegionZipMax = 10;
-
 
 
 export const CreateAdminGiftCardProductResponse = zod.object({
@@ -1633,18 +1628,11 @@ export const CreateAdminGiftCardProductResponse = zod.object({
   "faceValueCents": zod.number().int(),
   "priceCents": zod.number().int(),
   "availableCount": zod.number().int(),
-  "availableCardLocations": zod.array(zod.object({
-  "inventoryId": zod.string().uuid(),
-  "bin": zod.string().min(createAdminGiftCardProductResponseAvailableCardLocationsItemBinMin).max(createAdminGiftCardProductResponseAvailableCardLocationsItemBinMax).regex(createAdminGiftCardProductResponseAvailableCardLocationsItemBinRegExp).nullable(),
-  "address": zod.string(),
-  "city": zod.string(),
-  "state": zod.string(),
-  "regionZip": zod.string().max(createAdminGiftCardProductResponseAvailableCardLocationsItemRegionZipMax).nullable(),
-  "hasEmail": zod.boolean(),
-  "hasPhone": zod.boolean()
-})),
   "hasEmail": zod.boolean(),
   "hasPhone": zod.boolean(),
+  "canReceiveStock": zod.boolean().describe('True when the base is active and can receive another stock batch.'),
+  "hasHistory": zod.boolean().describe('True when the base has inventory or purchase history and therefore must be archived rather than deleted.'),
+  "isArchived": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
 

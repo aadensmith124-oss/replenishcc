@@ -780,9 +780,11 @@ router.post("/admin/gift-card-products", async (req, res): Promise<void> => {
       faceValueCents: created.faceValueCents,
       priceCents: created.priceCents,
       availableCount: 0,
-      availableCardLocations: [],
       hasEmail: false,
       hasPhone: false,
+      canReceiveStock: true,
+      hasHistory: false,
+      isArchived: false,
       createdAt: created.createdAt.toISOString(),
     }),
   );

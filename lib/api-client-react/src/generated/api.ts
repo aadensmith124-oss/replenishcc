@@ -32,6 +32,7 @@ import type {
   AdminCoupon,
   AdminCouponsResponse,
   AdminDepositsResponse,
+  AdminGiftCardProduct,
   AdminGiftCardProductsResponse,
   AdminLicenseProductsResponse,
   AdminRedeemCode,
@@ -65,7 +66,6 @@ import type {
   GetAdminUsersParams,
   GiftCardBaseRemovalResult,
   GiftCardBulkPurchaseResult,
-  GiftCardProduct,
   GiftCardProductsResponse,
   GiftCardPurchaseResult,
   HealthStatus,
@@ -4767,7 +4767,7 @@ export const getCreateAdminGiftCardProductUrl = () => {
 /**
  * @summary Create a card base with a per-card purchase price
  */
-export const createAdminGiftCardProduct = async (createGiftCardProductInput: CreateGiftCardProductInput, options?: Parameters<typeof customFetch>[1]): Promise<GiftCardProduct> => {
+export const createAdminGiftCardProduct = async (createGiftCardProductInput: CreateGiftCardProductInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminGiftCardProduct> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -4783,7 +4783,7 @@ export const createAdminGiftCardProduct = async (createGiftCardProductInput: Cre
     }
     return headers;
   };
-return customFetch<GiftCardProduct>(getCreateAdminGiftCardProductUrl(),
+return customFetch<AdminGiftCardProduct>(getCreateAdminGiftCardProductUrl(),
   {
     ...options,
     method: 'POST',

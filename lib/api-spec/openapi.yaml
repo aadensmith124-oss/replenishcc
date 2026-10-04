@@ -1248,7 +1248,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GiftCardProduct"
+                $ref: "#/components/schemas/AdminGiftCardProduct"
         "400":
           description: Invalid product details
         "401":
