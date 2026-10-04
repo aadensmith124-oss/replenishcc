@@ -659,8 +659,8 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .catalog-primary-controls .gift-catalog-search-input,
 .catalog-primary-controls .gift-catalog-filter-field select { height:44px; border-radius:6px; font-size:11px; }
 .catalog-primary-controls .gift-catalog-filter-field select { padding:0 12px; }
-.gift-catalog-controls { justify-content:flex-start; align-items:center; }
-.gift-catalog-controls .gift-filter-trigger { min-width:130px; justify-content:center; }
+.gift-catalog-controls { justify-content:center; align-items:center; }
+.gift-catalog-controls .gift-filter-trigger { min-width:130px; justify-content:center; margin-inline:auto; }
 .catalog-columns-after { width:max-content; }
 .catalog-columns-after .column-chooser-menu { right:auto; left:0; }
 @media (max-width:760px) {
