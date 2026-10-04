@@ -39,7 +39,7 @@ type RawCard = {
 };
 
 const aliases: [CardField, string[]][] = [
-  ['cardNumber', ['card number', 'card no', 'card #', 'cardnum', 'card', 'cc number', 'ccnum', 'pan', 'primary account number', 'account number', 'gift card number', 'giftcardno', 'number']],
+  ['cardNumber', ['card number', 'card no', 'card #', 'cardnum', 'card', 'cc number', 'ccnum', 'pan', 'primary account number', 'account number', 'gift card number', 'giftcardno', 'number', 'num']],
   ['expiration', ['expiration', 'expiration date', 'expiry', 'expiry date', 'exp', 'exp date', 'valid thru', 'valid until', 'month year', 'card expiry', 'card expiration', 'mm/yy', 'mm/yyyy', 'exp date mm yy', 'expiry date mm yy', 'expiration date mm yy']],
   ['expirationMonth', ['expiration month', 'expiry month', 'exp month', 'expmonth', 'month']],
   ['expirationYear', ['expiration year', 'expiry year', 'exp year', 'expyear', 'year']],
@@ -519,7 +519,7 @@ export function parseCardStockInput(input: string): CardStockImport {
   if (labeled) return labeled;
 
   const delimited = bestDelimitedTable(text);
-  if (delimited?.cards.length) return delimited;
+  if (delimited) return delimited;
 
   return {
     format: 'Not recognized',

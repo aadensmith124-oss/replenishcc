@@ -755,7 +755,7 @@ export function AdminCardInventoryPage() {
           <button className="gift-admin-submit" disabled={create.isPending} data-testid="button-create-card-listing">{create.isPending ? 'Creating…' : 'Create base'} <ArrowRight /></button>
         </form></Form>
       </section>
-      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload cards</h3><p>Import or paste up to {MAX_CARDS_PER_BATCH} cards per batch. Each active base can hold up to {MAX_CARDS_PER_BASE.toLocaleString()} available cards; sold cards remain in history and free space for restocking.</p></div></div>
+      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload cards</h3><p>Paste a header such as Card|num|exp|cvv|address|state|city|zip followed by card rows. Include a security code for every card; the preview shows only the last four digits. Import up to {MAX_CARDS_PER_BATCH} cards per batch. Each active base can hold up to {MAX_CARDS_PER_BASE.toLocaleString()} available cards; sold cards remain in history and free space for restocking.</p></div></div>
         <Form {...stockForm}><form onSubmit={stockForm.handleSubmit((values) => {
           const parsedBatch = parseCardStockInput(values.cards);
           if (!parsedBatch.cards.length) {
