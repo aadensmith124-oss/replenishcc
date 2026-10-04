@@ -667,7 +667,8 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
   .catalog-primary-controls { grid-template-columns:minmax(0,1fr); gap:12px; margin-top:-7px; }
   .catalog-primary-controls .gift-catalog-search-input,
   .catalog-primary-controls .gift-catalog-filter-field select { height:48px; font-size:13px; }
-  .gift-catalog-controls .gift-filter-trigger { width:auto; min-width:180px; min-height:48px; margin-inline:auto; }
+  .gift-catalog-controls { display:grid; grid-template-columns:minmax(0,1fr); justify-items:center; width:100%; }
+  .gift-catalog-controls .gift-filter-trigger { width:min(100%, 260px); min-width:0; min-height:48px; justify-self:center; justify-content:center; margin:0 auto; }
   .catalog-columns-after { width:100%; }
   .catalog-columns-after .column-chooser { width:100%; }
   .catalog-columns-after .column-chooser summary.quiet-button { width:100%; justify-content:center; min-height:48px; }

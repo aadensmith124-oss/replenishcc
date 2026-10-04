@@ -40,7 +40,7 @@ const baseSchema = z.object({
 });
 type BaseForm = z.infer<typeof baseSchema>;
 
-type CatalogColumn = 'state' | 'city' | 'regionZip' | 'cardType' | 'issuer' | 'brand' | 'price' | 'actions';
+type CatalogColumn = 'name' | 'state' | 'city' | 'regionZip' | 'cardType' | 'issuer' | 'brand' | 'price' | 'actions';
 type CatalogPriceFilter = 'all' | 'under-25' | '25-50' | '50-100' | '100-plus';
 type CatalogPresenceFilter = 'all' | 'yes' | 'no';
 type CatalogFilters = {
@@ -50,7 +50,6 @@ type CatalogFilters = {
   state: string;
   city: string;
   zip: string;
-  address: CatalogPresenceFilter;
   email: CatalogPresenceFilter;
   phone: CatalogPresenceFilter;
   price: CatalogPriceFilter;
@@ -58,7 +57,6 @@ type CatalogFilters = {
 type PublicCardLocation = {
   inventoryId: string;
   bin: string | null;
-  address: string;
   city: string;
   state: string;
   regionZip: string | null;
@@ -84,23 +82,26 @@ function locationsForProduct(product: ProductWithCardLocations): PublicCardLocat
 
 const emptyCatalogFilters: CatalogFilters = {
   brand: '', cardType: '', issuer: '', state: '', city: '', zip: '',
-  address: 'all', email: 'all', phone: 'all', price: 'all',
+  email: 'all', phone: 'all', price: 'all',
 };
 const catalogColumns: { id: CatalogColumn; label: string }[] = [
-  { id: 'brand', label: 'Brand' },
+  { id: 'name', label: 'Name' },
   { id: 'cardType', label: 'Type' },
   { id: 'issuer', label: 'Issuer' },
+  { id: 'brand', label: 'Brand' },
   { id: 'city', label: 'City' },
   { id: 'state', label: 'State' },
-  { id: 'regionZip', label: 'ZIP' },
+  { id: 'regionZip', label: 'ZIP Code' },
   { id: 'price', label: 'Price' },
   { id: 'actions', label: 'Actions' },
 ];
-const catalogColumnStorageKey = 'replenishcc-card-catalog-columns-v6';
-const previousCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v5';
-const legacyCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v4';
-const olderCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v3';
-const oldestCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v2';
+const catalogColumnStorageKey = 'replenishcc-card-catalog-columns-v8';
+const previousCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v7';
+const legacyCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v6';
+const olderCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v5';
+const oldestCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v4';
+const ancientCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v3';
+const olderCatalogColumnStorageKeyV2 = 'replenishcc-card-catalog-columns-v2';
 const originalCatalogColumnStorageKey = 'replenishcc-card-catalog-columns';
 const defaultCatalogColumns = catalogColumns.map((column) => column.id);
 
@@ -122,12 +123,14 @@ function readCatalogColumns(): CatalogColumn[] {
       ?? window.localStorage.getItem(legacyCatalogColumnStorageKey)
       ?? window.localStorage.getItem(olderCatalogColumnStorageKey)
       ?? window.localStorage.getItem(oldestCatalogColumnStorageKey)
+      ?? window.localStorage.getItem(ancientCatalogColumnStorageKey)
+      ?? window.localStorage.getItem(olderCatalogColumnStorageKeyV2)
       ?? window.localStorage.getItem(originalCatalogColumnStorageKey);
     if (preferenceValue === null) return defaultCatalogColumns;
     const parsed: unknown = JSON.parse(preferenceValue);
     if (!Array.isArray(parsed)) return defaultCatalogColumns;
     const newMetadataColumns: CatalogColumn[] = migratingPreferences
-      ? ['state', 'city', 'regionZip', 'cardType', 'issuer', 'brand', 'actions']
+      ? ['name', 'state', 'city', 'regionZip', 'cardType', 'issuer', 'brand', 'actions']
       : [];
     return catalogColumns.filter((column) => parsed.includes(column.id) || newMetadataColumns.includes(column.id)).map((column) => column.id);
   } catch {
@@ -183,13 +186,6 @@ export function BuyCardsPage() {
   ] : [];
   const cardInfoFeatures = infoProduct ? [
     { label: 'Email address', available: infoProduct.hasEmail, testId: `text-card-info-email-${infoProduct.id}` },
-    {
-      label: 'Address details',
-      available: infoProduct.availableCardLocations.some((location) =>
-        Boolean(location.address || location.city || location.state || location.regionZip),
-      ),
-      testId: `text-card-info-address-availability-${infoProduct.id}`,
-    },
     { label: 'Phone number', available: infoProduct.hasPhone, testId: `text-card-info-phone-${infoProduct.id}` },
   ] : [];
   const purchaseOne = (productId: string, inventoryId: string) => {
@@ -216,7 +212,6 @@ export function BuyCardsPage() {
       || product.brand.toLowerCase().includes(normalizedSearch)
       || product.cardType.toLowerCase().includes(normalizedSearch)
       || product.issuer.toLowerCase().includes(normalizedSearch)
-      || card.address.toLowerCase().includes(normalizedSearch)
       || card.city.toLowerCase().includes(normalizedSearch)
       || card.state.toLowerCase().includes(normalizedSearch)
       || (card.regionZip ?? '').toLowerCase().includes(normalizedSearch);
@@ -228,7 +223,6 @@ export function BuyCardsPage() {
       && exactMatch(card.state, filters.state)
       && exactMatch(card.city, filters.city)
       && (!filters.zip || (card.regionZip ?? '').toLowerCase().includes(filters.zip.trim().toLowerCase()))
-      && presenceMatch(Boolean(card.address.trim()), filters.address)
       && presenceMatch(card.hasEmail, filters.email)
       && presenceMatch(card.hasPhone, filters.phone)
       && matchesCatalogPrice(product.priceCents, filters.price);
@@ -248,7 +242,7 @@ export function BuyCardsPage() {
     () => filterCardRows(availableCardRows, draftCatalogFilters).length,
     [availableCardRows, draftCatalogFilters, baseId, normalizedSearch],
   );
-  const activeFilterCount = Object.entries(catalogFilters).filter(([key, value]) => key === 'price' ? value !== 'all' : key === 'address' || key === 'email' || key === 'phone' ? value !== 'all' : value !== '').length
+  const activeFilterCount = Object.entries(catalogFilters).filter(([key, value]) => key === 'price' || key === 'email' || key === 'phone' ? value !== 'all' : value !== '').length
     + (normalizedSearch ? 1 : 0) + (baseId !== 'all' ? 1 : 0);
   const selectedCardRows = selectedIds
     .map((id) => cardRowByInventoryId.get(id))
@@ -320,7 +314,15 @@ export function BuyCardsPage() {
     setDraftCatalogFilters((current) => ({ ...current, [key]: value }));
   };
   useEffect(() => {
-    try { window.localStorage.setItem(catalogColumnStorageKey, JSON.stringify(visibleColumns)); }
+    try {
+      if (window.localStorage.getItem(catalogColumnStorageKey) === null) {
+        const migratedColumns = readCatalogColumns();
+        window.localStorage.setItem(catalogColumnStorageKey, JSON.stringify(migratedColumns));
+        setVisibleColumns(migratedColumns);
+        return;
+      }
+      window.localStorage.setItem(catalogColumnStorageKey, JSON.stringify(visibleColumns));
+    }
     catch { /* Column preferences remain usable for this visit when browser storage is unavailable. */ }
   }, [visibleColumns]);
   useEffect(() => {
@@ -399,11 +401,6 @@ export function BuyCardsPage() {
                   <label className="catalog-filter-field" htmlFor="input-card-zip-filter">ZIP
                     <input id="input-card-zip-filter" type="search" inputMode="numeric" autoComplete="postal-code" value={draftCatalogFilters.zip} onChange={(event) => updateDraftFilter('zip', event.target.value)} placeholder="Any ZIP code" aria-label="Filter by ZIP code" data-testid="input-card-zip-filter" />
                   </label>
-                  <label className="catalog-filter-field" htmlFor="select-card-address-filter">Public address
-                    <select id="select-card-address-filter" value={draftCatalogFilters.address} onChange={(event) => updateDraftFilter('address', event.target.value as CatalogPresenceFilter)} data-testid="select-card-address-filter">
-                      <option value="all">Any</option><option value="yes">Address listed</option><option value="no">No address listed</option>
-                    </select>
-                  </label>
                 </section>
                 <section className="catalog-filter-group" aria-labelledby="catalog-group-included-details">
                   <h3 id="catalog-group-included-details">Included details</h3>
@@ -457,16 +454,18 @@ export function BuyCardsPage() {
           : <div className="gift-empty gift-filter-empty" data-testid="empty-filtered-card-catalog"><Search /><h2>No matching cards</h2><p>Try changing the search text or filters.</p><button type="button" className="gift-primary-link" onClick={resetFilters} data-testid="button-reset-card-filters">Reset filters <RotateCcw /></button></div>
           : <div className="gift-catalog-table-wrap" role="region" aria-label="Card listings" tabIndex={0}>
             <table className="gift-catalog-table">
-              <thead><tr><th scope="col" className="catalog-select-cell"><input type="checkbox" aria-label="Select one available card from each visible base" checked={allVisibleSelected} disabled={!filteredCardRows.length} onChange={toggleAllVisible} /></th><th scope="col">Card / Base</th><th scope="col">BIN</th>{visibleColumns.map((column) => <th scope="col" key={column} className={column === 'actions' ? 'catalog-actions-cell' : undefined}>{catalogColumns.find((item) => item.id === column)?.label}</th>)}</tr></thead>
+              <thead><tr><th scope="col" className="catalog-select-cell"><input type="checkbox" aria-label="Select one available card from each visible base" checked={allVisibleSelected} disabled={!filteredCardRows.length} onChange={toggleAllVisible} /></th><th scope="col">Card</th><th scope="col">BIN</th>{visibleColumns.map((column) => <th scope="col" key={column} className={column === 'actions' ? 'catalog-actions-cell' : undefined}>{catalogColumns.find((item) => item.id === column)?.label}</th>)}</tr></thead>
               <tbody>{filteredCardRows.map(({ product, card, cardNumber }) => {
                 const isSelected = selectedIds.includes(card.inventoryId);
                 const anotherCardFromBaseSelected = selectedCardRows.some((row) => row.product.id === product.id && row.card.inventoryId !== card.inventoryId);
                 return <tr key={card.inventoryId} data-testid={`row-gift-product-${product.id}-${card.inventoryId}`}>
                 <td className="catalog-select-cell"><input type="checkbox" aria-label={`Select card ${cardNumber} from ${product.name}`} checked={isSelected} disabled={anotherCardFromBaseSelected || (selectedIds.length >= 50 && !isSelected)} onChange={() => toggleSelection({ product, card, cardNumber })} data-testid={`checkbox-select-card-${card.inventoryId}`} /></td>
-                <td><div className="gift-catalog-product"><div><strong data-testid={`text-gift-product-name-${product.id}-${card.inventoryId}`}>Card {cardNumber}</strong><small>{product.name}</small></div></div></td>
+                <td><div className="gift-catalog-product"><div><strong>Card {cardNumber}</strong></div></div></td>
                 <td data-testid={`text-gift-card-bin-${card.inventoryId}`}>{card.bin || '—'}</td>
                 {visibleColumns.map((column) => {
                   switch (column) {
+                    case 'name':
+                      return <td key={column} data-testid={`text-gift-product-name-${product.id}-${card.inventoryId}`}>{product.name}</td>;
                     case 'brand':
                       return <td key={column} data-testid={`text-gift-card-brand-${card.inventoryId}`}>{product.brand || '—'}</td>;
                     case 'cardType':
