@@ -34,5 +34,6 @@ export interface AdminGiftCardProduct {
   hasEmail: boolean;
   hasPhone: boolean;
   canReceiveStock: boolean;
+  isArchived: boolean;
   createdAt: Date;
 }

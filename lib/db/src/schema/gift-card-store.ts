@@ -28,6 +28,7 @@ export const giftCardProductsTable = pgTable(
     brand: varchar("brand", { length: 80 }).notNull().default(""),
     faceValueCents: integer("face_value_cents").notNull(),
     priceCents: integer("price_cents").notNull(),
+    isArchived: boolean("is_archived").notNull().default(false),
     createdByUserId: uuid("created_by_user_id").references(
       () => usersTable.id,
       { onDelete: "set null" },

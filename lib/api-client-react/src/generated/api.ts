@@ -4341,7 +4341,7 @@ export const getGetAdminGiftCardProductsUrl = () => {
 }
 
 /**
- * @summary List prepaid gift-card products and inventory counts for an administrator
+ * @summary List prepaid gift-card products, including archived bases, for an administrator
  */
 export const getAdminGiftCardProducts = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminGiftCardProductsResponse> => {
 
@@ -4388,7 +4388,7 @@ export type GetAdminGiftCardProductsQueryError = ErrorType<void>
 
 
 /**
- * @summary List prepaid gift-card products and inventory counts for an administrator
+ * @summary List prepaid gift-card products, including archived bases, for an administrator
  */
 
 export function useGetAdminGiftCardProducts<TData = Awaited<ReturnType<typeof getAdminGiftCardProducts>>, TError = ErrorType<void>>(
@@ -4506,7 +4506,7 @@ export const getDeleteAdminGiftCardProductUrl = (productId: string,) => {
 }
 
 /**
- * @summary Delete a gift-card product that has no inventory or order history
+ * @summary Delete an empty base or archive a base with inventory or order history
  */
 export const deleteAdminGiftCardProduct = async (productId: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
 
@@ -4558,7 +4558,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type DeleteAdminGiftCardProductMutationVariables = {productId: string}
 
     /**
- * @summary Delete a gift-card product that has no inventory or order history
+ * @summary Delete an empty base or archive a base with inventory or order history
  */
 export const useDeleteAdminGiftCardProduct = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminGiftCardProduct>>, TError,DeleteAdminGiftCardProductMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -4569,6 +4569,80 @@ export const useDeleteAdminGiftCardProduct = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getDeleteAdminGiftCardProductMutationOptions(options));
+    }
+
+export const getRestoreAdminGiftCardProductUrl = (productId: string,) => {
+
+
+
+
+  return `/api/admin/gift-card-products/${productId}/restore`
+}
+
+/**
+ * @summary Restore an archived gift-card base to member sales
+ */
+export const restoreAdminGiftCardProduct = async (productId: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRestoreAdminGiftCardProductUrl(productId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRestoreAdminGiftCardProductMutationKey = () => ['restoreAdminGiftCardProduct'] as const;
+
+export const getRestoreAdminGiftCardProductMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreAdminGiftCardProduct>>, TError,RestoreAdminGiftCardProductMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreAdminGiftCardProduct>>, TError,RestoreAdminGiftCardProductMutationVariables, TContext> => {
+
+const mutationKey = getRestoreAdminGiftCardProductMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreAdminGiftCardProduct>>, RestoreAdminGiftCardProductMutationVariables> = (props) => {
+          const {productId} = props ?? {};
+
+          return  restoreAdminGiftCardProduct(productId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreAdminGiftCardProductMutationResult = NonNullable<Awaited<ReturnType<typeof restoreAdminGiftCardProduct>>>
+
+    export type RestoreAdminGiftCardProductMutationError = ErrorType<void>
+    export type RestoreAdminGiftCardProductMutationVariables = {productId: string}
+
+    /**
+ * @summary Restore an archived gift-card base to member sales
+ */
+export const useRestoreAdminGiftCardProduct = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreAdminGiftCardProduct>>, TError,RestoreAdminGiftCardProductMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restoreAdminGiftCardProduct>>,
+        TError,
+        RestoreAdminGiftCardProductMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRestoreAdminGiftCardProductMutationOptions(options));
     }
 
 export const getUpdateAdminGiftCardProductMetadataUrl = (productId: string,) => {

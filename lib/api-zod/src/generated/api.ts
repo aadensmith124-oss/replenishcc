@@ -1353,7 +1353,7 @@ export const BulkPurchaseGiftCardsResponse = zod.object({
 
 
 /**
- * @summary List prepaid gift-card products and inventory counts for an administrator
+ * @summary List prepaid gift-card products, including archived bases, for an administrator
  */
 export const getAdminGiftCardProductsResponseProductsItemAddressMax = 255;
 
@@ -1391,6 +1391,7 @@ export const GetAdminGiftCardProductsResponse = zod.object({
   "hasEmail": zod.boolean(),
   "hasPhone": zod.boolean(),
   "canReceiveStock": zod.boolean(),
+  "isArchived": zod.boolean(),
   "createdAt": zod.coerce.date()
 }))
 })
@@ -1486,13 +1487,23 @@ export const CreateAdminGiftCardProductResponse = zod.object({
 
 
 /**
- * @summary Delete a gift-card product that has no inventory or order history
+ * @summary Delete an empty base or archive a base with inventory or order history
  */
 export const DeleteAdminGiftCardProductParams = zod.object({
   "productId": zod.coerce.string().uuid()
 })
 
 export const DeleteAdminGiftCardProductResponse = zod.void()
+
+
+/**
+ * @summary Restore an archived gift-card base to member sales
+ */
+export const RestoreAdminGiftCardProductParams = zod.object({
+  "productId": zod.coerce.string().uuid()
+})
+
+export const RestoreAdminGiftCardProductResponse = zod.void()
 
 
 /**
