@@ -89,7 +89,7 @@ const emptyCatalogFilters: CatalogFilters = {
   email: 'all', phone: 'all', price: 'all',
 };
 const catalogColumns: { id: CatalogColumn; label: string }[] = [
-  { id: 'name', label: 'Base' },
+  { id: 'name', label: 'Name' },
   { id: 'cardType', label: 'Type' },
   { id: 'issuer', label: 'Issuer' },
   { id: 'brand', label: 'Brand' },
@@ -347,7 +347,9 @@ export function BuyCardsPage() {
         <span>Base</span>
         <select value={baseId} onChange={(event) => setBaseId(event.target.value)} aria-label="Choose a card base" data-testid="select-card-base" disabled={productsQuery.isLoading || productsQuery.isError || products.length === 0}>
           <option value="all">All Bases</option>
-          {products.map((product) => <option value={product.id} key={product.id}>{product.name}</option>)}
+          {products.map((product) => <option value={product.id} key={product.id}>
+            {product.name} — {product.availableCount} {product.availableCount === 1 ? 'card' : 'cards'} left
+          </option>)}
         </select>
       </label>
     </section>
@@ -440,7 +442,7 @@ export function BuyCardsPage() {
           <details className="column-chooser gift-column-chooser">
             <summary className="quiet-button" data-testid="button-choose-card-columns"><Columns3 /> Columns <ChevronRight className="chooser-chevron" /></summary>
             <div className="column-chooser-menu" role="group" aria-label="Choose visible card listing columns">
-              <p className="gift-column-note">Card and base stay visible. Choose which details and actions to show; private card credentials never appear as columns.</p>
+              <p className="gift-column-note">Card and BIN stay visible. Choose whether to show the name, location, and other listing details; private card credentials never appear as columns.</p>
               {catalogColumns.map((column) => <label key={column.id} className="column-choice">
                 <input type="checkbox" checked={visibleColumns.includes(column.id)} onChange={() => toggleColumn(column.id)} data-testid={`checkbox-card-column-${column.id}`} />
                 <span>{column.label}</span>

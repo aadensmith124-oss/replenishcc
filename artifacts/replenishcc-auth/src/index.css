@@ -2915,16 +2915,20 @@ html ::placeholder {
 .catalog-filter-dialog {
   position: fixed !important;
   top: 50% !important;
-  left: 50% !important;
+  left: max(18px, env(safe-area-inset-left, 0px)) !important;
+  right: max(18px, env(safe-area-inset-right, 0px)) !important;
+  margin-inline: auto !important;
+  box-sizing: border-box !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 0 !important;
-  width: min(480px, calc(100vw - 36px)) !important;
-  max-width: none !important;
+  width: auto !important;
+  max-width: 480px !important;
   height: auto !important;
   min-height: 276px;
   max-height: min(620px, calc(100dvh - 36px)) !important;
-  transform: translate(-50%, -50%) !important;
+  transform: translateY(-50%) !important;
+  overflow-x: hidden !important;
   overflow: hidden !important;
   border: 1px solid #3c3c3c !important;
   border-radius: 14px !important;
@@ -3141,16 +3145,17 @@ html ::placeholder {
 
 @media (max-width: 640px) {
   .catalog-filter-dialog {
-    inset: auto !important;
     top: 50% !important;
-    left: 50% !important;
-    right: auto !important;
+    left: max(12px, env(safe-area-inset-left, 0px)) !important;
+    right: max(12px, env(safe-area-inset-right, 0px)) !important;
     bottom: auto !important;
-    width: min(480px, calc(100vw - 28px)) !important;
+    width: auto !important;
+    max-width: 480px !important;
+    margin-inline: auto !important;
     height: auto !important;
     min-height: min(276px, 88dvh) !important;
     max-height: min(620px, 88dvh) !important;
-    transform: translate(-50%, -50%) !important;
+    transform: translateY(-50%) !important;
     border: 1px solid #3c3c3c !important;
     border-radius: 14px !important;
   }
