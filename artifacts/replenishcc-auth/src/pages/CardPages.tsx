@@ -553,7 +553,6 @@ export function MyCardOrdersPage() {
           ...(card.email ? [`Email: ${plainTextLine(card.email)}`] : []),
           ...(card.phone ? [`Phone: ${plainTextLine(card.phone)}`] : []),
           ...(card.publicLocation ? [`Public location: ${[
-            card.publicLocation.address,
             card.publicLocation.city,
             card.publicLocation.state,
             card.publicLocation.regionZip,
@@ -605,7 +604,6 @@ function Credential({ card, index, visible, toggle, copy, copied, orderId }: { c
     {card.publicLocation && <div className="gift-card-public-location" data-testid={`text-card-public-location-${orderId}-${index}`}>
       <small>Public location</small>
       <strong>{[
-        card.publicLocation.address,
         [card.publicLocation.city, card.publicLocation.state].filter(Boolean).join(', '),
         card.publicLocation.regionZip,
       ].filter(Boolean).join(' · ') || 'Not specified'}</strong>
@@ -643,6 +641,14 @@ export function AdminCardInventoryPage() {
   const stockText = stockForm.watch('cards') ?? '';
   const stockImport = useMemo(() => parseCardStockInput(stockText), [stockText]);
   const stockCards = stockImport.cards;
+  const stockBinPrefixes = useMemo(() => new Set(
+    stockCards.flatMap((card) => {
+      const normalizedNumber = card.cardNumber.replace(/\s/g, '');
+      return card.issues.length === 0 && /^\d{13,19}$/.test(normalizedNumber)
+        ? [normalizedNumber.slice(0, 8)]
+        : [];
+    }),
+  ), [stockCards]);
   const stockIssueCount = stockCards.filter((card) => card.issues.length > 0).length;
   const stockLocationCounts = {
     address: stockCards.filter((card) => card.address).length,
@@ -805,7 +811,12 @@ export function AdminCardInventoryPage() {
             if (stockFileInput.current) stockFileInput.current.value = '';
             invalidate();
             const label = `${result.addedCount} card${result.addedCount === 1 ? '' : 's'}`;
-            setFeedback(`${label} added. This base now has ${result.availableCount}/${MAX_CARDS_PER_BASE} available. ${result.binMetadataApplied ? 'BIN metadata auto-filled.' : 'BIN metadata was not applied; edit the base metadata if needed.'} ${result.locationMetadataApplied ? 'Per-card public locations saved.' : 'Base location defaults were used.'} ${result.redemptionZipApplied ? 'Per-card ZIP values saved.' : 'Base ZIP defaults were used where available.'}`);
+            const binMetadataFeedback = result.binMetadataApplied
+              ? 'BIN metadata auto-filled.'
+              : stockBinPrefixes.size > 1
+                ? `BIN lookup skipped because this batch has ${stockBinPrefixes.size} different 8-digit prefixes. Upload one prefix per batch to auto-fill type, issuer, and brand.`
+                : 'BIN metadata was not applied for this prefix; the public lookup may have no matching data or may be unavailable. Edit the base metadata if needed.';
+            setFeedback(`${label} added. This base now has ${result.availableCount}/${MAX_CARDS_PER_BASE} available. ${binMetadataFeedback} ${result.locationMetadataApplied ? 'Per-card public locations saved.' : 'Base location defaults were used.'} ${result.redemptionZipApplied ? 'Per-card ZIP values saved.' : 'Base ZIP defaults were used where available.'}`);
           }, onError: () => setFeedback('Stock upload was rejected. Check the preview, duplicates, and the base’s remaining capacity.') });
         })} className="gift-form">
            <FormField control={stockForm.control} name="productId" render={({ field }) => <FormItem><FormLabel>Base</FormLabel><FormControl><select {...field} data-testid="select-admin-stock-product"><option value="">Select a base</option>{rows.map((product) => <option key={product.id} value={product.id} disabled={!product.canReceiveStock}>{product.name} · {product.isArchived ? 'archived — restore before use' : product.canReceiveStock ? `${product.availableCount}/${MAX_CARDS_PER_BASE} available` : `${MAX_CARDS_PER_BASE}/${MAX_CARDS_PER_BASE} available — cap reached`}</option>)}</select></FormControl><FormMessage />{selectedStockProduct && <p className="gift-stock-capacity-note" aria-live="polite">{selectedRemainingCapacity.toLocaleString()} of {MAX_CARDS_PER_BASE.toLocaleString()} available-card spaces remain for this base.</p>}</FormItem>} />
@@ -818,7 +829,14 @@ export function AdminCardInventoryPage() {
            </div>
            <FormField control={stockForm.control} name="cards" render={({ field }) => <FormItem><FormLabel>Card data · {stockCards.length}/{MAX_CARDS_PER_BATCH} detected</FormLabel><FormControl><Textarea {...field} onChange={(event) => { field.onChange(event); setStockFileName(''); setStockFileError(''); setFeedback(''); }} rows={8} maxLength={100_000} placeholder="Import a file or paste CSV, TSV, JSON, labeled fields, or delimited card rows." data-testid="input-admin-card-stock" /></FormControl>
              <div className="gift-stock-detection" aria-live="polite"><span className={stockLocationCounts.address ? 'is-detected' : ''}>{stockLocationCounts.address ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Address {stockLocationCounts.address}/{stockCards.length}</span><span className={stockLocationCounts.state ? 'is-detected' : ''}>{stockLocationCounts.state ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}State {stockLocationCounts.state}/{stockCards.length}</span><span className={stockLocationCounts.city ? 'is-detected' : ''}>{stockLocationCounts.city ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}City {stockLocationCounts.city}/{stockCards.length}</span><span className={stockLocationCounts.zip ? 'is-detected' : ''}>{stockLocationCounts.zip ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}ZIP {stockLocationCounts.zip}/{stockCards.length}</span><span className={stockContactCounts.email ? 'is-detected' : ''}>{stockContactCounts.email ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Email {stockContactCounts.email}/{stockCards.length}</span><span className={stockContactCounts.phone ? 'is-detected' : ''}>{stockContactCounts.phone ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Phone {stockContactCounts.phone}/{stockCards.length}</span></div>
-             <div className="gift-stock-preview" aria-live="polite" data-testid="preview-admin-card-stock">
+              {stockCards.length > 0 && <p className={`gift-stock-bin-hint${stockBinPrefixes.size > 1 ? ' is-warning' : stockBinPrefixes.size === 1 ? ' is-ready' : ''}`} role="status" data-testid="text-stock-bin-lookup-status">
+                {stockBinPrefixes.size === 1
+                  ? 'One shared 8-digit BIN detected. Type, issuer, and brand will be looked up after upload.'
+                  : stockBinPrefixes.size > 1
+                    ? `${stockBinPrefixes.size} different 8-digit BIN prefixes detected. Upload one prefix per batch to auto-fill type, issuer, and brand.`
+                    : 'No valid 8-digit BIN prefix detected in this batch.'}
+              </p>}
+              <div className="gift-stock-preview" aria-live="polite" data-testid="preview-admin-card-stock">
                <div className="gift-stock-preview-header"><strong>{stockCards.length ? `${stockCards.length} card${stockCards.length === 1 ? '' : 's'} detected · ${stockImport.format}` : stockImport.format}</strong><span>{stockCards.length ? `${stockCards.length - stockIssueCount} ready · ${stockIssueCount} need review` : ''}</span></div>
                 {stockCards.length ? <>
                   <div className="gift-stock-preview-table-wrap" role="region" aria-label="Parsed card fields" tabIndex={0}>
