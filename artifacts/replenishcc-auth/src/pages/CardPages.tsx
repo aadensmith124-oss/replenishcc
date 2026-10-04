@@ -79,6 +79,23 @@ type BaseForm = z.infer<typeof baseSchema>;
 
 type CatalogColumn = 'state' | 'city' | 'regionZip' | 'cardType' | 'issuer' | 'brand' | 'price' | 'actions';
 type CatalogPriceFilter = 'all' | 'under-25' | '25-50' | '50-100' | '100-plus';
+type CatalogPresenceFilter = 'all' | 'yes' | 'no';
+type CatalogFilters = {
+  brand: string;
+  cardType: string;
+  issuer: string;
+  state: string;
+  city: string;
+  zip: string;
+  address: CatalogPresenceFilter;
+  email: CatalogPresenceFilter;
+  phone: CatalogPresenceFilter;
+  price: CatalogPriceFilter;
+};
+const emptyCatalogFilters: CatalogFilters = {
+  brand: '', cardType: '', issuer: '', state: '', city: '', zip: '',
+  address: 'all', email: 'all', phone: 'all', price: 'all',
+};
 const catalogColumns: { id: CatalogColumn; label: string }[] = [
   { id: 'brand', label: 'Brand' },
   { id: 'cardType', label: 'Type' },
@@ -146,8 +163,8 @@ export function BuyCardsPage() {
   const [notice, setNotice] = useState('');
   const [baseId, setBaseId] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [priceFilter, setPriceFilter] = useState<CatalogPriceFilter>('all');
-  const [draftPriceFilter, setDraftPriceFilter] = useState<CatalogPriceFilter>('all');
+  const [catalogFilters, setCatalogFilters] = useState<CatalogFilters>(emptyCatalogFilters);
+  const [draftCatalogFilters, setDraftCatalogFilters] = useState<CatalogFilters>(emptyCatalogFilters);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<CatalogColumn[]>(readCatalogColumns);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -187,6 +204,13 @@ export function BuyCardsPage() {
     });
   };
   const normalizedSearch = searchTerm.trim().toLowerCase();
+  const catalogOptions = useMemo(() => ({
+    brand: [...new Set(products.map((product) => product.brand.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    cardType: [...new Set(products.map((product) => product.cardType.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    issuer: [...new Set(products.map((product) => product.issuer.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    state: [...new Set(products.map((product) => product.state.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    city: [...new Set(products.map((product) => product.city.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+  }), [products]);
   const searchFilteredProducts = useMemo(() => products.filter((product) => {
     const matchesBase = baseId === 'all' || product.id === baseId;
     const matchesSearch = !normalizedSearch
@@ -200,14 +224,30 @@ export function BuyCardsPage() {
       || (product.regionZip ?? '').toLowerCase().includes(normalizedSearch);
     return matchesBase && matchesSearch;
   }), [products, baseId, normalizedSearch]);
+  const filterProducts = (source: typeof products, filters: CatalogFilters) => source.filter((product) => {
+    const exactMatch = (value: string, selection: string) => !selection || value.trim().toLocaleLowerCase() === selection.toLocaleLowerCase();
+    const presenceMatch = (value: boolean, selection: CatalogPresenceFilter) => selection === 'all' || (selection === 'yes' ? value : !value);
+    return exactMatch(product.brand, filters.brand)
+      && exactMatch(product.cardType, filters.cardType)
+      && exactMatch(product.issuer, filters.issuer)
+      && exactMatch(product.state, filters.state)
+      && exactMatch(product.city, filters.city)
+      && (!filters.zip || (product.regionZip ?? '').toLowerCase().includes(filters.zip.trim().toLowerCase()))
+      && presenceMatch(Boolean(product.address.trim()), filters.address)
+      && presenceMatch(product.hasEmail, filters.email)
+      && presenceMatch(product.hasPhone, filters.phone)
+      && matchesCatalogPrice(product.priceCents, filters.price);
+  });
   const filteredProducts = useMemo(
-    () => searchFilteredProducts.filter((product) => matchesCatalogPrice(product.priceCents, priceFilter)),
-    [searchFilteredProducts, priceFilter],
+    () => filterProducts(searchFilteredProducts, catalogFilters),
+    [searchFilteredProducts, catalogFilters],
   );
   const draftResultCount = useMemo(
-    () => searchFilteredProducts.filter((product) => matchesCatalogPrice(product.priceCents, draftPriceFilter)).length,
-    [searchFilteredProducts, draftPriceFilter],
+    () => filterProducts(searchFilteredProducts, draftCatalogFilters).length,
+    [searchFilteredProducts, draftCatalogFilters],
   );
+  const activeFilterCount = Object.entries(catalogFilters).filter(([key, value]) => key === 'price' ? value !== 'all' : key === 'address' || key === 'email' || key === 'phone' ? value !== 'all' : value !== '').length
+    + (normalizedSearch ? 1 : 0) + (baseId !== 'all' ? 1 : 0);
   const selectableProducts = filteredProducts.filter((product) => product.availableCount > 0);
   const selectedProducts = selectedIds
     .map((id) => products.find((product) => product.id === id))
@@ -240,16 +280,19 @@ export function BuyCardsPage() {
   const resetFilters = () => {
     setBaseId('all');
     setSearchTerm('');
-    setPriceFilter('all');
-    setDraftPriceFilter('all');
+    setCatalogFilters(emptyCatalogFilters);
+    setDraftCatalogFilters(emptyCatalogFilters);
   };
   const openFilters = () => {
-    setDraftPriceFilter(priceFilter);
+    setDraftCatalogFilters({ ...catalogFilters });
     setFiltersOpen(true);
   };
-  const applyPriceFilter = () => {
-    setPriceFilter(draftPriceFilter);
+  const applyCatalogFilters = () => {
+    setCatalogFilters({ ...draftCatalogFilters, zip: draftCatalogFilters.zip.trim() });
     setFiltersOpen(false);
+  };
+  const updateDraftFilter = <K extends keyof CatalogFilters>(key: K, value: CatalogFilters[K]) => {
+    setDraftCatalogFilters((current) => ({ ...current, [key]: value }));
   };
   useEffect(() => {
     try { window.localStorage.setItem(catalogColumnStorageKey, JSON.stringify(visibleColumns)); }
@@ -284,22 +327,77 @@ export function BuyCardsPage() {
       : <>
         <div className="gift-catalog-controls">
           <button type="button" className="quiet-button gift-filter-trigger" onClick={openFilters} aria-haspopup="dialog" aria-expanded={filtersOpen} data-testid="button-toggle-card-filters">
-            <SlidersHorizontal aria-hidden="true" /> Filters <ChevronRight className="chooser-chevron" aria-hidden="true" />
+            <SlidersHorizontal aria-hidden="true" /> Filters {activeFilterCount > 0 && <span className="catalog-filter-count" aria-label={`${activeFilterCount} active filters`} data-testid="text-active-card-filter-count">{activeFilterCount}</span>} <ChevronRight className="chooser-chevron" aria-hidden="true" />
           </button>
           <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
             <DialogContent className="catalog-filter-dialog" data-testid="dialog-card-catalog-filters">
               <DialogHeader className="catalog-filter-header">
                 <DialogTitle>Filters</DialogTitle>
+                <p>Refine authorized inventory using listing details.</p>
               </DialogHeader>
               <div className="catalog-filter-body">
-                <label className="catalog-filter-field" htmlFor="select-card-price-filter">Price
-                  <select id="select-card-price-filter" value={draftPriceFilter} onChange={(event) => setDraftPriceFilter(event.target.value as CatalogPriceFilter)} aria-label="Filter by price" data-testid="select-card-price-filter">
+                <section className="catalog-filter-group" aria-labelledby="catalog-group-card-details">
+                  <h3 id="catalog-group-card-details">Card details</h3>
+                  <label className="catalog-filter-field" htmlFor="select-card-brand-filter">Brand
+                    <select id="select-card-brand-filter" value={draftCatalogFilters.brand} onChange={(event) => updateDraftFilter('brand', event.target.value)} data-testid="select-card-brand-filter">
+                      <option value="">All brands</option>{catalogOptions.brand.map((value) => <option key={value} value={value}>{value}</option>)}
+                    </select>
+                  </label>
+                  <label className="catalog-filter-field" htmlFor="select-card-type-filter">Card type
+                    <select id="select-card-type-filter" value={draftCatalogFilters.cardType} onChange={(event) => updateDraftFilter('cardType', event.target.value)} data-testid="select-card-type-filter">
+                      <option value="">All types</option>{catalogOptions.cardType.map((value) => <option key={value} value={value}>{value}</option>)}
+                    </select>
+                  </label>
+                  <label className="catalog-filter-field" htmlFor="select-card-issuer-filter">Issuer
+                    <select id="select-card-issuer-filter" value={draftCatalogFilters.issuer} onChange={(event) => updateDraftFilter('issuer', event.target.value)} data-testid="select-card-issuer-filter">
+                      <option value="">All issuers</option>{catalogOptions.issuer.map((value) => <option key={value} value={value}>{value}</option>)}
+                    </select>
+                  </label>
+                  <label className="catalog-filter-field" htmlFor="select-card-price-filter">Price
+                  <select id="select-card-price-filter" value={draftCatalogFilters.price} onChange={(event) => updateDraftFilter('price', event.target.value as CatalogPriceFilter)} aria-label="Filter by price" data-testid="select-card-price-filter">
                     <option value="all">Any price</option><option value="under-25">Under $25</option><option value="25-50">$25 to under $50</option><option value="50-100">$50 to under $100</option><option value="100-plus">$100 and up</option>
                   </select>
-                </label>
+                  </label>
+                </section>
+                <section className="catalog-filter-group" aria-labelledby="catalog-group-location">
+                  <h3 id="catalog-group-location">Location</h3>
+                  <label className="catalog-filter-field" htmlFor="select-card-state-filter">State
+                    <select id="select-card-state-filter" value={draftCatalogFilters.state} onChange={(event) => updateDraftFilter('state', event.target.value)} data-testid="select-card-state-filter">
+                      <option value="">All states</option>{catalogOptions.state.map((value) => <option key={value} value={value}>{value}</option>)}
+                    </select>
+                  </label>
+                  <label className="catalog-filter-field" htmlFor="select-card-city-filter">City
+                    <select id="select-card-city-filter" value={draftCatalogFilters.city} onChange={(event) => updateDraftFilter('city', event.target.value)} data-testid="select-card-city-filter">
+                      <option value="">All cities</option>{catalogOptions.city.map((value) => <option key={value} value={value}>{value}</option>)}
+                    </select>
+                  </label>
+                  <label className="catalog-filter-field" htmlFor="input-card-zip-filter">ZIP
+                    <input id="input-card-zip-filter" type="search" inputMode="numeric" autoComplete="postal-code" value={draftCatalogFilters.zip} onChange={(event) => updateDraftFilter('zip', event.target.value)} placeholder="Any ZIP code" aria-label="Filter by ZIP code" data-testid="input-card-zip-filter" />
+                  </label>
+                  <label className="catalog-filter-field" htmlFor="select-card-address-filter">Public address
+                    <select id="select-card-address-filter" value={draftCatalogFilters.address} onChange={(event) => updateDraftFilter('address', event.target.value as CatalogPresenceFilter)} data-testid="select-card-address-filter">
+                      <option value="all">Any</option><option value="yes">Address listed</option><option value="no">No address listed</option>
+                    </select>
+                  </label>
+                </section>
+                <section className="catalog-filter-group" aria-labelledby="catalog-group-included-details">
+                  <h3 id="catalog-group-included-details">Included details</h3>
+                  <label className="catalog-filter-field" htmlFor="select-card-email-filter">Email available
+                    <select id="select-card-email-filter" value={draftCatalogFilters.email} onChange={(event) => updateDraftFilter('email', event.target.value as CatalogPresenceFilter)} data-testid="select-card-email-filter">
+                      <option value="all">Any</option><option value="yes">Included</option><option value="no">Not included</option>
+                    </select>
+                  </label>
+                  <label className="catalog-filter-field" htmlFor="select-card-phone-filter">Phone available
+                    <select id="select-card-phone-filter" value={draftCatalogFilters.phone} onChange={(event) => updateDraftFilter('phone', event.target.value as CatalogPresenceFilter)} data-testid="select-card-phone-filter">
+                      <option value="all">Any</option><option value="yes">Included</option><option value="no">Not included</option>
+                    </select>
+                  </label>
+                  <p className="catalog-filter-privacy-note"><LockKeyhole aria-hidden="true" /> Filters only use public listing details and availability indicators.</p>
+                </section>
               </div>
               <div className="catalog-filter-footer">
-                <button type="button" className="catalog-filter-apply" onClick={applyPriceFilter} data-testid="button-show-filter-results">
+                <button type="button" className="catalog-filter-reset" onClick={() => setDraftCatalogFilters(emptyCatalogFilters)} data-testid="button-reset-dialog-card-filters">Reset selections</button>
+                <button type="button" className="catalog-filter-apply" onClick={applyCatalogFilters} data-testid="button-show-filter-results">
                   Show {draftResultCount} result{draftResultCount === 1 ? '' : 's'}
                 </button>
               </div>
@@ -327,7 +425,7 @@ export function BuyCardsPage() {
         </div>
         <div className="gift-catalog-results" role="status" data-testid="text-card-catalog-results">
           Showing <strong>{filteredProducts.length}</strong> of {products.length} listings
-          {(normalizedSearch || baseId !== 'all' || priceFilter !== 'all') && <button type="button" onClick={resetFilters} data-testid="button-clear-card-filters"><RotateCcw /> Clear filters</button>}
+          {activeFilterCount > 0 && <button type="button" onClick={resetFilters} data-testid="button-clear-card-filters"><RotateCcw /> Clear filters</button>}
         </div>
         {filteredProducts.length === 0 ? <div className="gift-empty gift-filter-empty" data-testid="empty-filtered-card-catalog"><Search /><h2>No matching listings</h2><p>Try changing the search text or filters.</p><button type="button" className="gift-primary-link" onClick={resetFilters} data-testid="button-reset-card-filters">Reset filters <RotateCcw /></button></div>
           : <div className="gift-catalog-table-wrap" role="region" aria-label="Card listings" tabIndex={0}>

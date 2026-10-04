@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowDownToLine, CalendarDays, CheckCircle2, CircleAlert, Clock3, Download,
-  ExternalLink, FileText, Megaphone, RefreshCw, ShieldCheck, TrendingUp, WalletCards,
+  ArrowDownToLine, CalendarDays, CheckCircle2, CircleAlert, ClipboardList, Clock3, CreditCard, Download,
+  ExternalLink, FileText, Megaphone, MessageSquare, Plus, RefreshCw, ShieldCheck, TrendingUp, WalletCards,
 } from 'lucide-react';
 import {
   getGetAnnouncementsQueryKey, getGetMyDepositsQueryKey, useGetAnnouncements,
@@ -160,16 +160,17 @@ export function DashboardWorkspacePage() {
           </div>
         </header>
 
-        <section className="balance-feature">
-          <div className="balance-feature-copy"><div className="section-kicker">Available balance</div>
+        <section className="balance-feature" aria-labelledby="dashboard-balance-title">
+          <div className="balance-feature-copy"><div className="balance-feature-label" id="dashboard-balance-title">Available balance</div>
             {loading ? <div className="balance-skeleton skeleton" /> : depositError ? <div className="balance-failed"><CircleAlert aria-hidden="true" /> Balance unavailable</div> : <strong className="balance-amount" data-testid="text-member-balance">{money(balance ?? 0)}</strong>}
-            <span className="balance-caption">Current account balance</span>
+            <span className="balance-caption">Account overview · orders, deposits, and spend</span>
           </div>
-          <div className="balance-feature-mark"><WalletCards aria-hidden="true" /></div>
-          <Link href="/my-deposits" className="balance-history-link" data-testid="link-balance-history">View deposit history <ExternalLink aria-hidden="true" /></Link>
-          <div className="balance-rule" />
-          <div className="balance-metric"><span>Records in range</span><strong>{loading ? '—' : filteredDeposits.length}</strong></div>
-          <div className="balance-metric"><span>Confirmed in range</span><strong>{loading ? '—' : money(filteredDeposits.filter((d) => d.status === 'confirmed').reduce((sum, d) => sum + d.amountCents, 0))}</strong></div>
+          <nav className="balance-feature-actions" aria-label="Account shortcuts">
+            <Link href="/deposits" className="balance-feature-action balance-feature-action-primary" data-testid="link-dashboard-deposit"><Plus aria-hidden="true" />Deposit</Link>
+            <Link href="/buy-cards" className="balance-feature-action" data-testid="link-dashboard-buy-cards"><CreditCard aria-hidden="true" />Buy cards</Link>
+            <Link href="/buy-logs" className="balance-feature-action" data-testid="link-dashboard-buy-logs"><ClipboardList aria-hidden="true" />Buy logs</Link>
+            <Link href="/support/tickets" className="balance-feature-action" data-testid="link-dashboard-support"><MessageSquare aria-hidden="true" />Support</Link>
+          </nav>
         </section>
 
         <section className="analytics-toolbar" aria-label="Analytics controls">
