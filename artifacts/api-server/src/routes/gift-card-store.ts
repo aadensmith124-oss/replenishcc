@@ -16,6 +16,7 @@ import {
   PurchaseGiftCardResponse,
   UpdateAdminGiftCardProductMetadataBody,
   UpdateAdminGiftCardProductMetadataParams,
+  type GiftCardPublicLocation,
 } from "@workspace/api-zod";
 import {
   accountLedgerTable,
@@ -54,6 +55,20 @@ async function listProducts(includeStockEligibility = false) {
       faceValueCents: giftCardProductsTable.faceValueCents,
       priceCents: giftCardProductsTable.priceCents,
       availableCount,
+      availableCardLocations: sql<GiftCardPublicLocation[]>`
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'address', COALESCE(${giftCardInventoryTable.publicAddress}, ${giftCardProductsTable.address}),
+              'city', COALESCE(${giftCardInventoryTable.publicCity}, ${giftCardProductsTable.city}),
+              'state', COALESCE(${giftCardInventoryTable.publicState}, ${giftCardProductsTable.state}),
+              'regionZip', COALESCE(${giftCardInventoryTable.publicRegionZip}, ${giftCardProductsTable.regionZip})
+            )
+            ORDER BY ${giftCardInventoryTable.createdAt}, ${giftCardInventoryTable.id}
+          ) FILTER (WHERE ${giftCardInventoryTable.id} IS NOT NULL),
+          '[]'::json
+        )
+      `,
       hasEmail: sql<boolean>`coalesce(bool_or(${giftCardInventoryTable.hasEmail}), false)`,
       hasPhone: sql<boolean>`coalesce(bool_or(${giftCardInventoryTable.hasPhone}), false)`,
       createdAt: giftCardProductsTable.createdAt,
@@ -219,6 +234,7 @@ router.get("/orders/gift-cards", async (req, res): Promise<void> => {
         .select({
           id: giftCardProductsTable.id,
           address: giftCardProductsTable.address,
+          city: giftCardProductsTable.city,
           state: giftCardProductsTable.state,
           regionZip: giftCardProductsTable.regionZip,
         })
@@ -242,40 +258,41 @@ router.get("/orders/gift-cards", async (req, res): Promise<void> => {
         )
         .orderBy(giftCardInventoryTable.createdAt)
     : [];
-  const cardsByOrder = new Map<string, GiftCardCredential[]>();
+  const cardsByOrder = new Map<string, Array<GiftCardCredential & {
+    publicLocation: GiftCardPublicLocation;
+  }>>();
   for (const item of inventory) {
     if (!item.orderId) continue;
+    const baseLocation = productLocationsById.get(item.productId);
+    if (!baseLocation) {
+      throw new Error(`Public location metadata missing for gift-card inventory ${item.id}.`);
+    }
     const cards = cardsByOrder.get(item.orderId) ?? [];
-    cards.push(decryptGiftCardCredential(item));
+    cards.push({
+      ...decryptGiftCardCredential(item),
+      publicLocation: {
+        address: item.publicAddress ?? baseLocation.address,
+        city: item.publicCity ?? baseLocation.city,
+        state: item.publicState ?? baseLocation.state,
+        regionZip: item.publicRegionZip ?? baseLocation.regionZip,
+      },
+    });
     cardsByOrder.set(item.orderId, cards);
   }
 
   res.json(
     GetMyGiftCardOrdersResponse.parse({
       orders: orders.map((order) => ({
-        ...(() => {
-          const publicLocation = productLocationsById.get(order.productId);
-          if (!publicLocation) {
-            throw new Error(`Public location metadata missing for gift-card order ${order.id}.`);
-          }
-          return {
-            id: order.id,
-            productId: order.productId,
-            productName: order.productName,
-            description: order.description,
-            publicLocation: {
-              address: publicLocation.address,
-              state: publicLocation.state,
-              regionZip: publicLocation.regionZip,
-            },
-            faceValueCents: order.faceValueCents,
-            quantity: order.quantity,
-            unitPriceCents: order.unitPriceCents,
-            totalCents: order.totalCents,
-            deliveredCards: cardsByOrder.get(order.id) ?? [],
-            createdAt: order.createdAt.toISOString(),
-          };
-        })(),
+        id: order.id,
+        productId: order.productId,
+        productName: order.productName,
+        description: order.description,
+        faceValueCents: order.faceValueCents,
+        quantity: order.quantity,
+        unitPriceCents: order.unitPriceCents,
+        totalCents: order.totalCents,
+        deliveredCards: cardsByOrder.get(order.id) ?? [],
+        createdAt: order.createdAt.toISOString(),
       })),
     }),
   );
@@ -797,14 +814,26 @@ router.post(
       return;
     }
 
-    const address = parsed.data.address?.trim() ?? null;
-    const state = parsed.data.state?.trim() ?? null;
-    const city = parsed.data.city?.trim() ?? null;
-    const redemptionRegionZip = parsed.data.redemptionRegionZip ?? null;
-    const values = credentials.map((credential) => ({
+    const defaultLocation = {
+      address: parsed.data.address?.trim() || null,
+      state: parsed.data.state?.trim() || null,
+      city: parsed.data.city?.trim() || null,
+      regionZip: parsed.data.redemptionRegionZip ?? null,
+    };
+    const cardLocations = parsed.data.cards.map((card) => ({
+      address: card.publicLocation?.address?.trim() || defaultLocation.address,
+      city: card.publicLocation?.city?.trim() || defaultLocation.city,
+      state: card.publicLocation?.state?.trim() || defaultLocation.state,
+      regionZip: card.publicLocation?.regionZip ?? defaultLocation.regionZip,
+    }));
+    const values = credentials.map((credential, index) => ({
       productId: params.data.productId,
       hasEmail: Boolean(credential.email),
       hasPhone: Boolean(credential.phone),
+      publicAddress: cardLocations[index]?.address ?? null,
+      publicCity: cardLocations[index]?.city ?? null,
+      publicState: cardLocations[index]?.state ?? null,
+      publicRegionZip: cardLocations[index]?.regionZip ?? null,
       ...encryptGiftCardCredential(credential),
     }));
     let stockResult:
@@ -887,18 +916,10 @@ router.post(
       );
     }
     const metadataChanges: {
-      address?: string;
-      state?: string;
-      city?: string;
-      regionZip?: string;
       cardType?: string;
       issuer?: string;
       brand?: string;
     } = {};
-    if (address) metadataChanges.address = address;
-    if (state) metadataChanges.state = state;
-    if (city) metadataChanges.city = city;
-    if (redemptionRegionZip) metadataChanges.regionZip = redemptionRegionZip;
     if (binLookup.kind === "found") {
       if (binLookup.metadata.cardType) {
         metadataChanges.cardType = binLookup.metadata.cardType;
@@ -928,9 +949,10 @@ router.post(
         addedCount: values.length,
         availableCount: stockResult.availableCount,
         binMetadataApplied: metadataSaved && binLookup.kind === "found",
-        redemptionZipApplied: metadataSaved && redemptionRegionZip !== null,
-        locationMetadataApplied:
-          metadataSaved && Boolean(address || state || city),
+        redemptionZipApplied: cardLocations.some((location) => location.regionZip !== null),
+        locationMetadataApplied: cardLocations.some(
+          (location) => Boolean(location.address || location.state || location.city),
+        ),
       }),
     );
   },
