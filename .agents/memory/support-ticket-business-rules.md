@@ -3,8 +3,8 @@ name: Support ticket business rules
 description: ReplenishCC's current order, refund, and replacement boundaries for support tickets.
 ---
 
-There is no purchase/order source yet; orders are planned for a later addition. Support refund decisions currently credit the member's ReplenishCC account balance. Replacements are not offered.
+Support purchase-ticket order IDs must match an order owned by the ticket member and the ticket category. Admins should be able to confirm the match, copy the ID, and review order details before deciding whether to credit the member's ReplenishCC balance. Replacements are not offered.
 
-**Why:** The user confirmed these operating rules while scoping real-data support tickets.
+**Why:** The user requested verified order references and an admin review path before any balance refund.
 
-**How to apply:** Keep order references optional and explicitly unverified until a real order system exists. Do not offer or record replacement actions. Record approved refunds as balance ledger credits with an audit trail.
+**How to apply:** Resolve purchase references server-side using both member ownership and ticket category; never trust client-supplied order summaries. Keep refunds as auditable balance credits, and do not offer or record replacement actions.
