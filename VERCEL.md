@@ -1,26 +1,31 @@
 # Vercel deployment
 
-This repository is configured as one Vercel project: Vite serves the web app
-and a Node.js Function serves the existing Express API at `/api/*`. This keeps
-browser requests, authentication cookies, and same-origin checks on one host.
+This repository is configured as one Vercel project with three independently
+built services. The ReplenishCC web app and API share the public project domain,
+so browser requests, authentication cookies, and same-origin checks stay on one
+host. The component mockup sandbox is configured as internal-only.
 
-## Vercel project settings
+## Services and routing
 
-- Connect the repository at its root (do not set a monorepo subdirectory).
-- Use the **Other** framework preset. `vercel.json` supplies the install command,
-  build command, static output directory, and SPA fallback.
-- Keep the default Node.js runtime. The `api/[...path].ts` function forwards API
-  requests to the existing Express app.
-- Add the environment variables below to the Vercel Production environment
-  before the first production deployment. Add Preview values separately if
-  preview deployments should connect to a database.
+- `api-server` (`artifacts/api-server`) — Express; public requests under
+  `/api/*`. The service receives the original `/api/...` path, which matches
+  the existing Express router.
+- `replenishcc-auth` (`artifacts/replenishcc-auth`) — Vite; public fallback
+  for all other paths, including client-side routes.
+- `mockup-sandbox` (`artifacts/mockup-sandbox`) — Vite; internal-only, with no
+  public rewrite. It is a component-preview tool and no production service calls
+  it, so no service binding is needed.
 
-The build runs the workspace typechecks and builds only the web app. Vercel
-builds the API function from its TypeScript entry point.
+Connect the Git repository at its root so the service roots can resolve the
+shared pnpm workspace. Vercel Services is currently documented as a beta
+feature. The API service uses its Express TypeScript entry point; the Vite
+services build to `dist/public` and `dist` respectively and use service-level
+SPA fallbacks.
 
 ## Runtime environment
 
-Required:
+Set runtime variables in the Vercel project's environment settings before
+deploying. The API service requires:
 
 - `DATABASE_URL` — A PostgreSQL connection string reachable from Vercel. Replit
   documents that its database can be reached by external PostgreSQL clients;
@@ -36,8 +41,8 @@ Optional, depending on enabled features:
 
 - `NOWPAYMENTS_API_KEY` and `NOWPAYMENTS_IPN_SECRET` — Required for
   NOWPayments crypto deposits.
-- `DEPOSIT_ADMIN_EMAILS` — Comma-separated email addresses allowed to manage
-  deposits.
+- `DEPOSIT_ADMIN_EMAILS` — Comma-separated email addresses allowed to use the
+  app's administrator routes. Preserve existing entries when adding an admin.
 - `LOG_LEVEL` — Overrides the API logger level.
 
 Vercel production password recovery is not enabled in the current code: the
@@ -53,13 +58,17 @@ available until that work is complete.
    data or run schema changes.
 2. Set `SESSION_SECRET` to the existing value if the deployment will read
    existing encrypted gift-card or license-key stock.
-3. Deploy a preview and check `/api/healthz` returns `{"status":"ok"}`, then
+3. Set `DEPOSIT_ADMIN_EMAILS` in Vercel Production to the intended
+   comma-separated administrator list.
+4. Deploy a preview and check `/api/healthz` returns `{"status":"ok"}`, then
    verify sign-in, balance/deposit flows, and any payment webhook configuration
    against the intended environment.
-4. Complete and test production email delivery before enabling account recovery.
+5. Complete and test production email delivery before enabling account recovery.
 
 For Replit's external PostgreSQL connection details, see
 [Connection details](https://docs.replit.com/features/data-and-storage/connection-details).
-For Vercel's Node.js Functions and Express support, see
-[Node.js runtime](https://vercel.com/docs/functions/runtimes/node-js) and
+For Vercel Services routing and configuration, see
+[Services](https://vercel.com/docs/services),
+[Services routing](https://vercel.com/docs/services/routing),
+[Service configuration](https://vercel.com/docs/services/config-reference), and
 [Express on Vercel](https://vercel.com/docs/frameworks/backend/express).
