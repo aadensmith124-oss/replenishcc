@@ -403,7 +403,15 @@ router.post("/orders/gift-cards", async (req, res): Promise<void> => {
         quantity: order.quantity,
         unitPriceCents: order.unitPriceCents,
         totalCents: order.totalCents,
-        deliveredCards: stock.map((item) => decryptGiftCardCredential(item)),
+        deliveredCards: stock.map((item) => ({
+          ...decryptGiftCardCredential(item),
+          publicLocation: {
+            address: item.publicAddress ?? product.address,
+            city: item.publicCity ?? product.city,
+            state: item.publicState ?? product.state,
+            regionZip: item.publicRegionZip ?? product.regionZip,
+          },
+        })),
         createdAt: order.createdAt.toISOString(),
       },
     };
