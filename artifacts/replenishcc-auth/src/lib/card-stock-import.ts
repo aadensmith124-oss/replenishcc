@@ -40,7 +40,7 @@ type RawCard = {
 
 const aliases: [CardField, string[]][] = [
   ['cardNumber', ['card number', 'card no', 'card #', 'cardnum', 'card', 'cc number', 'ccnum', 'pan', 'primary account number', 'account number', 'gift card number', 'giftcardno', 'number']],
-  ['expiration', ['expiration', 'expiration date', 'expiry', 'expiry date', 'exp', 'exp date', 'valid thru', 'valid until', 'month year']],
+  ['expiration', ['expiration', 'expiration date', 'expiry', 'expiry date', 'exp', 'exp date', 'valid thru', 'valid until', 'month year', 'card expiry', 'card expiration', 'mm/yy', 'mm/yyyy', 'exp date mm yy', 'expiry date mm yy', 'expiration date mm yy']],
   ['expirationMonth', ['expiration month', 'expiry month', 'exp month', 'expmonth', 'month']],
   ['expirationYear', ['expiration year', 'expiry year', 'exp year', 'expyear', 'year']],
   ['securityCode', ['security code', 'security number', 'cvv', 'cvc', 'cvn', 'cv2', 'csc', 'verification code']],
@@ -87,19 +87,37 @@ function setRawValue(raw: RawCard, field: CardField, value: unknown): void {
 
 function normalizeExpiration(value: string): string {
   const text = value.trim().replace(/\s+/g, '');
+  const fullMonthFirst = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})$/.exec(text);
+  if (fullMonthFirst) {
+    const first = Number(fullMonthFirst[1]);
+    const second = Number(fullMonthFirst[2]);
+    if (first >= 1 && first <= 12) {
+      return `${String(first).padStart(2, '0')}/${fullMonthFirst[3]}`;
+    }
+    if (second >= 1 && second <= 12) {
+      return `${String(second).padStart(2, '0')}/${fullMonthFirst[3]}`;
+    }
+  }
   const monthFirst = /^(0?[1-9]|1[0-2])[/.-](\d{2}|\d{4})$/.exec(text);
   if (monthFirst) return `${monthFirst[1]!.padStart(2, '0')}/${monthFirst[2]}`;
   const compactMonthFirst = /^(0[1-9]|1[0-2])(\d{2}|\d{4})$/.exec(text);
   if (compactMonthFirst) return `${compactMonthFirst[1]}/${compactMonthFirst[2]}`;
-  const yearFirst = /^(\d{4})[-/](0[1-9]|1[0-2])(?:[-/]\d{1,2})?$/.exec(text);
+  const yearFirst = /^(\d{4})[-/.](0?[1-9]|1[0-2])(?:[-/.]\d{1,2})?(?:[T ].*)?$/i.exec(text);
   if (yearFirst) return `${yearFirst[2]}/${yearFirst[1]}`;
+  const months = 'jan feb mar apr may jun jul aug sep oct nov dec'.split(' ');
+  const namedMonthFirst = /^(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)[,\s.-]+(?:(?:\d{1,2})[,\s.-]+)?(\d{2}|\d{4})$/i.exec(value.trim());
+  const namedMonthLast = /^\d{1,2}[,\s.-]+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)[,\s.-]+(\d{2}|\d{4})$/i.exec(value.trim());
+  const namedMonth = namedMonthFirst ?? namedMonthLast;
+  if (namedMonth) {
+    const monthPrefix = namedMonth[1]!.slice(0, 3).toLocaleLowerCase();
+    const monthIndex = months.indexOf(monthPrefix);
+    if (monthIndex >= 0) return `${String(monthIndex + 1).padStart(2, '0')}/${namedMonth[2]}`;
+  }
   return text.replace('-', '/');
 }
 
 function looksLikeExpiration(value: string): boolean {
-  return /^(?:0?[1-9]|1[0-2])[/.-](?:\d{2}|\d{4})$/.test(value)
-    || /^(?:0[1-9]|1[0-2])(?:\d{2}|\d{4})$/.test(value)
-    || /^\d{4}[-/](?:0[1-9]|1[0-2])(?:[-/]\d{1,2})?$/.test(value);
+  return /^(?:0[1-9]|1[0-2])\/(?:\d{2}|\d{4})$/.test(normalizeExpiration(value));
 }
 
 function digitsOnly(value: string): string {
@@ -267,15 +285,42 @@ function rawFromColumns(
     return /^[\d\s().-]+$/.test(value) && digits.length >= 13 && digits.length <= 19;
   });
   const expirationIndex = values.findIndex(looksLikeExpiration);
+  let separateExpirationIndexes: [number, number] | null = null;
+  if (expirationIndex < 0) {
+    const monthPattern = /^(?:0?[1-9]|1[0-2])$/;
+    const yearPattern = /^(?:\d{2}|20\d{2})$/;
+    for (let index = 0; index < values.length - 1; index += 1) {
+      if (index === numberIndex || index + 1 === numberIndex) continue;
+      if (monthPattern.test(values[index]!) && yearPattern.test(values[index + 1]!)) {
+        separateExpirationIndexes = [index, index + 1];
+        break;
+      }
+      if (yearPattern.test(values[index]!) && monthPattern.test(values[index + 1]!)) {
+        separateExpirationIndexes = [index + 1, index];
+        break;
+      }
+    }
+  }
+  const separateExpirationIndexSet = new Set(separateExpirationIndexes ?? []);
   const securityIndex = values.findIndex((value, index) =>
     index !== numberIndex
     && index !== expirationIndex
+    && !separateExpirationIndexSet.has(index)
     && /^\d{3,4}$/.test(value),
   );
-  const detectedIndexes = new Set([numberIndex, expirationIndex, securityIndex].filter((index) => index >= 0));
+  const detectedIndexes = new Set([
+    numberIndex,
+    expirationIndex,
+    securityIndex,
+    ...(separateExpirationIndexes ?? []),
+  ].filter((index) => index >= 0));
 
   if (numberIndex >= 0) setRawValue(raw, 'cardNumber', values[numberIndex]);
   if (expirationIndex >= 0) setRawValue(raw, 'expiration', values[expirationIndex]);
+  else if (separateExpirationIndexes) {
+    const [monthIndex, yearIndex] = separateExpirationIndexes;
+    setRawValue(raw, 'expiration', `${values[monthIndex]}/${values[yearIndex]}`);
+  }
   if (securityIndex >= 0) setRawValue(raw, 'securityCode', values[securityIndex]);
 
   // Preserve the original layout for optional fields after detecting the required values.
