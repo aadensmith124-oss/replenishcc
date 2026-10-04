@@ -207,8 +207,7 @@ router.get("/orders/gift-cards", async (req, res): Promise<void> => {
     .select()
     .from(giftCardOrdersTable)
     .where(eq(giftCardOrdersTable.userId, user.id))
-    .orderBy(desc(giftCardOrdersTable.createdAt))
-    .limit(100);
+    .orderBy(desc(giftCardOrdersTable.createdAt));
 
   const orderIds = orders.map((order) => order.id);
   const inventory = orderIds.length

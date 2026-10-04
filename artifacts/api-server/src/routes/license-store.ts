@@ -85,8 +85,7 @@ router.get("/orders/license-keys", async (req, res): Promise<void> => {
     .select()
     .from(licenseOrdersTable)
     .where(eq(licenseOrdersTable.userId, user.id))
-    .orderBy(desc(licenseOrdersTable.createdAt))
-    .limit(100);
+    .orderBy(desc(licenseOrdersTable.createdAt));
 
   const orderIds = orders.map((order) => order.id);
   const inventory = orderIds.length
