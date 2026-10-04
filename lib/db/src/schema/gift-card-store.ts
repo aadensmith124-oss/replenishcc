@@ -82,6 +82,10 @@ export const giftCardInventoryTable = pgTable(
     credentialHash: varchar("credential_hash", { length: 64 }).notNull(),
     hasEmail: boolean("has_email").notNull().default(false),
     hasPhone: boolean("has_phone").notNull().default(false),
+    publicAddress: varchar("public_address", { length: 255 }),
+    publicState: varchar("public_state", { length: 80 }),
+    publicCity: varchar("public_city", { length: 120 }),
+    publicRegionZip: varchar("public_region_zip", { length: 10 }),
     status: varchar("status", { length: 16 }).notNull().default("available"),
     orderId: uuid("order_id").references(() => giftCardOrdersTable.id, {
       onDelete: "cascade",

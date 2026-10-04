@@ -1917,10 +1917,13 @@ components:
         faceValueCents: { type: integer }
         priceCents: { type: integer }
         availableCount: { type: integer }
+        availableCardLocations:
+          type: array
+          items: { $ref: "#/components/schemas/GiftCardPublicLocation" }
         hasEmail: { type: boolean }
         hasPhone: { type: boolean }
         createdAt: { type: string, format: date-time }
-      required: [id, name, description, address, state, city, regionZip, cardType, issuer, brand, faceValueCents, priceCents, availableCount, hasEmail, hasPhone, createdAt]
+      required: [id, name, description, address, state, city, regionZip, cardType, issuer, brand, faceValueCents, priceCents, availableCount, availableCardLocations, hasEmail, hasPhone, createdAt]
     GiftCardProductsResponse:
       type: object
       properties:
@@ -1982,6 +1985,13 @@ components:
         issuer: { type: string, minLength: 1, maxLength: 80 }
         brand: { type: string, minLength: 1, maxLength: 80 }
       required: [regionZip, address, state, city, cardType, issuer, brand]
+    GiftCardPublicLocationInput:
+      type: object
+      properties:
+        address: { type: string, maxLength: 255 }
+        city: { type: string, maxLength: 120 }
+        state: { type: string, maxLength: 80 }
+        regionZip: { type: ["string", "null"], maxLength: 10, pattern: "^[0-9]{5}(-[0-9]{4})?$" }
     GiftCardCredentialInput:
       type: object
       properties:
@@ -1990,6 +2000,7 @@ components:
         securityCode: { type: string, minLength: 3, maxLength: 4, pattern: "^[0-9]+$" }
         email: { type: ["string", "null"], format: email, maxLength: 320 }
         phone: { type: ["string", "null"], maxLength: 40 }
+        publicLocation: { $ref: "#/components/schemas/GiftCardPublicLocationInput" }
       required: [cardNumber, expiration, securityCode]
     AddGiftCardStockInput:
       type: object
@@ -2021,6 +2032,7 @@ components:
         securityCode: { type: string }
         email: { type: ["string", "null"], format: email, maxLength: 320 }
         phone: { type: ["string", "null"], maxLength: 40 }
+        publicLocation: { $ref: "#/components/schemas/GiftCardPublicLocation" }
       required: [cardNumber, expiration, securityCode]
     PurchaseGiftCardInput:
       type: object
@@ -2059,9 +2071,10 @@ components:
       type: object
       properties:
         address: { type: string }
+        city: { type: string }
         state: { type: string }
         regionZip: { type: ["string", "null"], maxLength: 10 }
-      required: [address, state, regionZip]
+      required: [address, city, state, regionZip]
     GiftCardOrder:
       type: object
       properties:
@@ -2069,7 +2082,6 @@ components:
         productId: { type: string, format: uuid }
         productName: { type: string }
         description: { type: string }
-        publicLocation: { $ref: "#/components/schemas/GiftCardPublicLocation" }
         faceValueCents: { type: integer }
         quantity: { type: integer }
         unitPriceCents: { type: integer }
