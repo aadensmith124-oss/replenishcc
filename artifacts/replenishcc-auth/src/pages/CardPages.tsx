@@ -24,6 +24,7 @@ const emailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
 
 function detectStockContactFields(line: string) {
   const extraFields = line.split('|').slice(3).map((field) => field.trim());
+  const redemptionZip = detectRedemptionRegionZip(line);
   let email: string | null = null;
   let phone: string | null = null;
   let pin: string | null = null;
@@ -53,15 +54,33 @@ function detectStockContactFields(line: string) {
     if (phoneCandidate) remaining = remaining.replace(phoneCandidate, ' ');
 
     remaining = remaining.replace(/\b(?:email|e-mail|phone|mobile|tel|telephone|pin)\b\s*[:=]?\s*/gi, ' ').trim();
-    if (!pin && /^\d{3,16}$/.test(remaining)) pin = remaining;
+    if (!pin && /^\d{3,16}$/.test(remaining) && !(index > 0 && remaining === redemptionZip)) pin = remaining;
   }
 
   return { email, phone, pin };
 }
 
 function detectRedemptionRegionZip(text: string): string | null {
-  const match = /\bredemption(?:\s+region)?\s+zip\s*[:=]\s*(\d{5}(?:-\d{4})?)\b/i.exec(text);
-  return match?.[1] ?? null;
+  const optionalFields = text.split('|').slice(3);
+  for (const [index, rawField] of optionalFields.entries()) {
+    const field = rawField.trim();
+    if (!field || /\b(?:billing|cardholder|address|home|shipping|mailing)\b/i.test(field)) continue;
+
+    const labelledRedemptionZip = /\b(?:redemption(?:\s+region)?|region)\s+zip\s*[:=]\s*(\d{5})\b/i.exec(field);
+    if (labelledRedemptionZip?.[1]) return labelledRedemptionZip[1];
+    if (/\bpin\b/i.test(field) || /\b(?:email|e-mail|phone|mobile|tel|telephone)\b/i.test(field) || emailPattern.test(field)) continue;
+    if (index === 0 && /^\d{3,16}$/.test(field)) continue;
+
+    const phoneCandidates = field.match(/\+?\d[\d\s().-]{7,}\d/g) ?? [];
+    if (phoneCandidates.some((candidate) => {
+      const digits = candidate.replace(/\D/g, '').length;
+      return digits >= 10 && digits <= 15;
+    })) continue;
+
+    const match = /\b\d{5}\b/.exec(field);
+    if (match?.[0]) return match[0];
+  }
+  return null;
 }
 
 function ContactIndicator({ available, label }: { available: boolean; label: string }) {
@@ -419,7 +438,7 @@ export function AdminCardInventoryPage() {
     <header className="gift-admin-heading"><div><div className="gift-eyebrow">Restricted operations · inventory only</div><h2>Card inventory</h2><p>Manage listings and encrypted stock intake. Credentials are intentionally excluded from this table.</p></div><div className="gift-admin-stat"><small>Available cards</small><strong data-testid="text-admin-total-stock">{products.isLoading ? '—' : totalStock}</strong></div></header>
     {feedback && <div className="gift-notice" role="status" data-testid="status-admin-card-action">{feedback}<button onClick={() => setFeedback('')} aria-label="Dismiss message" data-testid="button-dismiss-admin-message">×</button></div>}
     <div className="gift-admin-forms">
-      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>01</span><div><h3>Create a listing</h3><p>Card type, issuer, and brand can be filled from public BIN data after stock upload. ZIP is auto-filled only from a labeled redemption ZIP.</p></div></div>
+      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>01</span><div><h3>Create a listing</h3><p>Card type, issuer, and brand can be filled from public BIN data after stock upload. A 5-digit redemption ZIP is detected from the extra stock fields.</p></div></div>
         <Form {...form}><form onSubmit={form.handleSubmit((values) => create.mutate({ data: { name: values.name.trim(), description: values.description.trim(), regionZip: values.regionZip || null, cardType: values.cardType.trim(), issuer: values.issuer.trim(), brand: values.brand.trim(), faceValueCents: Math.round(values.faceValue * 100), priceCents: Math.round(values.price * 100) } }, { onSuccess: () => { form.reset(); invalidate(); setFeedback('Listing created. Add one verified card to make it available to members.'); }, onError: () => setFeedback('Listing could not be created. Review the values and try again.') }))} className="gift-form">
           <FormField control={form.control} name="name" render={({ field }) => <FormItem><FormLabel>Listing name</FormLabel><FormControl><Input {...field} placeholder="Gift card · $50" data-testid="input-admin-card-name" /></FormControl><FormMessage /></FormItem>} />
           <FormField control={form.control} name="description" render={({ field }) => <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} placeholder="Short member-facing details" data-testid="input-admin-card-description" /></FormControl><FormMessage /></FormItem>} />
@@ -431,7 +450,7 @@ export function AdminCardInventoryPage() {
           <button className="gift-admin-submit" disabled={create.isPending} data-testid="button-create-card-listing">{create.isPending ? 'Creating…' : 'Create listing'} <ArrowRight /></button>
         </form></Form>
       </section>
-      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload verified stock</h3><p>One card per listing: number | expiration | security code | optional PIN | optional email or phone. Add “Redemption ZIP: 90210” only for a product’s redemption region.</p></div></div>
+      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload verified stock</h3><p>One card per listing: number | expiration | security code | optional PIN | optional email or phone. A 5-digit number in the extra fields auto-fills public redemption ZIP; place it after PIN/contact values.</p></div></div>
         <Form {...stockForm}><form onSubmit={stockForm.handleSubmit((values) => {
           const lines = values.cards.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
           if (lines.length !== 1) { setFeedback('Upload exactly one card per listing. Create a new listing for each card.'); return; }
@@ -449,11 +468,11 @@ export function AdminCardInventoryPage() {
           });
           if (!cards.length || cards.some((card) => !card.cardNumber || !card.expiration || !card.securityCode)) { setFeedback('Each line must include card number, expiration, and security code separated by |.'); return; }
           const redemptionRegionZip = detectRedemptionRegionZip(values.cards);
-          addStock.mutate({ productId: values.productId, data: { cards, ...(redemptionRegionZip ? { redemptionRegionZip } : {}) } }, { onSuccess: (result) => { stockForm.reset(); invalidate(); setFeedback(`${result.addedCount} card accepted. ${result.binMetadataApplied ? 'BIN metadata auto-filled.' : 'BIN metadata was unavailable; enter any missing values manually.'} ${result.redemptionZipApplied ? 'The labeled redemption ZIP was saved.' : 'No labeled redemption ZIP found; the existing ZIP was kept.'}`); }, onError: () => setFeedback('Stock upload was rejected. Check each line and try again.') });
+          addStock.mutate({ productId: values.productId, data: { cards, ...(redemptionRegionZip ? { redemptionRegionZip } : {}) } }, { onSuccess: (result) => { stockForm.reset(); invalidate(); setFeedback(`${result.addedCount} card accepted. ${result.binMetadataApplied ? 'BIN metadata auto-filled.' : 'BIN metadata was unavailable; enter any missing values manually.'} ${result.redemptionZipApplied ? 'The detected redemption ZIP was saved.' : 'No 5-digit redemption ZIP detected; the existing ZIP was kept.'}`); }, onError: () => setFeedback('Stock upload was rejected. Check each line and try again.') });
         })} className="gift-form">
           <FormField control={stockForm.control} name="productId" render={({ field }) => <FormItem><FormLabel>Listing</FormLabel><FormControl><select {...field} data-testid="select-admin-stock-product"><option value="">Select a listing</option>{rows.map((product) => <option key={product.id} value={product.id} disabled={!product.canReceiveStock}>{product.name} · {product.canReceiveStock ? 'ready for one card' : 'stock already assigned'}</option>)}</select></FormControl><FormMessage /></FormItem>} />
           <FormField control={stockForm.control} name="cards" render={({ field }) => <FormItem><FormLabel>Card details</FormLabel><FormControl><Textarea {...field} rows={3} placeholder="card number | MM/YY | security code | optional PIN | email or phone" data-testid="input-admin-card-stock" /></FormControl><div className="gift-stock-detection" aria-live="polite"><span className={stockDetection.email ? 'is-detected' : ''}>{stockDetection.email ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Email {stockDetection.email ? 'detected' : 'not detected'}</span><span className={stockDetection.phone ? 'is-detected' : ''}>{stockDetection.phone ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Phone {stockDetection.phone ? 'detected' : 'not detected'}</span><span className={stockRedemptionZip ? 'is-detected' : ''}>{stockRedemptionZip ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Redemption ZIP {stockRedemptionZip ? `detected · ${stockRedemptionZip}` : 'not detected'}</span></div><FormMessage /></FormItem>} />
-          <div className="gift-upload-note"><LockKeyhole /> Binlist receives only the first 8 card digits after stock is accepted. Only a value labeled “Redemption ZIP” is saved to the listing; billing ZIP is never used.</div>
+          <div className="gift-upload-note"><LockKeyhole /> Binlist receives only the first 8 card digits after stock is accepted. ZIP detection skips the numeric PIN slot, contact fields, and text marked as billing/address data.</div>
           <div className="gift-upload-note"><LockKeyhole /> Stock is handled by the authorized service and stored encrypted. Details never appear in inventory rows.</div>
           <button className="gift-admin-submit" disabled={addStock.isPending || !rows.some((product) => product.canReceiveStock) || !selectedStockProduct?.canReceiveStock} data-testid="button-upload-card-stock">{addStock.isPending ? 'Uploading…' : 'Upload one encrypted card'} <ArrowRight /></button>
         </form></Form>
