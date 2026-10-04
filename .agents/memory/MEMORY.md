@@ -9,3 +9,4 @@
 - [Development API database environment](database-workflow-env.md) — The current custom `DATABASE_URL` is production/external; never run development schema pushes against it.
 - [TypeScript build-info cache](typescript-build-cache.md) — After dependency changes, rule out stale build info before editing source to fix contradictory type errors.
 - [Patch application verification](patch-application-verification.md) — Verify intended symbols and diffs after multi-hunk patches; success output alone is not enough.
+- [Tailwind v4 dialog centering](tailwind-v4-dialog-centering.md) — Custom-centered Radix dialogs must clear inherited `translate`, not only override `transform`.
