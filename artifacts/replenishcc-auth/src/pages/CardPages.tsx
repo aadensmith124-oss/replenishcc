@@ -465,17 +465,29 @@ export function BuyCardsPage() {
                 <td className="catalog-select-cell"><input type="checkbox" aria-label={`Select card ${cardNumber} from ${product.name}`} checked={isSelected} disabled={anotherCardFromBaseSelected || (selectedIds.length >= 50 && !isSelected)} onChange={() => toggleSelection({ product, card, cardNumber })} data-testid={`checkbox-select-card-${card.inventoryId}`} /></td>
                 <td><div className="gift-catalog-product"><div><strong data-testid={`text-gift-product-name-${product.id}-${card.inventoryId}`}>Card {cardNumber}</strong><small>{product.name}</small></div></div></td>
                 <td data-testid={`text-gift-card-bin-${card.inventoryId}`}>{card.bin || '—'}</td>
-                {visibleColumns.includes('brand') && <td data-testid={`text-gift-card-brand-${card.inventoryId}`}>{product.brand || '—'}</td>}
-                {visibleColumns.includes('cardType') && <td data-testid={`text-gift-card-type-${card.inventoryId}`}>{product.cardType || '—'}</td>}
-                {visibleColumns.includes('issuer') && <td data-testid={`text-gift-card-issuer-${card.inventoryId}`}>{product.issuer || '—'}</td>}
-                {visibleColumns.includes('city') && <td data-testid={`text-gift-city-${card.inventoryId}`}>{card.city || '—'}</td>}
-                {visibleColumns.includes('state') && <td data-testid={`text-gift-state-${card.inventoryId}`}>{card.state || '—'}</td>}
-                {visibleColumns.includes('regionZip') && <td data-testid={`text-gift-region-zip-${card.inventoryId}`}>{card.regionZip || '—'}</td>}
-                {visibleColumns.includes('price') && <td className="gift-catalog-price" data-testid={`text-gift-member-price-${card.inventoryId}`}>{money(product.priceCents)}</td>}
-                {visibleColumns.includes('actions') && <td className="catalog-actions-cell"><div className="gift-catalog-actions">
-                  <button className="gift-info-button" type="button" onClick={() => setInfoProductId(product.id)} data-testid={`button-info-card-${card.inventoryId}`}><Info /> Info</button>
-                  <button className="gift-purchase-button" type="button" disabled={purchase.isPending || bulkPurchase.isPending} onClick={() => purchaseOne(product.id, card.inventoryId)} aria-label={`Buy card ${cardNumber} from ${product.name}`} data-testid={`button-purchase-card-${card.inventoryId}`}>{purchase.isPending ? 'Working…' : 'Buy'} <ShoppingCart /></button>
-                </div></td>}
+                {visibleColumns.map((column) => {
+                  switch (column) {
+                    case 'brand':
+                      return <td key={column} data-testid={`text-gift-card-brand-${card.inventoryId}`}>{product.brand || '—'}</td>;
+                    case 'cardType':
+                      return <td key={column} data-testid={`text-gift-card-type-${card.inventoryId}`}>{product.cardType || '—'}</td>;
+                    case 'issuer':
+                      return <td key={column} data-testid={`text-gift-card-issuer-${card.inventoryId}`}>{product.issuer || '—'}</td>;
+                    case 'city':
+                      return <td key={column} data-testid={`text-gift-city-${card.inventoryId}`}>{card.city || '—'}</td>;
+                    case 'state':
+                      return <td key={column} data-testid={`text-gift-state-${card.inventoryId}`}>{card.state || '—'}</td>;
+                    case 'regionZip':
+                      return <td key={column} data-testid={`text-gift-region-zip-${card.inventoryId}`}>{card.regionZip || '—'}</td>;
+                    case 'price':
+                      return <td key={column} className="gift-catalog-price" data-testid={`text-gift-member-price-${card.inventoryId}`}>{money(product.priceCents)}</td>;
+                    case 'actions':
+                      return <td key={column} className="catalog-actions-cell"><div className="gift-catalog-actions">
+                        <button className="gift-info-button" type="button" onClick={() => setInfoProductId(product.id)} data-testid={`button-info-card-${card.inventoryId}`}><Info /> Info</button>
+                        <button className="gift-purchase-button" type="button" disabled={purchase.isPending || bulkPurchase.isPending} onClick={() => purchaseOne(product.id, card.inventoryId)} aria-label={`Buy card ${cardNumber} from ${product.name}`} data-testid={`button-purchase-card-${card.inventoryId}`}>{purchase.isPending ? 'Working…' : 'Buy'} <ShoppingCart /></button>
+                      </div></td>;
+                  }
+                })}
               </tr>;
               })}</tbody>
             </table>
