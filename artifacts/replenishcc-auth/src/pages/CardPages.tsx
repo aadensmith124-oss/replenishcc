@@ -8,7 +8,7 @@ import { ArrowRight, Check, ChevronRight, Clipboard, Columns3, CreditCard, Info,
 import {
   getGetAdminGiftCardProductsQueryKey, getGetGiftCardProductsQueryKey, getGetMyGiftCardOrdersQueryKey, getGetMyDepositsQueryKey,
   useAddAdminGiftCardStock, useCreateAdminGiftCardProduct, useDeleteAdminGiftCardProduct,
-  useGetAdminGiftCardProducts, useGetAuthMe, useGetGiftCardProducts, useGetMyGiftCardOrders, usePurchaseGiftCard, useUpdateAdminGiftCardProductRegionZip,
+  useGetAdminGiftCardProducts, useGetAuthMe, useGetGiftCardProducts, useGetMyGiftCardOrders, usePurchaseGiftCard, useUpdateAdminGiftCardProductMetadata,
   type AuthMeResponse,
   type GiftCardCredential,
 } from '@workspace/api-client-react';
@@ -24,21 +24,28 @@ const cardSchema = z.object({
   name: z.string().trim().min(1, 'Enter a listing name').max(100),
   description: z.string().max(1000),
   regionZip: z.string().trim().refine((value) => !value || /^\d{5}(?:-\d{4})?$/.test(value), 'Enter a 5-digit ZIP or ZIP+4'),
+  cardType: z.string().trim().min(1, 'Enter the card type').max(80),
+  issuer: z.string().trim().min(1, 'Enter the issuer').max(80),
+  brand: z.string().trim().min(1, 'Enter the card brand').max(80),
   faceValue: z.coerce.number().positive('Enter a positive denomination'),
   price: z.coerce.number().positive('Enter a positive price'),
 });
 type CardForm = z.infer<typeof cardSchema>;
 
-type CatalogColumn = 'description' | 'regionZip' | 'faceValue' | 'availability' | 'price';
+type CatalogColumn = 'description' | 'regionZip' | 'cardType' | 'issuer' | 'brand' | 'faceValue' | 'availability' | 'price';
 type CatalogPriceFilter = 'all' | 'under-25' | '25-50' | '50-100' | '100-plus';
 const catalogColumns: { id: CatalogColumn; label: string }[] = [
   { id: 'description', label: 'Description' },
   { id: 'regionZip', label: 'Region ZIP' },
+  { id: 'cardType', label: 'Card type' },
+  { id: 'issuer', label: 'Issuer' },
+  { id: 'brand', label: 'Brand' },
   { id: 'faceValue', label: 'Face value' },
   { id: 'availability', label: 'Available stock' },
   { id: 'price', label: 'Member price' },
 ];
-const catalogColumnStorageKey = 'replenishcc-card-catalog-columns-v2';
+const catalogColumnStorageKey = 'replenishcc-card-catalog-columns-v3';
+const previousCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v2';
 const legacyCatalogColumnStorageKey = 'replenishcc-card-catalog-columns';
 const defaultCatalogColumns = catalogColumns.map((column) => column.id);
 
@@ -46,12 +53,17 @@ function readCatalogColumns(): CatalogColumn[] {
   if (typeof window === 'undefined') return defaultCatalogColumns;
   try {
     const stored = window.localStorage.getItem(catalogColumnStorageKey);
-    const migratingLegacyPreferences = stored === null;
-    const preferenceValue = stored ?? window.localStorage.getItem(legacyCatalogColumnStorageKey);
+    const migratingPreferences = stored === null;
+    const preferenceValue = stored
+      ?? window.localStorage.getItem(previousCatalogColumnStorageKey)
+      ?? window.localStorage.getItem(legacyCatalogColumnStorageKey);
     if (preferenceValue === null) return defaultCatalogColumns;
     const parsed: unknown = JSON.parse(preferenceValue);
     if (!Array.isArray(parsed)) return defaultCatalogColumns;
-    return catalogColumns.filter((column) => parsed.includes(column.id) || (migratingLegacyPreferences && column.id === 'regionZip')).map((column) => column.id);
+    const newMetadataColumns: CatalogColumn[] = migratingPreferences
+      ? ['regionZip', 'cardType', 'issuer', 'brand']
+      : [];
+    return catalogColumns.filter((column) => parsed.includes(column.id) || newMetadataColumns.includes(column.id)).map((column) => column.id);
   } catch {
     return defaultCatalogColumns;
   }
@@ -209,6 +221,9 @@ export function BuyCardsPage() {
                 <td><div className="gift-catalog-product"><div><strong data-testid={`text-gift-product-name-${product.id}`}>{product.name}</strong></div></div></td>
                 {visibleColumns.includes('description') && <td className="gift-catalog-description">{product.description || 'Authorized card listing'}</td>}
                 {visibleColumns.includes('regionZip') && <td data-testid={`text-gift-region-zip-${product.id}`}>{product.regionZip || '—'}</td>}
+                {visibleColumns.includes('cardType') && <td data-testid={`text-gift-card-type-${product.id}`}>{product.cardType || '—'}</td>}
+                {visibleColumns.includes('issuer') && <td data-testid={`text-gift-card-issuer-${product.id}`}>{product.issuer || '—'}</td>}
+                {visibleColumns.includes('brand') && <td data-testid={`text-gift-card-brand-${product.id}`}>{product.brand || '—'}</td>}
                 {visibleColumns.includes('faceValue') && <td className="gift-catalog-face" data-testid={`text-gift-face-value-${product.id}`}>{money(product.faceValueCents)}</td>}
                 {visibleColumns.includes('availability') && <td><span className={`gift-stock${product.availableCount === 0 ? ' is-out' : product.availableCount <= 5 ? ' is-low' : ''}`}><i />{product.availableCount} available</span></td>}
                 {visibleColumns.includes('price') && <td className="gift-catalog-price" data-testid={`text-gift-member-price-${product.id}`}>{money(product.priceCents)}</td>}
@@ -228,6 +243,9 @@ export function BuyCardsPage() {
         <dl className="gift-info-facts">
           <div><dt>Base</dt><dd>{infoProduct.name}</dd></div>
           <div><dt>Redemption region ZIP</dt><dd data-testid={`text-card-info-region-zip-${infoProduct.id}`}>{infoProduct.regionZip || 'Not specified'}</dd></div>
+          <div><dt>Card type</dt><dd>{infoProduct.cardType || 'Not specified'}</dd></div>
+          <div><dt>Issuer</dt><dd>{infoProduct.issuer || 'Not specified'}</dd></div>
+          <div><dt>Brand</dt><dd>{infoProduct.brand || 'Not specified'}</dd></div>
           <div><dt>Face value</dt><dd data-testid={`text-card-info-value-${infoProduct.id}`}>{money(infoProduct.faceValueCents)}</dd></div>
           <div><dt>Member price</dt><dd data-testid={`text-card-info-price-${infoProduct.id}`}>{money(infoProduct.priceCents)}</dd></div>
           <div><dt>Available stock</dt><dd data-testid={`text-card-info-stock-${infoProduct.id}`}>{infoProduct.availableCount} cards</dd></div>
@@ -298,34 +316,42 @@ export function AdminCardInventoryPage() {
   const create = useCreateAdminGiftCardProduct();
   const addStock = useAddAdminGiftCardStock();
   const remove = useDeleteAdminGiftCardProduct();
-  const updateRegionZip = useUpdateAdminGiftCardProductRegionZip();
+  const updateMetadata = useUpdateAdminGiftCardProductMetadata();
   const [feedback, setFeedback] = useState('');
-  const [editingZip, setEditingZip] = useState<{ productId: string; productName: string } | null>(null);
-  const [regionZipDraft, setRegionZipDraft] = useState('');
-  const form = useForm<CardForm>({ resolver: zodResolver(listingSchema), defaultValues: { name: '', description: '', regionZip: '', faceValue: 0, price: 0 } });
+  const [editingMetadata, setEditingMetadata] = useState<{ productId: string; productName: string } | null>(null);
+  const [metadataDraft, setMetadataDraft] = useState({ regionZip: '', cardType: '', issuer: '', brand: '' });
+  const form = useForm<CardForm>({ resolver: zodResolver(listingSchema), defaultValues: { name: '', description: '', regionZip: '', cardType: '', issuer: '', brand: '', faceValue: 0, price: 0 } });
   const stockForm = useForm<StockForm>({ resolver: zodResolver(stockSchema), defaultValues: { productId: '', cards: '' } });
   const rows = products.data?.products ?? [];
+  const selectedStockProduct = rows.find((product) => product.id === stockForm.watch('productId'));
   const totalStock = useMemo(() => rows.reduce((sum, item) => sum + item.availableCount, 0), [rows]);
   useEffect(() => { document.title = 'Card inventory | ReplenishCC Admin'; }, []);
   useEffect(() => { if (!session.isLoading && (session.isError || !session.data?.authenticated)) setLocation('/login'); else if (!session.isLoading && session.data?.user && !session.data.user.isDepositAdmin) setLocation('/dashboard'); }, [session.isLoading, session.isError, session.data?.authenticated, session.data?.user, setLocation]);
   const invalidate = () => { void queryClient.invalidateQueries({ queryKey: getGetAdminGiftCardProductsQueryKey() }); void queryClient.invalidateQueries({ queryKey: getGetGiftCardProductsQueryKey() }); };
-  const saveRegionZip = (event: FormEvent<HTMLFormElement>) => {
+  const saveMetadata = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!editingZip) return;
-    const regionZip = regionZipDraft.trim();
+    if (!editingMetadata) return;
+    const regionZip = metadataDraft.regionZip.trim();
     if (regionZip && !/^\d{5}(?:-\d{4})?$/.test(regionZip)) {
       setFeedback('Enter a valid 5-digit ZIP or ZIP+4 for the product region.');
       return;
     }
-    updateRegionZip.mutate(
-      { productId: editingZip.productId, data: { regionZip: regionZip || null } },
+    const cardType = metadataDraft.cardType.trim();
+    const issuer = metadataDraft.issuer.trim();
+    const brand = metadataDraft.brand.trim();
+    if (!cardType || !issuer || !brand || [cardType, issuer, brand].some((value) => value.length > 80)) {
+      setFeedback('Enter a card type, issuer, and brand (up to 80 characters each).');
+      return;
+    }
+    updateMetadata.mutate(
+      { productId: editingMetadata.productId, data: { regionZip: regionZip || null, cardType, issuer, brand } },
       {
         onSuccess: () => {
-          setEditingZip(null);
+          setEditingMetadata(null);
           invalidate();
-          setFeedback('Redemption region ZIP updated.');
+          setFeedback('Public product metadata updated.');
         },
-        onError: () => setFeedback('The product-region ZIP could not be updated. Try again.'),
+        onError: () => setFeedback('Product metadata could not be updated. Try again.'),
       },
     );
   };
@@ -334,28 +360,33 @@ export function AdminCardInventoryPage() {
     <header className="gift-admin-heading"><div><div className="gift-eyebrow">Restricted operations · inventory only</div><h2>Card inventory</h2><p>Manage listings and encrypted stock intake. Credentials are intentionally excluded from this table.</p></div><div className="gift-admin-stat"><small>Available cards</small><strong data-testid="text-admin-total-stock">{products.isLoading ? '—' : totalStock}</strong></div></header>
     {feedback && <div className="gift-notice" role="status" data-testid="status-admin-card-action">{feedback}<button onClick={() => setFeedback('')} aria-label="Dismiss message" data-testid="button-dismiss-admin-message">×</button></div>}
     <div className="gift-admin-forms">
-      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>01</span><div><h3>Create a listing</h3><p>Set the public product value, price, and redemption region ZIP.</p></div></div>
-        <Form {...form}><form onSubmit={form.handleSubmit((values) => create.mutate({ data: { name: values.name.trim(), description: values.description.trim(), regionZip: values.regionZip || null, faceValueCents: Math.round(values.faceValue * 100), priceCents: Math.round(values.price * 100) } }, { onSuccess: () => { form.reset(); invalidate(); setFeedback('Listing created. Add verified stock to make it available to members.'); }, onError: () => setFeedback('Listing could not be created. Review the values and try again.') }))} className="gift-form">
+      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>01</span><div><h3>Create a listing</h3><p>Set the public card type, issuer, brand, value, price, and redemption region.</p></div></div>
+        <Form {...form}><form onSubmit={form.handleSubmit((values) => create.mutate({ data: { name: values.name.trim(), description: values.description.trim(), regionZip: values.regionZip || null, cardType: values.cardType.trim(), issuer: values.issuer.trim(), brand: values.brand.trim(), faceValueCents: Math.round(values.faceValue * 100), priceCents: Math.round(values.price * 100) } }, { onSuccess: () => { form.reset(); invalidate(); setFeedback('Listing created. Add one verified card to make it available to members.'); }, onError: () => setFeedback('Listing could not be created. Review the values and try again.') }))} className="gift-form">
           <FormField control={form.control} name="name" render={({ field }) => <FormItem><FormLabel>Listing name</FormLabel><FormControl><Input {...field} placeholder="Gift card · $50" data-testid="input-admin-card-name" /></FormControl><FormMessage /></FormItem>} />
           <FormField control={form.control} name="description" render={({ field }) => <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} placeholder="Short member-facing details" data-testid="input-admin-card-description" /></FormControl><FormMessage /></FormItem>} />
           <FormField control={form.control} name="regionZip" render={({ field }) => <FormItem><FormLabel>Redemption region ZIP</FormLabel><FormControl><Input {...field} inputMode="numeric" maxLength={10} placeholder="ZIP for the product’s region" data-testid="input-admin-card-region-zip" /></FormControl><FormMessage /></FormItem>} />
+          <FormField control={form.control} name="cardType" render={({ field }) => <FormItem><FormLabel>Card type</FormLabel><FormControl><Input {...field} maxLength={80} placeholder="Prepaid Visa" data-testid="input-admin-card-type" /></FormControl><FormMessage /></FormItem>} />
+          <FormField control={form.control} name="issuer" render={({ field }) => <FormItem><FormLabel>Issuer</FormLabel><FormControl><Input {...field} maxLength={80} placeholder="Issuing institution" data-testid="input-admin-card-issuer" /></FormControl><FormMessage /></FormItem>} />
+          <FormField control={form.control} name="brand" render={({ field }) => <FormItem><FormLabel>Brand</FormLabel><FormControl><Input {...field} maxLength={80} placeholder="Card program or brand" data-testid="input-admin-card-brand" /></FormControl><FormMessage /></FormItem>} />
           <div className="gift-form-pair"><FormField control={form.control} name="faceValue" render={({ field }) => <FormItem><FormLabel>Face value (USD)</FormLabel><FormControl><Input {...field} type="number" min="0.01" step="0.01" data-testid="input-admin-face-value" /></FormControl><FormMessage /></FormItem>} /><FormField control={form.control} name="price" render={({ field }) => <FormItem><FormLabel>Member price (USD)</FormLabel><FormControl><Input {...field} type="number" min="0.01" step="0.01" data-testid="input-admin-card-price" /></FormControl><FormMessage /></FormItem>} /></div>
           <button className="gift-admin-submit" disabled={create.isPending} data-testid="button-create-card-listing">{create.isPending ? 'Creating…' : 'Create listing'} <ArrowRight /></button>
         </form></Form>
       </section>
-      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload verified stock</h3><p>One card per line: number | expiration | security code | PIN (optional).</p></div></div>
+      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload verified stock</h3><p>One card per listing: number | expiration | security code | PIN (optional). Use a new listing for each card.</p></div></div>
         <Form {...stockForm}><form onSubmit={stockForm.handleSubmit((values) => {
-          const cards: GiftCardCredential[] = values.cards.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
+          const lines = values.cards.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+          if (lines.length !== 1) { setFeedback('Upload exactly one card per listing. Create a new listing for each card.'); return; }
+          const cards: GiftCardCredential[] = lines.map((line) => {
             const [cardNumber, expiration, securityCode, pin] = line.split('|').map((part) => part.trim());
             return { cardNumber: cardNumber ?? '', expiration: expiration ?? '', securityCode: securityCode ?? '', pin: pin || null };
           });
           if (!cards.length || cards.some((card) => !card.cardNumber || !card.expiration || !card.securityCode)) { setFeedback('Each line must include card number, expiration, and security code separated by |.'); return; }
           addStock.mutate({ productId: values.productId, data: { cards } }, { onSuccess: (result) => { stockForm.reset(); invalidate(); setFeedback(`${result.addedCount} cards accepted. ${result.availableCount} now available.`); }, onError: () => setFeedback('Stock upload was rejected. Check each line and try again.') });
         })} className="gift-form">
-          <FormField control={stockForm.control} name="productId" render={({ field }) => <FormItem><FormLabel>Listing</FormLabel><FormControl><select {...field} data-testid="select-admin-stock-product"><option value="">Select a listing</option>{rows.map((product) => <option key={product.id} value={product.id}>{product.name} · {product.availableCount} available</option>)}</select></FormControl><FormMessage /></FormItem>} />
-          <FormField control={stockForm.control} name="cards" render={({ field }) => <FormItem><FormLabel>Card details</FormLabel><FormControl><Textarea {...field} rows={6} placeholder="card number | MM/YY | security code | PIN (optional)" data-testid="input-admin-card-stock" /></FormControl><FormMessage /></FormItem>} />
+          <FormField control={stockForm.control} name="productId" render={({ field }) => <FormItem><FormLabel>Listing</FormLabel><FormControl><select {...field} data-testid="select-admin-stock-product"><option value="">Select a listing</option>{rows.map((product) => <option key={product.id} value={product.id} disabled={!product.canReceiveStock}>{product.name} · {product.canReceiveStock ? 'ready for one card' : 'stock already assigned'}</option>)}</select></FormControl><FormMessage /></FormItem>} />
+          <FormField control={stockForm.control} name="cards" render={({ field }) => <FormItem><FormLabel>Card details</FormLabel><FormControl><Textarea {...field} rows={3} placeholder="card number | MM/YY | security code | PIN (optional)" data-testid="input-admin-card-stock" /></FormControl><FormMessage /></FormItem>} />
           <div className="gift-upload-note"><LockKeyhole /> Stock is handled by the authorized service and stored encrypted. Details never appear in inventory rows.</div>
-          <button className="gift-admin-submit" disabled={addStock.isPending || !rows.length} data-testid="button-upload-card-stock">{addStock.isPending ? 'Uploading…' : 'Upload encrypted stock'} <ArrowRight /></button>
+          <button className="gift-admin-submit" disabled={addStock.isPending || !rows.some((product) => product.canReceiveStock) || !selectedStockProduct?.canReceiveStock} data-testid="button-upload-card-stock">{addStock.isPending ? 'Uploading…' : 'Upload one encrypted card'} <ArrowRight /></button>
         </form></Form>
       </section>
     </div>
@@ -363,18 +394,24 @@ export function AdminCardInventoryPage() {
       {products.isLoading ? <div className="gift-admin-loading" data-testid="loading-admin-card-inventory"><i/><i/><i/></div>
       : products.isError ? <div className="gift-query-error" role="alert" data-testid="error-admin-card-inventory">Inventory unavailable. <button onClick={() => void products.refetch()} data-testid="button-retry-admin-card-inventory">Retry</button></div>
       : rows.length === 0 ? <div className="gift-admin-empty" data-testid="empty-admin-card-inventory">No listings created yet. Create a listing above to begin.</div>
-        : <div className="gift-table-wrap"><table className="gift-table"><thead><tr><th>Listing</th><th>Region ZIP</th><th>Face value</th><th>Member price</th><th>Available</th><th>Created</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{rows.map((product) => <tr key={product.id} data-testid={`row-card-inventory-${product.id}`}><td><strong>{product.name}</strong><small>{product.description || 'No description'}</small></td><td>{product.regionZip || '—'}</td><td>{money(product.faceValueCents)}</td><td>{money(product.priceCents)}</td><td><span className="gift-count-chip">{product.availableCount}</span></td><td>{date(product.createdAt)}</td><td><button className="gift-edit" type="button" onClick={() => { setEditingZip({ productId: product.id, productName: product.name }); setRegionZipDraft(product.regionZip ?? ''); }} data-testid={`button-edit-card-region-zip-${product.id}`}><Pencil /> Edit ZIP</button> <button className="gift-delete" disabled={product.availableCount !== 0 || remove.isPending} title={product.availableCount !== 0 ? 'Remove all available stock before deletion' : 'Deletion also requires no order history'} onClick={() => { if (window.confirm(`Delete listing “${product.name}”? It must have no inventory or order history.`)) remove.mutate({ productId: product.id }, { onSuccess: () => { invalidate(); setFeedback('Empty listing deleted.'); }, onError: () => setFeedback('Listing could not be deleted. It has remaining stock or order history.') }); }} data-testid={`button-delete-card-listing-${product.id}`}><Trash2 /> Delete</button></td></tr>)}</tbody></table></div>}
+        : <div className="gift-table-wrap"><table className="gift-table"><thead><tr><th>Listing</th><th>Region ZIP</th><th>Card type</th><th>Issuer</th><th>Brand</th><th>Face value</th><th>Member price</th><th>Available</th><th>Stock eligibility</th><th>Created</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{rows.map((product) => <tr key={product.id} data-testid={`row-card-inventory-${product.id}`}><td><strong>{product.name}</strong><small>{product.description || 'No description'}</small></td><td>{product.regionZip || '—'}</td><td>{product.cardType || '—'}</td><td>{product.issuer || '—'}</td><td>{product.brand || '—'}</td><td>{money(product.faceValueCents)}</td><td>{money(product.priceCents)}</td><td><span className="gift-count-chip">{product.availableCount}</span></td><td>{product.canReceiveStock ? 'Ready for one card' : 'Stock already assigned'}</td><td>{date(product.createdAt)}</td><td><button className="gift-edit" type="button" onClick={() => { setEditingMetadata({ productId: product.id, productName: product.name }); setMetadataDraft({ regionZip: product.regionZip ?? '', cardType: product.cardType, issuer: product.issuer, brand: product.brand }); }} data-testid={`button-edit-card-metadata-${product.id}`}><Pencil /> Edit metadata</button> <button className="gift-delete" disabled={!product.canReceiveStock || remove.isPending} title={!product.canReceiveStock ? 'Listings with inventory or order history cannot be deleted' : 'Delete this empty listing'} onClick={() => { if (window.confirm(`Delete listing “${product.name}”? It must have no inventory or order history.`)) remove.mutate({ productId: product.id }, { onSuccess: () => { invalidate(); setFeedback('Empty listing deleted.'); }, onError: () => setFeedback('Listing could not be deleted. It has remaining stock or order history.') }); }} data-testid={`button-delete-card-listing-${product.id}`}><Trash2 /> Delete</button></td></tr>)}</tbody></table></div>}
     </section>
-      <Dialog open={!!editingZip} onOpenChange={(open) => { if (!open && !updateRegionZip.isPending) setEditingZip(null); }}>
+      <Dialog open={!!editingMetadata} onOpenChange={(open) => { if (!open && !updateMetadata.isPending) setEditingMetadata(null); }}>
         <DialogContent className="gift-info-dialog">
           <DialogHeader className="gift-info-dialog-head">
-            <div><DialogTitle>Edit redemption ZIP</DialogTitle><DialogDescription>{editingZip?.productName} · Public product region only; do not enter a billing address.</DialogDescription></div>
+            <div><DialogTitle>Edit listing metadata</DialogTitle><DialogDescription>{editingMetadata?.productName} · These details are public product metadata; never enter card credentials or billing addresses.</DialogDescription></div>
           </DialogHeader>
-          <form className="gift-form" onSubmit={saveRegionZip}>
+          <form className="gift-form" onSubmit={saveMetadata}>
             <label htmlFor="edit-card-region-zip">Redemption region ZIP</label>
-            <Input id="edit-card-region-zip" value={regionZipDraft} onChange={(event) => setRegionZipDraft(event.target.value)} inputMode="numeric" maxLength={10} placeholder="5-digit ZIP or ZIP+4" data-testid="input-edit-card-region-zip" />
-            <p className="gift-zip-note">Leave blank to remove the public region ZIP. Card numbers, security codes, PINs, and billing addresses stay private.</p>
-            <button type="submit" className="gift-admin-submit" disabled={updateRegionZip.isPending} data-testid="button-save-card-region-zip">{updateRegionZip.isPending ? 'Saving…' : 'Save ZIP'} <Check /></button>
+            <Input id="edit-card-region-zip" value={metadataDraft.regionZip} onChange={(event) => setMetadataDraft((current) => ({ ...current, regionZip: event.target.value }))} inputMode="numeric" maxLength={10} placeholder="5-digit ZIP or ZIP+4" data-testid="input-edit-card-region-zip" />
+            <label htmlFor="edit-card-type">Card type</label>
+            <Input id="edit-card-type" value={metadataDraft.cardType} onChange={(event) => setMetadataDraft((current) => ({ ...current, cardType: event.target.value }))} maxLength={80} data-testid="input-edit-card-type" />
+            <label htmlFor="edit-card-issuer">Issuer</label>
+            <Input id="edit-card-issuer" value={metadataDraft.issuer} onChange={(event) => setMetadataDraft((current) => ({ ...current, issuer: event.target.value }))} maxLength={80} data-testid="input-edit-card-issuer" />
+            <label htmlFor="edit-card-brand">Brand</label>
+            <Input id="edit-card-brand" value={metadataDraft.brand} onChange={(event) => setMetadataDraft((current) => ({ ...current, brand: event.target.value }))} maxLength={80} data-testid="input-edit-card-brand" />
+            <p className="gift-zip-note">Leave ZIP blank to remove it. Card numbers, security codes, PINs, and billing addresses stay private.</p>
+            <button type="submit" className="gift-admin-submit" disabled={updateMetadata.isPending} data-testid="button-save-card-metadata">{updateMetadata.isPending ? 'Saving…' : 'Save metadata'} <Check /></button>
           </form>
         </DialogContent>
       </Dialog>

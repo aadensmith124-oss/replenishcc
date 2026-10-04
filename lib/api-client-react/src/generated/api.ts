@@ -30,6 +30,7 @@ import type {
   AdminCoupon,
   AdminCouponsResponse,
   AdminDepositsResponse,
+  AdminGiftCardProductsResponse,
   AdminLicenseProductsResponse,
   AdminRedeemCode,
   AdminRedeemCodesResponse,
@@ -86,7 +87,7 @@ import type {
   SupportTicketRefundInput,
   SupportTicketRefundResponse,
   SupportTicketStatusInput,
-  UpdateGiftCardProductRegionZipInput,
+  UpdateGiftCardProductMetadataInput,
   WeeklyLeaderboardResponse
 } from './api.schemas';
 
@@ -4252,9 +4253,9 @@ export const getGetAdminGiftCardProductsUrl = () => {
 /**
  * @summary List prepaid gift-card products and inventory counts for an administrator
  */
-export const getAdminGiftCardProducts = async ( options?: Parameters<typeof customFetch>[1]): Promise<GiftCardProductsResponse> => {
+export const getAdminGiftCardProducts = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminGiftCardProductsResponse> => {
 
-  return customFetch<GiftCardProductsResponse>(getGetAdminGiftCardProductsUrl(),
+  return customFetch<AdminGiftCardProductsResponse>(getGetAdminGiftCardProductsUrl(),
   {
     ...options,
     method: 'GET'
@@ -4480,19 +4481,19 @@ export const useDeleteAdminGiftCardProduct = <TError = ErrorType<void>,
       return useMutation(getDeleteAdminGiftCardProductMutationOptions(options));
     }
 
-export const getUpdateAdminGiftCardProductRegionZipUrl = (productId: string,) => {
+export const getUpdateAdminGiftCardProductMetadataUrl = (productId: string,) => {
 
 
 
 
-  return `/api/admin/gift-card-products/${productId}/region-zip`
+  return `/api/admin/gift-card-products/${productId}/metadata`
 }
 
 /**
- * @summary Update the public redemption-region ZIP for a gift-card product
+ * @summary Update public metadata for a gift-card product
  */
-export const updateAdminGiftCardProductRegionZip = async (productId: string,
-    updateGiftCardProductRegionZipInput: UpdateGiftCardProductRegionZipInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+export const updateAdminGiftCardProductMetadata = async (productId: string,
+    updateGiftCardProductMetadataInput: UpdateGiftCardProductMetadataInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -4508,12 +4509,12 @@ export const updateAdminGiftCardProductRegionZip = async (productId: string,
     }
     return headers;
   };
-return customFetch<void>(getUpdateAdminGiftCardProductRegionZipUrl(productId),
+return customFetch<void>(getUpdateAdminGiftCardProductMetadataUrl(productId),
   {
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(updateGiftCardProductRegionZipInput)
+    body: JSON.stringify(updateGiftCardProductMetadataInput)
   }
 );}
 
@@ -4521,13 +4522,13 @@ return customFetch<void>(getUpdateAdminGiftCardProductRegionZipUrl(productId),
 
 
 
-export const getUpdateAdminGiftCardProductRegionZipMutationKey = () => ['updateAdminGiftCardProductRegionZip'] as const;
+export const getUpdateAdminGiftCardProductMetadataMutationKey = () => ['updateAdminGiftCardProductMetadata'] as const;
 
-export const getUpdateAdminGiftCardProductRegionZipMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminGiftCardProductRegionZip>>, TError,UpdateAdminGiftCardProductRegionZipMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof updateAdminGiftCardProductRegionZip>>, TError,UpdateAdminGiftCardProductRegionZipMutationVariables, TContext> => {
+export const getUpdateAdminGiftCardProductMetadataMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminGiftCardProductMetadata>>, TError,UpdateAdminGiftCardProductMetadataMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminGiftCardProductMetadata>>, TError,UpdateAdminGiftCardProductMetadataMutationVariables, TContext> => {
 
-const mutationKey = getUpdateAdminGiftCardProductRegionZipMutationKey();
+const mutationKey = getUpdateAdminGiftCardProductMetadataMutationKey();
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -4537,10 +4538,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminGiftCardProductRegionZip>>, UpdateAdminGiftCardProductRegionZipMutationVariables> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminGiftCardProductMetadata>>, UpdateAdminGiftCardProductMetadataMutationVariables> = (props) => {
           const {productId,data} = props ?? {};
 
-          return  updateAdminGiftCardProductRegionZip(productId,data,requestOptions)
+          return  updateAdminGiftCardProductMetadata(productId,data,requestOptions)
         }
 
 
@@ -4550,23 +4551,23 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type UpdateAdminGiftCardProductRegionZipMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminGiftCardProductRegionZip>>>
-    export type UpdateAdminGiftCardProductRegionZipMutationBody = BodyType<UpdateGiftCardProductRegionZipInput>
-    export type UpdateAdminGiftCardProductRegionZipMutationError = ErrorType<void>
-    export type UpdateAdminGiftCardProductRegionZipMutationVariables = {productId: string;data: BodyType<UpdateGiftCardProductRegionZipInput>}
+    export type UpdateAdminGiftCardProductMetadataMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminGiftCardProductMetadata>>>
+    export type UpdateAdminGiftCardProductMetadataMutationBody = BodyType<UpdateGiftCardProductMetadataInput>
+    export type UpdateAdminGiftCardProductMetadataMutationError = ErrorType<void>
+    export type UpdateAdminGiftCardProductMetadataMutationVariables = {productId: string;data: BodyType<UpdateGiftCardProductMetadataInput>}
 
     /**
- * @summary Update the public redemption-region ZIP for a gift-card product
+ * @summary Update public metadata for a gift-card product
  */
-export const useUpdateAdminGiftCardProductRegionZip = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminGiftCardProductRegionZip>>, TError,UpdateAdminGiftCardProductRegionZipMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+export const useUpdateAdminGiftCardProductMetadata = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminGiftCardProductMetadata>>, TError,UpdateAdminGiftCardProductMetadataMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
-        Awaited<ReturnType<typeof updateAdminGiftCardProductRegionZip>>,
+        Awaited<ReturnType<typeof updateAdminGiftCardProductMetadata>>,
         TError,
-        UpdateAdminGiftCardProductRegionZipMutationVariables,
+        UpdateAdminGiftCardProductMetadataMutationVariables,
         TContext
       > => {
-      return useMutation(getUpdateAdminGiftCardProductRegionZipMutationOptions(options));
+      return useMutation(getUpdateAdminGiftCardProductMetadataMutationOptions(options));
     }
 
 export const getAddAdminGiftCardStockUrl = (productId: string,) => {
@@ -4578,7 +4579,7 @@ export const getAddAdminGiftCardStockUrl = (productId: string,) => {
 }
 
 /**
- * @summary Add a batch of prepaid gift cards to a product's available stock
+ * @summary Add one prepaid gift card to a new product listing
  */
 export const addAdminGiftCardStock = async (productId: string,
     addGiftCardStockInput: AddGiftCardStockInput, options?: Parameters<typeof customFetch>[1]): Promise<AddGiftCardStockResponse> => {
@@ -4645,7 +4646,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type AddAdminGiftCardStockMutationVariables = {productId: string;data: BodyType<AddGiftCardStockInput>}
 
     /**
- * @summary Add a batch of prepaid gift cards to a product's available stock
+ * @summary Add one prepaid gift card to a new product listing
  */
 export const useAddAdminGiftCardStock = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addAdminGiftCardStock>>, TError,AddAdminGiftCardStockMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}

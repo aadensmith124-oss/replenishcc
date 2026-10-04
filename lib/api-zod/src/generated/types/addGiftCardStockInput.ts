@@ -10,7 +10,7 @@ import type { GiftCardCredentialInput } from './giftCardCredentialInput';
 export interface AddGiftCardStockInput {
   /**
      * @minItems 1
-     * @maxItems 500
+     * @maxItems 1
      */
   cards: GiftCardCredentialInput[];
 }

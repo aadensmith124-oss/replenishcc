@@ -6,14 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface CreateGiftCardProductInput {
-  /**
-     * @minLength 1
-     * @maxLength 100
-     */
-  name: string;
-  /** @maxLength 1000 */
-  description: string;
+export interface UpdateGiftCardProductMetadataInput {
   /**
      * @maxLength 10
      * @nullable
@@ -35,14 +28,4 @@ export interface CreateGiftCardProductInput {
      * @maxLength 80
      */
   brand: string;
-  /**
-     * @minimum 1
-     * @maximum 1000000
-     */
-  faceValueCents: number;
-  /**
-     * @minimum 1
-     * @maximum 1000000
-     */
-  priceCents: number;
 }

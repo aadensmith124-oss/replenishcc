@@ -12,8 +12,8 @@ import {
   GetMyGiftCardOrdersResponse,
   PurchaseGiftCardBody,
   PurchaseGiftCardResponse,
-  UpdateAdminGiftCardProductRegionZipBody,
-  UpdateAdminGiftCardProductRegionZipParams,
+  UpdateAdminGiftCardProductMetadataBody,
+  UpdateAdminGiftCardProductMetadataParams,
 } from "@workspace/api-zod";
 import {
   accountLedgerTable,
@@ -33,7 +33,7 @@ import {
 
 const router: IRouter = Router();
 
-async function listProducts() {
+async function listProducts(includeStockEligibility = false) {
   const availableCount = count(giftCardInventoryTable.id);
   const products = await db
     .select({
@@ -41,6 +41,9 @@ async function listProducts() {
       name: giftCardProductsTable.name,
       description: giftCardProductsTable.description,
       regionZip: giftCardProductsTable.regionZip,
+      cardType: giftCardProductsTable.cardType,
+      issuer: giftCardProductsTable.issuer,
+      brand: giftCardProductsTable.brand,
       faceValueCents: giftCardProductsTable.faceValueCents,
       priceCents: giftCardProductsTable.priceCents,
       availableCount,
@@ -57,8 +60,30 @@ async function listProducts() {
     .groupBy(giftCardProductsTable.id)
     .orderBy(desc(giftCardProductsTable.createdAt));
 
+  const productIds = products.map((product) => product.id);
+  const [inventoryHistory, orderHistory] =
+    includeStockEligibility && productIds.length
+      ? await Promise.all([
+          db
+            .select({ productId: giftCardInventoryTable.productId })
+            .from(giftCardInventoryTable)
+            .where(inArray(giftCardInventoryTable.productId, productIds)),
+          db
+            .select({ productId: giftCardOrdersTable.productId })
+            .from(giftCardOrdersTable)
+            .where(inArray(giftCardOrdersTable.productId, productIds)),
+        ])
+      : [[], []];
+  const blockedProductIds = new Set([
+    ...inventoryHistory.map((item) => item.productId),
+    ...orderHistory.map((order) => order.productId),
+  ]);
+
   return products.map((product) => ({
     ...product,
+    ...(includeStockEligibility
+      ? { canReceiveStock: !blockedProductIds.has(product.id) }
+      : {}),
     createdAt: product.createdAt.toISOString(),
   }));
 }
@@ -298,7 +323,7 @@ router.get("/admin/gift-card-products", async (req, res): Promise<void> => {
     return;
   }
 
-  const products = await listProducts();
+  const products = await listProducts(true);
   res.json(GetAdminGiftCardProductsResponse.parse({ products }));
 });
 
@@ -320,8 +345,13 @@ router.post("/admin/gift-card-products", async (req, res): Promise<void> => {
   }
   const name = parsed.data.name.trim();
   const description = parsed.data.description.trim();
-  if (!name) {
-    res.status(400).json({ error: "Product name cannot be blank." });
+  const cardType = parsed.data.cardType.trim();
+  const issuer = parsed.data.issuer.trim();
+  const brand = parsed.data.brand.trim();
+  if (!name || !cardType || !issuer || !brand) {
+    res.status(400).json({
+      error: "Product name, card type, issuer, and brand cannot be blank.",
+    });
     return;
   }
 
@@ -331,6 +361,9 @@ router.post("/admin/gift-card-products", async (req, res): Promise<void> => {
       name,
       description,
       regionZip: parsed.data.regionZip,
+      cardType,
+      issuer,
+      brand,
       faceValueCents: parsed.data.faceValueCents,
       priceCents: parsed.data.priceCents,
       createdByUserId: user.id,
@@ -344,6 +377,9 @@ router.post("/admin/gift-card-products", async (req, res): Promise<void> => {
       name: created.name,
       description: created.description,
       regionZip: created.regionZip,
+      cardType: created.cardType,
+      issuer: created.issuer,
+      brand: created.brand,
       faceValueCents: created.faceValueCents,
       priceCents: created.priceCents,
       availableCount: 0,
@@ -353,7 +389,7 @@ router.post("/admin/gift-card-products", async (req, res): Promise<void> => {
 });
 
 router.patch(
-  "/admin/gift-card-products/:productId/region-zip",
+  "/admin/gift-card-products/:productId/metadata",
   async (req, res): Promise<void> => {
     const user = await getCurrentUser(req);
     if (!user) {
@@ -365,18 +401,32 @@ router.patch(
       return;
     }
 
-    const params = UpdateAdminGiftCardProductRegionZipParams.safeParse(
+    const params = UpdateAdminGiftCardProductMetadataParams.safeParse(
       req.params,
     );
-    const parsed = UpdateAdminGiftCardProductRegionZipBody.safeParse(req.body);
+    const parsed = UpdateAdminGiftCardProductMetadataBody.safeParse(req.body);
     if (!params.success || !parsed.success) {
-      res.status(400).json({ error: "Enter a valid product-region ZIP." });
+      res.status(400).json({ error: "Enter valid gift-card listing metadata." });
+      return;
+    }
+    const cardType = parsed.data.cardType.trim();
+    const issuer = parsed.data.issuer.trim();
+    const brand = parsed.data.brand.trim();
+    if (!cardType || !issuer || !brand) {
+      res.status(400).json({
+        error: "Card type, issuer, and brand cannot be blank.",
+      });
       return;
     }
 
     const [updated] = await db
       .update(giftCardProductsTable)
-      .set({ regionZip: parsed.data.regionZip })
+      .set({
+        regionZip: parsed.data.regionZip,
+        cardType,
+        issuer,
+        brand,
+      })
       .where(eq(giftCardProductsTable.id, params.data.productId))
       .returning({ id: giftCardProductsTable.id });
     if (!updated) {
@@ -475,6 +525,13 @@ router.post(
       return;
     }
     const credentials = cards as GiftCardCredential[];
+    if (credentials.length !== 1) {
+      res.status(400).json({
+        error:
+          "Upload exactly one card per listing. Create a new listing for each card.",
+      });
+      return;
+    }
     const hashes = credentials.map(hashGiftCardCredential);
     if (new Set(hashes).size !== hashes.length) {
       res.status(400).json({
@@ -483,54 +540,60 @@ router.post(
       return;
     }
 
-    const [product] = await db
-      .select({ id: giftCardProductsTable.id })
-      .from(giftCardProductsTable)
-      .where(eq(giftCardProductsTable.id, params.data.productId))
-      .limit(1);
-    if (!product) {
+    const values = credentials.map((credential) => ({
+      productId: params.data.productId,
+      ...encryptGiftCardCredential(credential),
+    }));
+    const stockResult = await db.transaction(async (tx) => {
+      const [product] = await tx
+        .select({ id: giftCardProductsTable.id })
+        .from(giftCardProductsTable)
+        .where(eq(giftCardProductsTable.id, params.data.productId))
+        .for("update")
+        .limit(1);
+      if (!product) return { kind: "missing" as const };
+
+      const [existingInventory, existingOrder] = await Promise.all([
+        tx
+          .select({ id: giftCardInventoryTable.id })
+          .from(giftCardInventoryTable)
+          .where(eq(giftCardInventoryTable.productId, product.id))
+          .limit(1),
+        tx
+          .select({ id: giftCardOrdersTable.id })
+          .from(giftCardOrdersTable)
+          .where(eq(giftCardOrdersTable.productId, product.id))
+          .limit(1),
+      ]);
+      if (existingInventory.length > 0 || existingOrder.length > 0) {
+        return { kind: "ineligible" as const };
+      }
+
+      const inserted = await tx
+        .insert(giftCardInventoryTable)
+        .values(values)
+        .onConflictDoNothing({
+          target: giftCardInventoryTable.credentialHash,
+        })
+        .returning({ id: giftCardInventoryTable.id });
+      if (inserted.length !== values.length) {
+        return { kind: "duplicate" as const };
+      }
+      return { kind: "success" as const, availableCount: inserted.length };
+    });
+
+    if (stockResult.kind === "missing") {
       res.status(404).json({ error: "Gift-card product not found." });
       return;
     }
-
-    const values = credentials.map((credential) => ({
-      productId: product.id,
-      ...encryptGiftCardCredential(credential),
-    }));
-    const stockResult = await db
-      .transaction(async (tx) => {
-        const inserted = await tx
-          .insert(giftCardInventoryTable)
-          .values(values)
-          .onConflictDoNothing({
-            target: giftCardInventoryTable.credentialHash,
-          })
-          .returning({ id: giftCardInventoryTable.id });
-        if (inserted.length !== values.length) {
-          throw new Error("DUPLICATE_GIFT_CARD_CREDENTIAL");
-        }
-        const [available] = await tx
-          .select({ count: count() })
-          .from(giftCardInventoryTable)
-          .where(
-            and(
-              eq(giftCardInventoryTable.productId, product.id),
-              eq(giftCardInventoryTable.status, "available"),
-            ),
-          );
-        return Number(available?.count ?? 0);
-      })
-      .catch((error: unknown) => {
-        if (
-          error instanceof Error &&
-          error.message === "DUPLICATE_GIFT_CARD_CREDENTIAL"
-        ) {
-          return null;
-        }
-        throw error;
+    if (stockResult.kind === "ineligible") {
+      res.status(409).json({
+        error:
+          "This listing already has or previously had inventory or orders. Create a new listing for each card.",
       });
-
-    if (stockResult === null) {
+      return;
+    }
+    if (stockResult.kind === "duplicate") {
       res.status(409).json({
         error: "One or more cards already exist in the inventory.",
       });
@@ -540,7 +603,7 @@ router.post(
     res.json(
       AddAdminGiftCardStockResponse.parse({
         addedCount: values.length,
-        availableCount: stockResult,
+        availableCount: stockResult.availableCount,
       }),
     );
   },

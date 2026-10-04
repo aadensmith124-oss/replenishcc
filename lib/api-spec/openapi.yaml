@@ -1140,11 +1140,11 @@ paths:
           description: Product not found
         "409":
           description: Product has inventory or order history and cannot be deleted
-  /admin/gift-card-products/{productId}/region-zip:
+  /admin/gift-card-products/{productId}/metadata:
     patch:
-      operationId: updateAdminGiftCardProductRegionZip
+      operationId: updateAdminGiftCardProductMetadata
       tags: [giftCardStore]
-      summary: Update the public redemption-region ZIP for a gift-card product
+      summary: Update public metadata for a gift-card product
       parameters:
         - name: productId
           in: path
@@ -1155,12 +1155,12 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateGiftCardProductRegionZipInput"
+                $ref: "#/components/schemas/UpdateGiftCardProductMetadataInput"
       responses:
         "204":
-          description: Product region ZIP updated
+          description: Product metadata updated
         "400":
-          description: Invalid product identifier or ZIP
+          description: Invalid product identifier or metadata
         "401":
           description: Sign-in required
         "403":
@@ -1171,7 +1171,7 @@ paths:
     post:
       operationId: addAdminGiftCardStock
       tags: [giftCardStore]
-      summary: Add a batch of prepaid gift cards to a product's available stock
+      summary: Add one prepaid gift card to a new product listing
       parameters:
         - name: productId
           in: path
@@ -1185,7 +1185,7 @@ paths:
               $ref: "#/components/schemas/AddGiftCardStockInput"
       responses:
         "200":
-          description: Gift-card stock added
+          description: One gift card added to the listing
           content:
             application/json:
               schema:
@@ -1196,6 +1196,10 @@ paths:
           description: Sign-in required
         "403":
           description: Admin access required
+        "404":
+          description: Product not found
+        "409":
+          description: Listing already has or previously had inventory or orders
   /admin/coupons:
     get:
       operationId: getAdminCoupons
@@ -1878,11 +1882,14 @@ components:
         name: { type: string }
         description: { type: string }
         regionZip: { type: ["string", "null"], maxLength: 10, pattern: "^[0-9]{5}(-[0-9]{4})?$" }
+        cardType: { type: string, maxLength: 80 }
+        issuer: { type: string, maxLength: 80 }
+        brand: { type: string, maxLength: 80 }
         faceValueCents: { type: integer }
         priceCents: { type: integer }
         availableCount: { type: integer }
         createdAt: { type: string, format: date-time }
-      required: [id, name, description, regionZip, faceValueCents, priceCents, availableCount, createdAt]
+      required: [id, name, description, regionZip, cardType, issuer, brand, faceValueCents, priceCents, availableCount, createdAt]
     GiftCardProductsResponse:
       type: object
       properties:
@@ -1897,12 +1904,15 @@ components:
         name: { type: string }
         description: { type: string }
         regionZip: { type: ["string", "null"], maxLength: 10, pattern: "^[0-9]{5}(-[0-9]{4})?$" }
+        cardType: { type: string, maxLength: 80 }
+        issuer: { type: string, maxLength: 80 }
+        brand: { type: string, maxLength: 80 }
         faceValueCents: { type: integer }
         priceCents: { type: integer }
         availableCount: { type: integer }
         canReceiveStock: { type: boolean }
         createdAt: { type: string, format: date-time }
-      required: [id, name, description, regionZip, faceValueCents, priceCents, availableCount, canReceiveStock, createdAt]
+      required: [id, name, description, regionZip, cardType, issuer, brand, faceValueCents, priceCents, availableCount, canReceiveStock, createdAt]
     AdminGiftCardProductsResponse:
       type: object
       properties:
@@ -1916,14 +1926,20 @@ components:
         name: { type: string, minLength: 1, maxLength: 100 }
         description: { type: string, maxLength: 1000 }
         regionZip: { type: ["string", "null"], maxLength: 10, pattern: "^[0-9]{5}(-[0-9]{4})?$" }
+        cardType: { type: string, minLength: 1, maxLength: 80 }
+        issuer: { type: string, minLength: 1, maxLength: 80 }
+        brand: { type: string, minLength: 1, maxLength: 80 }
         faceValueCents: { type: integer, minimum: 1, maximum: 1000000 }
         priceCents: { type: integer, minimum: 1, maximum: 1000000 }
-      required: [name, description, regionZip, faceValueCents, priceCents]
-    UpdateGiftCardProductRegionZipInput:
+      required: [name, description, regionZip, cardType, issuer, brand, faceValueCents, priceCents]
+    UpdateGiftCardProductMetadataInput:
       type: object
       properties:
         regionZip: { type: ["string", "null"], maxLength: 10, pattern: "^[0-9]{5}(-[0-9]{4})?$" }
-      required: [regionZip]
+        cardType: { type: string, minLength: 1, maxLength: 80 }
+        issuer: { type: string, minLength: 1, maxLength: 80 }
+        brand: { type: string, minLength: 1, maxLength: 80 }
+      required: [regionZip, cardType, issuer, brand]
     GiftCardCredentialInput:
       type: object
       properties:

@@ -909,6 +909,12 @@ export interface GiftCardProduct {
      * @pattern ^[0-9]{5}(-[0-9]{4})?$
      */
   regionZip: string | null;
+  /** @maxLength 80 */
+  cardType: string;
+  /** @maxLength 80 */
+  issuer: string;
+  /** @maxLength 80 */
+  brand: string;
   faceValueCents: number;
   priceCents: number;
   availableCount: number;
@@ -917,6 +923,33 @@ export interface GiftCardProduct {
 
 export interface GiftCardProductsResponse {
   products: GiftCardProduct[];
+}
+
+export interface AdminGiftCardProduct {
+  id: string;
+  name: string;
+  description: string;
+  /**
+     * @maxLength 10
+     * @nullable
+     * @pattern ^[0-9]{5}(-[0-9]{4})?$
+     */
+  regionZip: string | null;
+  /** @maxLength 80 */
+  cardType: string;
+  /** @maxLength 80 */
+  issuer: string;
+  /** @maxLength 80 */
+  brand: string;
+  faceValueCents: number;
+  priceCents: number;
+  availableCount: number;
+  canReceiveStock: boolean;
+  createdAt: string;
+}
+
+export interface AdminGiftCardProductsResponse {
+  products: AdminGiftCardProduct[];
 }
 
 export interface CreateGiftCardProductInput {
@@ -934,6 +967,21 @@ export interface CreateGiftCardProductInput {
      */
   regionZip: string | null;
   /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  cardType: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  issuer: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  brand: string;
+  /**
      * @minimum 1
      * @maximum 1000000
      */
@@ -945,13 +993,28 @@ export interface CreateGiftCardProductInput {
   priceCents: number;
 }
 
-export interface UpdateGiftCardProductRegionZipInput {
+export interface UpdateGiftCardProductMetadataInput {
   /**
      * @maxLength 10
      * @nullable
      * @pattern ^[0-9]{5}(-[0-9]{4})?$
      */
   regionZip: string | null;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  cardType: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  issuer: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  brand: string;
 }
 
 export interface GiftCardCredentialInput {
@@ -982,7 +1045,7 @@ export interface GiftCardCredentialInput {
 export interface AddGiftCardStockInput {
   /**
      * @minItems 1
-     * @maxItems 500
+     * @maxItems 1
      */
   cards: GiftCardCredentialInput[];
 }
@@ -1004,7 +1067,7 @@ export interface PurchaseGiftCardInput {
   productId: string;
   /**
      * @minimum 1
-     * @maximum 50
+     * @maximum 1
      */
   quantity: number;
 }

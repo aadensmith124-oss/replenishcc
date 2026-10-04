@@ -1196,6 +1196,12 @@ export const getGiftCardProductsResponseProductsItemRegionZipMax = 10;
 
 
 export const getGiftCardProductsResponseProductsItemRegionZipRegExp = new RegExp('^[0-9]{5}(-[0-9]{4})?$');
+export const getGiftCardProductsResponseProductsItemCardTypeMax = 80;
+
+export const getGiftCardProductsResponseProductsItemIssuerMax = 80;
+
+export const getGiftCardProductsResponseProductsItemBrandMax = 80;
+
 
 
 export const GetGiftCardProductsResponse = zod.object({
@@ -1204,6 +1210,9 @@ export const GetGiftCardProductsResponse = zod.object({
   "name": zod.string(),
   "description": zod.string(),
   "regionZip": zod.string().max(getGiftCardProductsResponseProductsItemRegionZipMax).regex(getGiftCardProductsResponseProductsItemRegionZipRegExp).nullable(),
+  "cardType": zod.string().max(getGiftCardProductsResponseProductsItemCardTypeMax),
+  "issuer": zod.string().max(getGiftCardProductsResponseProductsItemIssuerMax),
+  "brand": zod.string().max(getGiftCardProductsResponseProductsItemBrandMax),
   "faceValueCents": zod.number().int(),
   "priceCents": zod.number().int(),
   "availableCount": zod.number().int(),
@@ -1239,7 +1248,7 @@ export const GetMyGiftCardOrdersResponse = zod.object({
 /**
  * @summary Purchase prepaid gift cards using the signed-in user's account balance
  */
-export const purchaseGiftCardBodyQuantityMax = 50;
+export const purchaseGiftCardBodyQuantityMax = 1;
 
 
 
@@ -1277,6 +1286,12 @@ export const getAdminGiftCardProductsResponseProductsItemRegionZipMax = 10;
 
 
 export const getAdminGiftCardProductsResponseProductsItemRegionZipRegExp = new RegExp('^[0-9]{5}(-[0-9]{4})?$');
+export const getAdminGiftCardProductsResponseProductsItemCardTypeMax = 80;
+
+export const getAdminGiftCardProductsResponseProductsItemIssuerMax = 80;
+
+export const getAdminGiftCardProductsResponseProductsItemBrandMax = 80;
+
 
 
 export const GetAdminGiftCardProductsResponse = zod.object({
@@ -1285,9 +1300,13 @@ export const GetAdminGiftCardProductsResponse = zod.object({
   "name": zod.string(),
   "description": zod.string(),
   "regionZip": zod.string().max(getAdminGiftCardProductsResponseProductsItemRegionZipMax).regex(getAdminGiftCardProductsResponseProductsItemRegionZipRegExp).nullable(),
+  "cardType": zod.string().max(getAdminGiftCardProductsResponseProductsItemCardTypeMax),
+  "issuer": zod.string().max(getAdminGiftCardProductsResponseProductsItemIssuerMax),
+  "brand": zod.string().max(getAdminGiftCardProductsResponseProductsItemBrandMax),
   "faceValueCents": zod.number().int(),
   "priceCents": zod.number().int(),
   "availableCount": zod.number().int(),
+  "canReceiveStock": zod.boolean(),
   "createdAt": zod.coerce.date()
 }))
 })
@@ -1304,6 +1323,12 @@ export const createAdminGiftCardProductBodyRegionZipMax = 10;
 
 
 export const createAdminGiftCardProductBodyRegionZipRegExp = new RegExp('^[0-9]{5}(-[0-9]{4})?$');
+export const createAdminGiftCardProductBodyCardTypeMax = 80;
+
+export const createAdminGiftCardProductBodyIssuerMax = 80;
+
+export const createAdminGiftCardProductBodyBrandMax = 80;
+
 export const createAdminGiftCardProductBodyFaceValueCentsMax = 1000000;
 
 export const createAdminGiftCardProductBodyPriceCentsMax = 1000000;
@@ -1314,6 +1339,9 @@ export const CreateAdminGiftCardProductBody = zod.object({
   "name": zod.string().min(1).max(createAdminGiftCardProductBodyNameMax),
   "description": zod.string().max(createAdminGiftCardProductBodyDescriptionMax),
   "regionZip": zod.string().max(createAdminGiftCardProductBodyRegionZipMax).regex(createAdminGiftCardProductBodyRegionZipRegExp).nullable(),
+  "cardType": zod.string().min(1).max(createAdminGiftCardProductBodyCardTypeMax),
+  "issuer": zod.string().min(1).max(createAdminGiftCardProductBodyIssuerMax),
+  "brand": zod.string().min(1).max(createAdminGiftCardProductBodyBrandMax),
   "faceValueCents": zod.number().int().min(1).max(createAdminGiftCardProductBodyFaceValueCentsMax),
   "priceCents": zod.number().int().min(1).max(createAdminGiftCardProductBodyPriceCentsMax)
 })
@@ -1322,6 +1350,12 @@ export const createAdminGiftCardProductResponseRegionZipMax = 10;
 
 
 export const createAdminGiftCardProductResponseRegionZipRegExp = new RegExp('^[0-9]{5}(-[0-9]{4})?$');
+export const createAdminGiftCardProductResponseCardTypeMax = 80;
+
+export const createAdminGiftCardProductResponseIssuerMax = 80;
+
+export const createAdminGiftCardProductResponseBrandMax = 80;
+
 
 
 export const CreateAdminGiftCardProductResponse = zod.object({
@@ -1329,6 +1363,9 @@ export const CreateAdminGiftCardProductResponse = zod.object({
   "name": zod.string(),
   "description": zod.string(),
   "regionZip": zod.string().max(createAdminGiftCardProductResponseRegionZipMax).regex(createAdminGiftCardProductResponseRegionZipRegExp).nullable(),
+  "cardType": zod.string().max(createAdminGiftCardProductResponseCardTypeMax),
+  "issuer": zod.string().max(createAdminGiftCardProductResponseIssuerMax),
+  "brand": zod.string().max(createAdminGiftCardProductResponseBrandMax),
   "faceValueCents": zod.number().int(),
   "priceCents": zod.number().int(),
   "availableCount": zod.number().int(),
@@ -1347,27 +1384,36 @@ export const DeleteAdminGiftCardProductResponse = zod.void()
 
 
 /**
- * @summary Update the public redemption-region ZIP for a gift-card product
+ * @summary Update public metadata for a gift-card product
  */
-export const UpdateAdminGiftCardProductRegionZipParams = zod.object({
+export const UpdateAdminGiftCardProductMetadataParams = zod.object({
   "productId": zod.coerce.string().uuid()
 })
 
-export const updateAdminGiftCardProductRegionZipBodyRegionZipMax = 10;
+export const updateAdminGiftCardProductMetadataBodyRegionZipMax = 10;
 
 
-export const updateAdminGiftCardProductRegionZipBodyRegionZipRegExp = new RegExp('^[0-9]{5}(-[0-9]{4})?$');
+export const updateAdminGiftCardProductMetadataBodyRegionZipRegExp = new RegExp('^[0-9]{5}(-[0-9]{4})?$');
+export const updateAdminGiftCardProductMetadataBodyCardTypeMax = 80;
+
+export const updateAdminGiftCardProductMetadataBodyIssuerMax = 80;
+
+export const updateAdminGiftCardProductMetadataBodyBrandMax = 80;
 
 
-export const UpdateAdminGiftCardProductRegionZipBody = zod.object({
-  "regionZip": zod.string().max(updateAdminGiftCardProductRegionZipBodyRegionZipMax).regex(updateAdminGiftCardProductRegionZipBodyRegionZipRegExp).nullable()
+
+export const UpdateAdminGiftCardProductMetadataBody = zod.object({
+  "regionZip": zod.string().max(updateAdminGiftCardProductMetadataBodyRegionZipMax).regex(updateAdminGiftCardProductMetadataBodyRegionZipRegExp).nullable(),
+  "cardType": zod.string().min(1).max(updateAdminGiftCardProductMetadataBodyCardTypeMax),
+  "issuer": zod.string().min(1).max(updateAdminGiftCardProductMetadataBodyIssuerMax),
+  "brand": zod.string().min(1).max(updateAdminGiftCardProductMetadataBodyBrandMax)
 })
 
-export const UpdateAdminGiftCardProductRegionZipResponse = zod.void()
+export const UpdateAdminGiftCardProductMetadataResponse = zod.void()
 
 
 /**
- * @summary Add a batch of prepaid gift cards to a product's available stock
+ * @summary Add one prepaid gift card to a new product listing
  */
 export const AddAdminGiftCardStockParams = zod.object({
   "productId": zod.coerce.string().uuid()
@@ -1388,7 +1434,7 @@ export const addAdminGiftCardStockBodyCardsItemSecurityCodeMax = 4;
 export const addAdminGiftCardStockBodyCardsItemSecurityCodeRegExp = new RegExp('^[0-9]+$');
 export const addAdminGiftCardStockBodyCardsItemPinMax = 16;
 
-export const addAdminGiftCardStockBodyCardsMax = 500;
+export const addAdminGiftCardStockBodyCardsMax = 1;
 
 
 

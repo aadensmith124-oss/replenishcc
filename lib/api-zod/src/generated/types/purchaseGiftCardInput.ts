@@ -10,7 +10,7 @@ export interface PurchaseGiftCardInput {
   productId: string;
   /**
      * @minimum 1
-     * @maximum 50
+     * @maximum 1
      */
   quantity: number;
 }

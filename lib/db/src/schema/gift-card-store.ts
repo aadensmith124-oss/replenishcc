@@ -19,6 +19,9 @@ export const giftCardProductsTable = pgTable(
     name: varchar("name", { length: 100 }).notNull(),
     description: text("description").notNull().default(""),
     regionZip: varchar("region_zip", { length: 10 }),
+    cardType: varchar("card_type", { length: 80 }).notNull().default(""),
+    issuer: varchar("issuer", { length: 80 }).notNull().default(""),
+    brand: varchar("brand", { length: 80 }).notNull().default(""),
     faceValueCents: integer("face_value_cents").notNull(),
     priceCents: integer("price_cents").notNull(),
     createdByUserId: uuid("created_by_user_id").references(

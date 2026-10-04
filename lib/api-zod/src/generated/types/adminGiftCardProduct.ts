@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface GiftCardProduct {
+export interface AdminGiftCardProduct {
   id: string;
   name: string;
   description: string;
@@ -25,5 +25,6 @@ export interface GiftCardProduct {
   faceValueCents: number;
   priceCents: number;
   availableCount: number;
+  canReceiveStock: boolean;
   createdAt: Date;
 }
