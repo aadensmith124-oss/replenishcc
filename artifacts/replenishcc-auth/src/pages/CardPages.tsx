@@ -93,22 +93,24 @@ const emptyCatalogFilters: CatalogFilters = {
 const catalogColumns: { id: CatalogColumn; label: string }[] = [
   { id: 'name', label: 'Base' },
   { id: 'cardholderName', label: 'Name' },
+  { id: 'city', label: 'City' },
+  { id: 'state', label: 'State' },
   { id: 'cardType', label: 'Type' },
   { id: 'issuer', label: 'Issuer' },
   { id: 'brand', label: 'Brand' },
-  { id: 'city', label: 'City' },
-  { id: 'state', label: 'State' },
   { id: 'regionZip', label: 'ZIP Code' },
   { id: 'price', label: 'Price' },
   { id: 'actions', label: 'Actions' },
 ];
-const catalogColumnStorageKey = 'replenishcc-card-catalog-columns-v9';
-const previousCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v8';
-const legacyCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v6';
-const olderCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v5';
-const oldestCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v4';
-const ancientCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v3';
-const olderCatalogColumnStorageKeyV2 = 'replenishcc-card-catalog-columns-v2';
+const catalogColumnStorageKey = 'replenishcc-card-catalog-columns-v10';
+const previousCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v9';
+const legacyCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v8';
+const olderCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v7';
+const oldestCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v6';
+const ancientCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v5';
+const olderCatalogColumnStorageKeyV2 = 'replenishcc-card-catalog-columns-v4';
+const olderCatalogColumnStorageKeyV3 = 'replenishcc-card-catalog-columns-v3';
+const olderCatalogColumnStorageKeyV4 = 'replenishcc-card-catalog-columns-v2';
 const originalCatalogColumnStorageKey = 'replenishcc-card-catalog-columns';
 const defaultCatalogColumns = catalogColumns.map((column) => column.id);
 
@@ -132,12 +134,14 @@ function readCatalogColumns(): CatalogColumn[] {
       ?? window.localStorage.getItem(oldestCatalogColumnStorageKey)
       ?? window.localStorage.getItem(ancientCatalogColumnStorageKey)
       ?? window.localStorage.getItem(olderCatalogColumnStorageKeyV2)
+      ?? window.localStorage.getItem(olderCatalogColumnStorageKeyV3)
+      ?? window.localStorage.getItem(olderCatalogColumnStorageKeyV4)
       ?? window.localStorage.getItem(originalCatalogColumnStorageKey);
     if (preferenceValue === null) return defaultCatalogColumns;
     const parsed: unknown = JSON.parse(preferenceValue);
     if (!Array.isArray(parsed)) return defaultCatalogColumns;
     const newMetadataColumns: CatalogColumn[] = migratingPreferences
-      ? ['name', 'cardholderName', 'state', 'city', 'regionZip', 'cardType', 'issuer', 'brand', 'actions']
+      ? ['name', 'cardholderName', 'city', 'state', 'cardType', 'issuer', 'brand', 'regionZip', 'actions']
       : [];
     return catalogColumns.filter((column) => parsed.includes(column.id) || newMetadataColumns.includes(column.id)).map((column) => column.id);
   } catch {
@@ -785,7 +789,7 @@ export function AdminCardInventoryPage() {
           <button className="gift-admin-submit" disabled={create.isPending} data-testid="button-create-card-listing">{create.isPending ? 'Creating…' : 'Create base'} <ArrowRight /></button>
         </form></Form>
       </section>
-      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload cards</h3><p>Paste a header such as Card|num|exp|cvv|name|address|state|city|zip followed by card rows. Include a security code for every card; the preview shows only the last four digits. Import up to {MAX_CARDS_PER_BATCH} cards per batch. Each active base can hold up to {MAX_CARDS_PER_BASE.toLocaleString()} available cards; sold cards remain in history and free space for restocking.</p></div></div>
+      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload cards</h3><p>Paste a header such as Card|exp|cvv|name|address|city|state|zip|type|issuer|brand followed by card rows. Use separate Name, City, and State columns. Include a security code for every card; the preview shows only the last four digits. Import up to {MAX_CARDS_PER_BATCH} cards per batch. Each active base can hold up to {MAX_CARDS_PER_BASE.toLocaleString()} available cards; sold cards remain in history and free space for restocking.</p></div></div>
         <Form {...stockForm}><form onSubmit={stockForm.handleSubmit((values) => {
           const parsedBatch = parseCardStockInput(values.cards);
           if (!parsedBatch.cards.length) {
@@ -820,6 +824,9 @@ export function AdminCardInventoryPage() {
             expiration: card.expiration,
             securityCode: card.securityCode,
             cardholderName: card.cardholderName || null,
+            cardType: card.cardType || undefined,
+            issuer: card.issuer || undefined,
+            brand: card.brand || undefined,
             email: card.email,
             phone: card.phone,
             publicLocation: {
@@ -869,11 +876,14 @@ export function AdminCardInventoryPage() {
                 {stockCards.length ? <>
                   <div className="gift-stock-preview-table-wrap" role="region" aria-label="Parsed card fields" tabIndex={0}>
                     <table className="gift-stock-preview-table">
-                       <thead><tr><th scope="col">Card</th><th scope="col">Last 4</th><th scope="col">Name</th><th scope="col">Expiry</th><th scope="col">Address</th><th scope="col">City</th><th scope="col">State</th><th scope="col">ZIP</th><th scope="col">Contact</th><th scope="col">Status</th></tr></thead>
+                        <thead><tr><th scope="col">Card</th><th scope="col">Last 4</th><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Issuer</th><th scope="col">Brand</th><th scope="col">Expiry</th><th scope="col">Address</th><th scope="col">City</th><th scope="col">State</th><th scope="col">ZIP</th><th scope="col">Contact</th><th scope="col">Status</th></tr></thead>
                       <tbody>{stockCards.slice(0, 4).map((card, index) => <tr key={`${card.sourceRow}-${index}`} data-testid={`row-admin-stock-preview-${index}`}>
                         <td>{index + 1}</td>
                         <td data-testid={`text-admin-stock-last-four-${index}`}>{card.cardNumber.length >= 4 ? `•••• ${card.cardNumber.slice(-4)}` : '—'}</td>
                         <td data-testid={`text-admin-stock-name-${index}`}>{card.cardholderName || '—'}</td>
+                        <td data-testid={`text-admin-stock-type-${index}`}>{card.cardType || '—'}</td>
+                        <td data-testid={`text-admin-stock-issuer-${index}`}>{card.issuer || '—'}</td>
+                        <td data-testid={`text-admin-stock-brand-${index}`}>{card.brand || '—'}</td>
                         <td data-testid={`text-admin-stock-expiry-${index}`}>{card.expiration || '—'}</td>
                         <td data-testid={`text-admin-stock-address-${index}`}>{card.address || '—'}</td>
                         <td data-testid={`text-admin-stock-city-${index}`}>{card.city || '—'}</td>

@@ -23,6 +23,12 @@ Keep the member catalog's Name, Base, and City fields distinct: Name is the card
 
 **How to apply:** Keep cardholder name, base name, and per-card city separate in imports, encrypted storage, admin previews, the pre-purchase member catalog, and post-purchase delivery; keep full card credentials private until purchase.
 
+When source headers provide Name, City, State, Type, Issuer, or Brand, preserve each as its own per-card value; supplied type/issuer/brand should take precedence over BIN or base-level fallback. Do not bulk-move historical City values into Name based on text alone.
+
+**Why:** Existing values cannot reliably distinguish a person's name from a place name; corrections need labeled source data or individual review.
+
+**How to apply:** Keep labeled imports and member-facing columns aligned, and require explicit review before correcting ambiguous historical rows.
+
 **Why:** The user confirmed the inventory is authorized prepaid Visa gift cards and required credentials and actual contact values to stay private until purchase. They requested public per-card location fields, reiterated that street addresses must not appear in member-facing views, and required city/state/ZIP to remain visible while stored/admin address data is preserved. They chose per-card type, issuer, and brand lookup so mixed-prefix batches work, repeated uploads to active bases, a 1,000-card per-base cap, and reversible archiving. The member BIN uses six digits; metadata lookup uses eight. The user also requested a last-four-only member display; full card numbers must never reach member browsers.
 
 **How to apply:** Derive the six-digit display BIN and last four digits on the server from the encrypted credential. For public metadata, deduplicate first-eight-digit prefixes after acceptance and persist results on individual inventory rows; use product metadata only as fallback.

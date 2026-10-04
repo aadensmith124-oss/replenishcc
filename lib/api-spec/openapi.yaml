@@ -2263,6 +2263,9 @@ components:
         email: { type: ["string", "null"], format: email, maxLength: 320 }
         phone: { type: ["string", "null"], maxLength: 40 }
         cardholderName: { type: ["string", "null"], maxLength: 120 }
+        cardType: { type: ["string", "null"], maxLength: 80 }
+        issuer: { type: ["string", "null"], maxLength: 80 }
+        brand: { type: ["string", "null"], maxLength: 80 }
         publicLocation: { $ref: "#/components/schemas/GiftCardPublicLocationInput" }
       required: [cardNumber, expiration, securityCode]
     AddGiftCardStockInput:

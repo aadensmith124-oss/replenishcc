@@ -3,6 +3,9 @@ export type ImportedGiftCard = {
   expiration: string;
   securityCode: string;
   cardholderName: string;
+  cardType: string;
+  issuer: string;
+  brand: string;
   email: string | null;
   phone: string | null;
   address: string;
@@ -26,6 +29,9 @@ type CardField =
   | 'expirationYear'
   | 'securityCode'
   | 'cardholderName'
+  | 'cardType'
+  | 'issuer'
+  | 'brand'
   | 'firstName'
   | 'lastName'
   | 'address'
@@ -49,6 +55,9 @@ const aliases: [CardField, string[]][] = [
   ['expirationYear', ['expiration year', 'expiry year', 'exp year', 'expyear', 'year']],
   ['securityCode', ['security code', 'security number', 'cvv', 'cvc', 'cvn', 'cv2', 'csc', 'verification code']],
   ['cardholderName', ['name', 'cardholder name', 'card holder name', 'cardholder', 'card holder', 'full name', 'name on card']],
+  ['cardType', ['card type', 'type', 'product type']],
+  ['issuer', ['issuer', 'issuing bank', 'bank']],
+  ['brand', ['brand', 'network', 'scheme']],
   ['firstName', ['first name', 'given name', 'forename']],
   ['lastName', ['last name', 'surname', 'family name']],
   ['address', ['address', 'full address', 'address line', 'address line 1', 'address line 2', 'address 1', 'address 2', 'billing address', 'billing address 1', 'street address', 'street address 1', 'street address 2', 'street address line 1', 'street', 'redemption address', 'card address']],
@@ -177,6 +186,9 @@ function cardFromRaw(raw: RawCard): ImportedGiftCard {
     values.cardholderName
     || [values.firstName, values.lastName].filter(Boolean).join(' ')
   ).trim().replace(/\s+/g, ' ');
+  const cardType = (values.cardType ?? '').trim().replace(/\s+/g, ' ');
+  const issuer = (values.issuer ?? '').trim().replace(/\s+/g, ' ');
+  const brand = (values.brand ?? '').trim().replace(/\s+/g, ' ');
   const contact = detectContacts([
     values.contact ?? '',
     values.phone ?? '',
@@ -210,6 +222,9 @@ function cardFromRaw(raw: RawCard): ImportedGiftCard {
     issues.push('Check the phone number.');
   }
   if (cardholderName.length > 120) issues.push('The cardholder name cannot exceed 120 characters.');
+  if (cardType.length > 80 || issuer.length > 80 || brand.length > 80) {
+    issues.push('Card type, issuer, and brand must each be 80 characters or less.');
+  }
   if (regionZip && !zipPattern.test(regionZip)) issues.push('Check the ZIP code.');
   if (address.length > 255 || state.length > 80 || city.length > 120) {
     issues.push('A location field is too long.');
@@ -220,6 +235,9 @@ function cardFromRaw(raw: RawCard): ImportedGiftCard {
     expiration,
     securityCode,
     cardholderName,
+    cardType,
+    issuer,
+    brand,
     email: email || null,
     phone: phone || null,
     address,
@@ -388,10 +406,26 @@ function rawFromColumns(
         addressEntry,
       ].sort((left, right) => left.index - right.index)
     : [];
-  const cityEntry = otherLocationEntries.find((entry) =>
+  const alphabeticEntries = otherLocationEntries.filter((entry) =>
     !addressEntries.includes(entry) && /[A-Za-z]/.test(entry.value),
   );
+  const firstAddressIndex = addressEntries[0]?.index ?? Number.POSITIVE_INFINITY;
+  const lastAddressIndex = addressEntries.at(-1)?.index ?? Number.NEGATIVE_INFINITY;
+  let cardholderNameEntry: (typeof alphabeticEntries)[number] | undefined;
+  let cityEntry: (typeof alphabeticEntries)[number] | undefined;
+  if (addressEntries.length) {
+    cardholderNameEntry = alphabeticEntries.find((entry) => entry.index < firstAddressIndex);
+    cityEntry = alphabeticEntries.find((entry) =>
+      entry.index > lastAddressIndex && entry !== cardholderNameEntry,
+    );
+  } else if (alphabeticEntries.length >= 2) {
+    [cardholderNameEntry] = alphabeticEntries;
+    cityEntry = alphabeticEntries.at(-1);
+  } else {
+    [cityEntry] = alphabeticEntries;
+  }
 
+  if (cardholderNameEntry) setRawValue(raw, 'cardholderName', cardholderNameEntry.value);
   if (addressEntries.length) setRawValue(raw, 'address', addressEntries.map((entry) => entry.value).join(' '));
   if (stateEntry) setRawValue(raw, 'state', stateEntry.value);
   if (cityEntry) setRawValue(raw, 'city', cityEntry.value);

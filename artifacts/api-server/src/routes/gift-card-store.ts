@@ -163,6 +163,9 @@ async function listProducts({
     bin: string | null;
     lastFour: string | null;
     cardholderName: string | null;
+    cardType: string | null;
+    issuer: string | null;
+    brand: string | null;
   }>();
   if (includeBins) {
     const inventoryIds = products.flatMap((product) =>
@@ -184,6 +187,9 @@ async function listProducts({
           bin: getGiftCardBinPrefix(card.cardNumber),
           lastFour: getGiftCardLastFour(card.cardNumber),
           cardholderName: card.cardholderName?.trim() || null,
+          cardType: card.cardType?.trim() || null,
+          issuer: card.issuer?.trim() || null,
+          brand: card.brand?.trim() || null,
         });
       }
     }
@@ -221,6 +227,9 @@ async function listProducts({
                 bin: cardIdentifiers.get(card.inventoryId)?.bin ?? null,
                 lastFour: cardIdentifiers.get(card.inventoryId)?.lastFour ?? null,
                 cardholderName: cardIdentifiers.get(card.inventoryId)?.cardholderName ?? null,
+                cardType: cardIdentifiers.get(card.inventoryId)?.cardType || card.cardType,
+                issuer: cardIdentifiers.get(card.inventoryId)?.issuer || card.issuer,
+                brand: cardIdentifiers.get(card.inventoryId)?.brand || card.brand,
               }),
             ),
           }
@@ -247,6 +256,9 @@ function normalizeCredential(
   const email = card.email?.trim() || null;
   const phone = card.phone?.trim() || null;
   const cardholderName = card.cardholderName?.trim().replace(/\s+/g, " ") || null;
+  const cardType = card.cardType?.trim().replace(/\s+/g, " ") || null;
+  const issuer = card.issuer?.trim().replace(/\s+/g, " ") || null;
+  const brand = card.brand?.trim().replace(/\s+/g, " ") || null;
   const phoneDigits = phone?.replace(/\D/g, "") ?? "";
   if (
     !/^\d{13,19}$/.test(cardNumber) ||
@@ -259,7 +271,10 @@ function normalizeCredential(
         !/^\+?[\d\s().-]+$/.test(phone) ||
         phoneDigits.length < 10 ||
         phoneDigits.length > 15)) ||
-    (cardholderName !== null && cardholderName.length > 120)
+    (cardholderName !== null && cardholderName.length > 120) ||
+    (cardType !== null && cardType.length > 80) ||
+    (issuer !== null && issuer.length > 80) ||
+    (brand !== null && brand.length > 80)
   ) {
     return null;
   }
@@ -270,6 +285,9 @@ function normalizeCredential(
     email,
     phone,
     cardholderName,
+    cardType,
+    issuer,
+    brand,
   };
 }
 
@@ -487,12 +505,13 @@ router.get("/orders/gift-cards", async (req, res): Promise<void> => {
     if (!baseLocation) {
       throw new Error(`Public location metadata missing for gift-card inventory ${item.id}.`);
     }
+    const credential = decryptGiftCardCredential(item);
     const cards = cardsByOrder.get(item.orderId) ?? [];
     cards.push({
-      ...decryptGiftCardCredential(item),
-      cardType: item.cardType ?? baseLocation.cardType,
-      issuer: item.issuer ?? baseLocation.issuer,
-      brand: item.brand ?? baseLocation.brand,
+      ...credential,
+      cardType: credential.cardType || item.cardType || baseLocation.cardType,
+      issuer: credential.issuer || item.issuer || baseLocation.issuer,
+      brand: credential.brand || item.brand || baseLocation.brand,
       publicLocation: {
         address: item.publicAddress ?? baseLocation.address,
         city: item.publicCity ?? baseLocation.city,
@@ -610,6 +629,7 @@ router.post("/orders/gift-cards", async (req, res): Promise<void> => {
       return { kind: "stock" as const };
     }
 
+    const deliveredCredential = decryptGiftCardCredential(stock);
     const [order] = await tx
       .insert(giftCardOrdersTable)
       .values({
@@ -656,10 +676,10 @@ router.post("/orders/gift-cards", async (req, res): Promise<void> => {
         unitPriceCents: order.unitPriceCents,
         totalCents: order.totalCents,
         deliveredCards: [{
-          ...decryptGiftCardCredential(stock),
-          cardType: stock.cardType ?? product.cardType,
-          issuer: stock.issuer ?? product.issuer,
-          brand: stock.brand ?? product.brand,
+          ...deliveredCredential,
+          cardType: deliveredCredential.cardType || stock.cardType || product.cardType,
+          issuer: deliveredCredential.issuer || stock.issuer || product.issuer,
+          brand: deliveredCredential.brand || stock.brand || product.brand,
           publicLocation: {
             address: stock.publicAddress ?? product.address,
             city: stock.publicCity ?? product.city,

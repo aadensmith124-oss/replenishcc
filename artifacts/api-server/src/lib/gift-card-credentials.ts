@@ -13,6 +13,9 @@ export type GiftCardCredential = {
   email?: string | null;
   phone?: string | null;
   cardholderName?: string | null;
+  cardType?: string | null;
+  issuer?: string | null;
+  brand?: string | null;
 };
 
 export function getGiftCardBinPrefix(cardNumber: string): string | null {

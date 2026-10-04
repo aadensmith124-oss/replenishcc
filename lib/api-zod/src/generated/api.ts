@@ -1769,6 +1769,12 @@ export const addAdminGiftCardStockBodyCardsItemPhoneMax = 40;
 
 export const addAdminGiftCardStockBodyCardsItemCardholderNameMax = 120;
 
+export const addAdminGiftCardStockBodyCardsItemCardTypeMax = 80;
+
+export const addAdminGiftCardStockBodyCardsItemIssuerMax = 80;
+
+export const addAdminGiftCardStockBodyCardsItemBrandMax = 80;
+
 export const addAdminGiftCardStockBodyCardsItemPublicLocationAddressMax = 255;
 
 export const addAdminGiftCardStockBodyCardsItemPublicLocationCityMax = 120;
@@ -1795,6 +1801,9 @@ export const AddAdminGiftCardStockBody = zod.object({
   "email": zod.string().email().max(addAdminGiftCardStockBodyCardsItemEmailMax).nullish(),
   "phone": zod.string().max(addAdminGiftCardStockBodyCardsItemPhoneMax).nullish(),
   "cardholderName": zod.string().max(addAdminGiftCardStockBodyCardsItemCardholderNameMax).nullish(),
+  "cardType": zod.string().max(addAdminGiftCardStockBodyCardsItemCardTypeMax).nullish(),
+  "issuer": zod.string().max(addAdminGiftCardStockBodyCardsItemIssuerMax).nullish(),
+  "brand": zod.string().max(addAdminGiftCardStockBodyCardsItemBrandMax).nullish(),
   "publicLocation": zod.object({
   "address": zod.string().max(addAdminGiftCardStockBodyCardsItemPublicLocationAddressMax).optional(),
   "city": zod.string().max(addAdminGiftCardStockBodyCardsItemPublicLocationCityMax).optional(),

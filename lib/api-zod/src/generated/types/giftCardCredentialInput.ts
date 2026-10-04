@@ -40,5 +40,20 @@ export interface GiftCardCredentialInput {
      * @nullable
      */
   cardholderName?: string | null;
+  /**
+     * @maxLength 80
+     * @nullable
+     */
+  cardType?: string | null;
+  /**
+     * @maxLength 80
+     * @nullable
+     */
+  issuer?: string | null;
+  /**
+     * @maxLength 80
+     * @nullable
+     */
+  brand?: string | null;
   publicLocation?: GiftCardPublicLocationInput;
 }
