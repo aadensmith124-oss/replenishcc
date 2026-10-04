@@ -9,6 +9,7 @@ import {
   CreateAdminGiftCardProductBody,
   CreateAdminGiftCardProductResponse,
   DeleteAdminGiftCardProductParams,
+  DeleteAdminGiftCardProductResponse,
   GetAdminGiftCardProductsResponse,
   GetGiftCardProductsResponse,
   GetMyGiftCardOrdersResponse,
@@ -755,7 +756,7 @@ router.patch(
       res.status(404).json({ error: "Gift-card product not found." });
       return;
     }
-    res.status(204).end();
+    res.json(DeleteAdminGiftCardProductResponse.parse({ action: result.kind }));
   },
 );
 
