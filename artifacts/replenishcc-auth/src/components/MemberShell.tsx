@@ -245,7 +245,7 @@ export function MemberShell({
         {expanded.shop && <div className="nav-children">
           <Link href="/buy-logs" className={`nav-row${isBuyLogsPage ? ' active' : ''}`} aria-current={isBuyLogsPage ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-buy-logs"><ClipboardList aria-hidden="true" /><span>Buy Logs</span></Link>
           <Link href="/buy-cards" className={`nav-row${location === '/buy-cards' ? ' active' : ''}`} aria-current={location === '/buy-cards' ? 'page' : undefined} onClick={closeMobileNav} data-testid="link-buy-cards"><CreditCard aria-hidden="true" /><span>Buy Cards</span></Link>
-          <a href="https://t.me/@CardVenomBot" className="nav-row" target="_blank" rel="noopener noreferrer" onClick={closeMobileNav} data-testid="link-cc-checker"><ExternalLink aria-hidden="true" /><span>CC Checker</span></a>
+          <a href="https://t.me/CardVenomBot" className="nav-row" target="_blank" rel="noopener noreferrer" onClick={closeMobileNav} data-testid="link-cc-checker"><ExternalLink aria-hidden="true" /><span>CC Checker</span></a>
         </div>}
         <button className={`nav-row nav-group${isMyLogOrdersPage || isMyCardOrdersPage ? ' active' : ''}`} type="button" onClick={() => toggleGroup('orders')} aria-expanded={expanded.orders} data-testid="button-toggle-orders">
           <Package aria-hidden="true" /><span>My Orders</span><ChevronDown className={`nav-chevron${expanded.orders ? ' is-open' : ''}`} aria-hidden="true" />
