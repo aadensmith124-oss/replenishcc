@@ -20,7 +20,9 @@ Connect the Git repository at its root so the service roots can resolve the
 shared pnpm workspace. Vercel Services is currently documented as a beta
 feature. The API service uses its Express TypeScript entry point; the Vite
 services build to `dist/public` and `dist` respectively and use service-level
-SPA fallbacks.
+SPA fallbacks. The web service builds shared TypeScript library declarations
+before its local typecheck so a clean Vercel checkout can typecheck workspace
+imports.
 
 ## Runtime environment
 

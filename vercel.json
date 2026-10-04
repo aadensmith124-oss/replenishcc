@@ -21,7 +21,7 @@
     "replenishcc-auth": {
       "root": "artifacts/replenishcc-auth",
       "framework": "vite",
-      "buildCommand": "pnpm run typecheck && pnpm run build",
+      "buildCommand": "pnpm --dir ../.. run typecheck:libs && pnpm run typecheck && pnpm run build",
       "outputDirectory": "dist/public",
       "rewrites": [
         {
