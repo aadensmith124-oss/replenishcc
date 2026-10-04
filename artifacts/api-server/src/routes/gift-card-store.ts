@@ -38,7 +38,13 @@ const router: IRouter = Router();
 
 class DuplicateGiftCardBatchError extends Error {}
 
-async function listProducts(includeStockEligibility = false) {
+async function listProducts({
+  includeStockEligibility = false,
+  includeArchived = false,
+}: {
+  includeStockEligibility?: boolean;
+  includeArchived?: boolean;
+} = {}) {
   const availableCount = count(giftCardInventoryTable.id);
   const products = await db
     .select({
@@ -54,6 +60,7 @@ async function listProducts(includeStockEligibility = false) {
       brand: giftCardProductsTable.brand,
       faceValueCents: giftCardProductsTable.faceValueCents,
       priceCents: giftCardProductsTable.priceCents,
+      isArchived: giftCardProductsTable.isArchived,
       availableCount,
       availableCardLocations: sql<GiftCardPublicLocation[]>`
         COALESCE(
@@ -81,6 +88,11 @@ async function listProducts(includeStockEligibility = false) {
         eq(giftCardInventoryTable.status, "available"),
       ),
     )
+    .where(
+      includeArchived
+        ? undefined
+        : eq(giftCardProductsTable.isArchived, false),
+    )
     .groupBy(giftCardProductsTable.id)
     .orderBy(desc(giftCardProductsTable.createdAt));
 
@@ -101,15 +113,21 @@ async function listProducts(includeStockEligibility = false) {
   const blockedProductIds = new Set([
     ...inventoryHistory.map((item) => item.productId),
     ...orderHistory.map((order) => order.productId),
+    ...products
+      .filter((product) => product.isArchived)
+      .map((product) => product.id),
   ]);
 
-  return products.map((product) => ({
-    ...product,
-    ...(includeStockEligibility
-      ? { canReceiveStock: !blockedProductIds.has(product.id) }
-      : {}),
-    createdAt: product.createdAt.toISOString(),
-  }));
+  return products.map((product) => {
+    const { isArchived, ...visibleProduct } = product;
+    return {
+      ...visibleProduct,
+      ...(includeStockEligibility
+        ? { canReceiveStock: !blockedProductIds.has(product.id), isArchived }
+        : {}),
+      createdAt: product.createdAt.toISOString(),
+    };
+  });
 }
 
 function normalizeCredential(
@@ -322,7 +340,13 @@ router.post("/orders/gift-cards", async (req, res): Promise<void> => {
     const [product] = await tx
       .select()
       .from(giftCardProductsTable)
-      .where(eq(giftCardProductsTable.id, parsed.data.productId))
+      .where(
+        and(
+          eq(giftCardProductsTable.id, parsed.data.productId),
+          eq(giftCardProductsTable.isArchived, false),
+        ),
+      )
+      .for("update")
       .limit(1);
     if (!product) return { kind: "missing" as const };
 
@@ -469,7 +493,12 @@ router.post("/orders/gift-cards/bulk", async (req, res): Promise<void> => {
     const selectedProducts = await tx
       .select()
       .from(giftCardProductsTable)
-      .where(inArray(giftCardProductsTable.id, productIds))
+      .where(
+        and(
+          inArray(giftCardProductsTable.id, productIds),
+          eq(giftCardProductsTable.isArchived, false),
+        ),
+      )
       .orderBy(giftCardProductsTable.id)
       .for("update");
     if (selectedProducts.length !== productIds.length) {
@@ -595,7 +624,10 @@ router.get("/admin/gift-card-products", async (req, res): Promise<void> => {
     return;
   }
 
-  const products = await listProducts(true);
+  const products = await listProducts({
+    includeStockEligibility: true,
+    includeArchived: true,
+  });
   res.json(GetAdminGiftCardProductsResponse.parse({ products }));
 });
 
