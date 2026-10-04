@@ -35,6 +35,9 @@
 .support-ticket-main strong { overflow: hidden; color: #e0e5dc; font-size: 11px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .support-ticket-main > span,.support-ticket-main small { overflow: hidden; color: #88948a; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .support-ticket-main small { color: #a1aa9f; }
+.support-ticket-order-match { font-weight: 650; }
+.support-ticket-order-match.is-verified { color: #9fc0ab; }
+.support-ticket-order-match.is-unmatched { color: #d5a28d; }
 .support-ticket-side { display: grid; justify-items: end; gap: 6px; }
 .support-ticket-id { color: #7d897f; font: 9px var(--app-font-mono); }
 .support-ticket-arrow { width: 15px; height: 15px; color: #748075; transition: transform .15s ease; }
@@ -80,6 +83,23 @@
 .support-closed-note svg { width: 15px; height: 15px; color: #b7a75d; }
 .support-detail-aside { display: grid; gap: 13px; }
 .support-detail-card,.support-refund-card { padding: 19px; }
+.support-order-card h2 { margin: 6px 0 12px; color: #e8ebe4; font: 600 18px/1.2 var(--app-font-serif); }
+.support-order-id-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.support-order-id-row code { min-width: 0; overflow-wrap: anywhere; color: #cbd2c8; font: 9px/1.5 var(--app-font-mono); }
+.support-copy-order-button { min-height: 30px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid #465044; border-radius: 5px; padding: 0 8px; color: #d6d9ce; background: #222a23; font-size: 9px; cursor: pointer; }
+.support-copy-order-button:hover { border-color: #827748; color: #e1d17b; }
+.support-copy-order-button svg { width: 12px; height: 12px; }
+.support-order-copy-status { color: #d5a28d; font-size: 8px; }
+.support-order-verified-summary { display: grid; gap: 4px; margin-top: 12px; border: 1px solid #394a3d; border-radius: 7px; padding: 10px; background: #1d2820; }
+.support-order-verified-summary strong { color: #dfe6dc; font-size: 10px; }
+.support-order-verified-summary span,.support-order-unmatched { color: #9aa69a; font-size: 9px; line-height: 1.55; }
+.support-order-unmatched { margin: 10px 0 0; color: #d1aa96; }
+.support-order-details { margin-top: 11px; border-top: 1px solid #2d372f; padding-top: 9px; }
+.support-order-details summary { color: #d2c477; font-size: 9px; font-weight: 650; cursor: pointer; }
+.support-order-details .support-detail-facts { margin-top: 8px; }
+.support-selected-order { display: grid; gap: 4px; border: 1px solid #394a3d; border-radius: 6px; padding: 9px; background: #1d2820; }
+.support-selected-order strong { color: #a0aa9f; font-size: 8px; }
+.support-selected-order code { color: #dfe6dc; font: 9px/1.5 var(--app-font-mono); overflow-wrap: anywhere; }
 .support-detail-facts { display: grid; gap: 0; margin: 15px 0 0; }
 .support-detail-facts > div { display: grid; grid-template-columns: 90px minmax(0,1fr); gap: 8px; border-top: 1px solid #2d372f; padding: 10px 0; }
 .support-detail-facts dt { color: #818d82; font-size: 9px; }
