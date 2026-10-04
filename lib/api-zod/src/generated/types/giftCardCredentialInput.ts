@@ -35,5 +35,10 @@ export interface GiftCardCredentialInput {
      * @nullable
      */
   phone?: string | null;
+  /**
+     * @maxLength 120
+     * @nullable
+     */
+  cardholderName?: string | null;
   publicLocation?: GiftCardPublicLocationInput;
 }

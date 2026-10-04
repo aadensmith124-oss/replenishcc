@@ -158,7 +158,10 @@ async function listProducts({
     .orderBy(desc(giftCardProductsTable.createdAt));
 
   const productIds = products.map((product) => product.id);
-  const cardIdentifiers = new Map<string, { bin: string | null; lastFour: string | null }>();
+  const cardIdentifiers = new Map<string, {
+    bin: string | null;
+    lastFour: string | null;
+  }>();
   if (includeBins) {
     const inventoryIds = products.flatMap((product) =>
       product.availableCardLocations.map((card) => card.inventoryId),
@@ -178,6 +181,7 @@ async function listProducts({
         cardIdentifiers.set(credential.id, {
           bin: getGiftCardBinPrefix(card.cardNumber),
           lastFour: getGiftCardLastFour(card.cardNumber),
+          cardholderName: card.cardholderName?.trim() || null,
         });
       }
     }
@@ -214,6 +218,7 @@ async function listProducts({
                 ...card,
                 bin: cardIdentifiers.get(card.inventoryId)?.bin ?? null,
                 lastFour: cardIdentifiers.get(card.inventoryId)?.lastFour ?? null,
+                cardholderName: cardIdentifiers.get(card.inventoryId)?.cardholderName ?? null,
               }),
             ),
           }
@@ -239,6 +244,7 @@ function normalizeCredential(
   const expirationMatch = /^(0[1-9]|1[0-2])\/(\d{2}|\d{4})$/.exec(expiration);
   const email = card.email?.trim() || null;
   const phone = card.phone?.trim() || null;
+  const cardholderName = card.cardholderName?.trim().replace(/\s+/g, " ") || null;
   const phoneDigits = phone?.replace(/\D/g, "") ?? "";
   if (
     !/^\d{13,19}$/.test(cardNumber) ||
@@ -250,7 +256,8 @@ function normalizeCredential(
       (phone.length > 40 ||
         !/^\+?[\d\s().-]+$/.test(phone) ||
         phoneDigits.length < 10 ||
-        phoneDigits.length > 15))
+        phoneDigits.length > 15)) ||
+    (cardholderName !== null && cardholderName.length > 120)
   ) {
     return null;
   }
@@ -260,6 +267,7 @@ function normalizeCredential(
     securityCode: card.securityCode,
     email,
     phone,
+    cardholderName,
   };
 }
 

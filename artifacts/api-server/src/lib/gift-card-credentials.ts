@@ -12,6 +12,7 @@ export type GiftCardCredential = {
   securityCode: string;
   email?: string | null;
   phone?: string | null;
+  cardholderName?: string | null;
 };
 
 export function getGiftCardBinPrefix(cardNumber: string): string | null {
@@ -43,9 +44,16 @@ function encryptionKey(): Buffer {
 }
 
 export function hashGiftCardCredential(value: GiftCardCredential): string {
+  const hashIdentity = {
+    cardNumber: value.cardNumber,
+    expiration: value.expiration,
+    securityCode: value.securityCode,
+    email: value.email ?? null,
+    phone: value.phone ?? null,
+  };
   return createHmac("sha256", sessionSecret())
     .update("replenishcc-gift-card-deduplication:")
-    .update(JSON.stringify(value))
+    .update(JSON.stringify(hashIdentity))
     .digest("hex");
 }
 

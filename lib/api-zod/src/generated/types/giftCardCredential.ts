@@ -21,6 +21,11 @@ export interface GiftCardCredential {
      * @nullable
      */
   phone?: string | null;
+  /**
+     * @maxLength 120
+     * @nullable
+     */
+  cardholderName?: string | null;
   /** @maxLength 80 */
   cardType?: string;
   /** @maxLength 80 */

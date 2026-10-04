@@ -40,10 +40,11 @@ const baseSchema = z.object({
 });
 type BaseForm = z.infer<typeof baseSchema>;
 
-type CatalogColumn = 'name' | 'state' | 'city' | 'regionZip' | 'cardType' | 'issuer' | 'brand' | 'price' | 'actions';
+type CatalogColumn = 'name' | 'cardholderName' | 'state' | 'city' | 'regionZip' | 'cardType' | 'issuer' | 'brand' | 'price' | 'actions';
 type CatalogPriceFilter = 'all' | 'under-25' | '25-50' | '50-100' | '100-plus';
 type CatalogPresenceFilter = 'all' | 'yes' | 'no';
 type CatalogFilters = {
+  cardholderName: string;
   brand: string;
   cardType: string;
   issuer: string;
@@ -61,6 +62,7 @@ type PublicCardLocation = {
   cardType: string;
   issuer: string;
   brand: string;
+  cardholderName: string | null;
   city: string;
   state: string;
   regionZip: string | null;
@@ -85,11 +87,12 @@ function locationsForProduct(product: ProductWithCardLocations): PublicCardLocat
 }
 
 const emptyCatalogFilters: CatalogFilters = {
-  brand: '', cardType: '', issuer: '', state: '', city: '', zip: '',
+  cardholderName: '', brand: '', cardType: '', issuer: '', state: '', city: '', zip: '',
   email: 'all', phone: 'all', price: 'all',
 };
 const catalogColumns: { id: CatalogColumn; label: string }[] = [
-  { id: 'name', label: 'Name' },
+  { id: 'name', label: 'Base' },
+  { id: 'cardholderName', label: 'Name' },
   { id: 'cardType', label: 'Type' },
   { id: 'issuer', label: 'Issuer' },
   { id: 'brand', label: 'Brand' },
@@ -99,8 +102,8 @@ const catalogColumns: { id: CatalogColumn; label: string }[] = [
   { id: 'price', label: 'Price' },
   { id: 'actions', label: 'Actions' },
 ];
-const catalogColumnStorageKey = 'replenishcc-card-catalog-columns-v8';
-const previousCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v7';
+const catalogColumnStorageKey = 'replenishcc-card-catalog-columns-v9';
+const previousCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v8';
 const legacyCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v6';
 const olderCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v5';
 const oldestCatalogColumnStorageKey = 'replenishcc-card-catalog-columns-v4';
@@ -134,7 +137,7 @@ function readCatalogColumns(): CatalogColumn[] {
     const parsed: unknown = JSON.parse(preferenceValue);
     if (!Array.isArray(parsed)) return defaultCatalogColumns;
     const newMetadataColumns: CatalogColumn[] = migratingPreferences
-      ? ['name', 'state', 'city', 'regionZip', 'cardType', 'issuer', 'brand', 'actions']
+      ? ['name', 'cardholderName', 'state', 'city', 'regionZip', 'cardType', 'issuer', 'brand', 'actions']
       : [];
     return catalogColumns.filter((column) => parsed.includes(column.id) || newMetadataColumns.includes(column.id)).map((column) => column.id);
   } catch {
@@ -212,6 +215,7 @@ export function BuyCardsPage() {
     const matchesSearch = !normalizedSearch
       || product.name.toLowerCase().includes(normalizedSearch)
       || product.description.toLowerCase().includes(normalizedSearch)
+      || (card.cardholderName ?? '').toLowerCase().includes(normalizedSearch)
       || (card.brand || product.brand).toLowerCase().includes(normalizedSearch)
       || (card.cardType || product.cardType).toLowerCase().includes(normalizedSearch)
       || (card.issuer || product.issuer).toLowerCase().includes(normalizedSearch)
@@ -220,6 +224,7 @@ export function BuyCardsPage() {
       || (card.regionZip ?? '').toLowerCase().includes(normalizedSearch);
     return matchesBase
       && matchesSearch
+      && exactMatch(card.cardholderName ?? '', filters.cardholderName)
       && exactMatch(card.brand || product.brand, filters.brand)
       && exactMatch(card.cardType || product.cardType, filters.cardType)
       && exactMatch(card.issuer || product.issuer, filters.issuer)
@@ -231,6 +236,7 @@ export function BuyCardsPage() {
       && matchesCatalogPrice(product.priceCents, filters.price);
   });
   const catalogOptions = useMemo(() => ({
+    cardholderName: [...new Set(availableCardRows.map(({ card }) => (card.cardholderName ?? '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
     brand: [...new Set(availableCardRows.map(({ product, card }) => (card.brand || product.brand).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
     cardType: [...new Set(availableCardRows.map(({ product, card }) => (card.cardType || product.cardType).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
     issuer: [...new Set(availableCardRows.map(({ product, card }) => (card.issuer || product.issuer).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
@@ -341,7 +347,7 @@ export function BuyCardsPage() {
     <section className="catalog-primary-controls" aria-label="Search and choose a base">
       <label className="gift-catalog-filter-field gift-catalog-search-field">
         <span>Search listings</span>
-        <span className="gift-catalog-search-input"><Search aria-hidden="true" /><input type="search" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Name, brand, type, issuer or location" aria-label="Search card listings by name, description, brand, type, issuer, or location" data-testid="input-card-catalog-search" /></span>
+         <span className="gift-catalog-search-input"><Search aria-hidden="true" /><input type="search" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Name, base, brand, type, issuer or location" aria-label="Search card listings by name, base, description, brand, type, issuer, or location" data-testid="input-card-catalog-search" /></span>
       </label>
       <label className="gift-catalog-filter-field catalog-base-select">
         <span>Base</span>
@@ -370,6 +376,11 @@ export function BuyCardsPage() {
               <div className="catalog-filter-body">
                 <section className="catalog-filter-group" aria-labelledby="catalog-group-card-details">
                   <h3 id="catalog-group-card-details">Card details</h3>
+                  <label className="catalog-filter-field" htmlFor="select-card-name-filter">Name
+                    <select id="select-card-name-filter" value={draftCatalogFilters.cardholderName} onChange={(event) => updateDraftFilter('cardholderName', event.target.value)} data-testid="select-card-name-filter">
+                      <option value="">All names</option>{catalogOptions.cardholderName.map((value) => <option key={value} value={value}>{value}</option>)}
+                    </select>
+                  </label>
                   <label className="catalog-filter-field" htmlFor="select-card-brand-filter">Brand
                     <select id="select-card-brand-filter" value={draftCatalogFilters.brand} onChange={(event) => updateDraftFilter('brand', event.target.value)} data-testid="select-card-brand-filter">
                       <option value="">All brands</option>{catalogOptions.brand.map((value) => <option key={value} value={value}>{value}</option>)}
@@ -442,7 +453,7 @@ export function BuyCardsPage() {
           <details className="column-chooser gift-column-chooser">
             <summary className="quiet-button" data-testid="button-choose-card-columns"><Columns3 /> Columns <ChevronRight className="chooser-chevron" /></summary>
             <div className="column-chooser-menu" role="group" aria-label="Choose visible card listing columns">
-              <p className="gift-column-note">Card and BIN stay visible. Choose whether to show the name, location, and other listing details; private card credentials never appear as columns.</p>
+              <p className="gift-column-note">Card and BIN stay visible. Choose whether to show the cardholder name, base, location, and other listing details; card number, expiration, and security code stay private until purchase.</p>
               {catalogColumns.map((column) => <label key={column.id} className="column-choice">
                 <input type="checkbox" checked={visibleColumns.includes(column.id)} onChange={() => toggleColumn(column.id)} data-testid={`checkbox-card-column-${column.id}`} />
                 <span>{column.label}</span>
@@ -471,6 +482,8 @@ export function BuyCardsPage() {
                   switch (column) {
                     case 'name':
                       return <td key={column} data-testid={`text-gift-product-name-${product.id}-${card.inventoryId}`}>{product.name}</td>;
+                    case 'cardholderName':
+                      return <td key={column} data-testid={`text-gift-cardholder-name-${card.inventoryId}`}>{card.cardholderName || '—'}</td>;
                     case 'brand':
                       return <td key={column} data-testid={`text-gift-card-brand-${card.inventoryId}`}>{card.brand || product.brand || '—'}</td>;
                     case 'cardType':
@@ -552,6 +565,7 @@ export function MyCardOrdersPage() {
       ...(order.deliveredCards.length
         ? order.deliveredCards.flatMap((card, cardIndex) => [
           `Card ${cardIndex + 1}`,
+          ...(card.cardholderName ? [`Cardholder name: ${plainTextLine(card.cardholderName)}`] : []),
           `Card number: ${plainTextLine(card.cardNumber)}`,
           `Expiration: ${plainTextLine(card.expiration)}`,
           `Security code: ${plainTextLine(card.securityCode)}`,
@@ -606,6 +620,7 @@ function Credential({ card, index, visible, toggle, copy, copied, orderId }: { c
       ['Card type', card.cardType || '—', '', 'type'],
       ['Issuer', card.issuer || '—', '', 'issuer'],
       ['Brand', card.brand || '—', '', 'brand'],
+      ['Name', visible ? card.cardholderName || '—' : '••••••••', card.cardholderName || '', 'name'],
       ['Card number', visible ? card.cardNumber : '•••• •••• •••• ••••', card.cardNumber, 'number'],
       ['Expiration', visible ? card.expiration : '•• / ••', card.expiration, 'expiration'],
       ['Security code', visible ? card.securityCode : '•••', card.securityCode, 'security'],
@@ -770,7 +785,7 @@ export function AdminCardInventoryPage() {
           <button className="gift-admin-submit" disabled={create.isPending} data-testid="button-create-card-listing">{create.isPending ? 'Creating…' : 'Create base'} <ArrowRight /></button>
         </form></Form>
       </section>
-      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload cards</h3><p>Paste a header such as Card|num|exp|cvv|address|state|city|zip followed by card rows. Include a security code for every card; the preview shows only the last four digits. Import up to {MAX_CARDS_PER_BATCH} cards per batch. Each active base can hold up to {MAX_CARDS_PER_BASE.toLocaleString()} available cards; sold cards remain in history and free space for restocking.</p></div></div>
+      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload cards</h3><p>Paste a header such as Card|num|exp|cvv|name|address|state|city|zip followed by card rows. Include a security code for every card; the preview shows only the last four digits. Import up to {MAX_CARDS_PER_BATCH} cards per batch. Each active base can hold up to {MAX_CARDS_PER_BASE.toLocaleString()} available cards; sold cards remain in history and free space for restocking.</p></div></div>
         <Form {...stockForm}><form onSubmit={stockForm.handleSubmit((values) => {
           const parsedBatch = parseCardStockInput(values.cards);
           if (!parsedBatch.cards.length) {
@@ -804,6 +819,7 @@ export function AdminCardInventoryPage() {
             cardNumber: card.cardNumber,
             expiration: card.expiration,
             securityCode: card.securityCode,
+            cardholderName: card.cardholderName || null,
             email: card.email,
             phone: card.phone,
             publicLocation: {
@@ -853,10 +869,11 @@ export function AdminCardInventoryPage() {
                 {stockCards.length ? <>
                   <div className="gift-stock-preview-table-wrap" role="region" aria-label="Parsed card fields" tabIndex={0}>
                     <table className="gift-stock-preview-table">
-                      <thead><tr><th scope="col">Card</th><th scope="col">Last 4</th><th scope="col">Expiry</th><th scope="col">Address</th><th scope="col">City</th><th scope="col">State</th><th scope="col">ZIP</th><th scope="col">Contact</th><th scope="col">Status</th></tr></thead>
+                       <thead><tr><th scope="col">Card</th><th scope="col">Last 4</th><th scope="col">Name</th><th scope="col">Expiry</th><th scope="col">Address</th><th scope="col">City</th><th scope="col">State</th><th scope="col">ZIP</th><th scope="col">Contact</th><th scope="col">Status</th></tr></thead>
                       <tbody>{stockCards.slice(0, 4).map((card, index) => <tr key={`${card.sourceRow}-${index}`} data-testid={`row-admin-stock-preview-${index}`}>
                         <td>{index + 1}</td>
                         <td data-testid={`text-admin-stock-last-four-${index}`}>{card.cardNumber.length >= 4 ? `•••• ${card.cardNumber.slice(-4)}` : '—'}</td>
+                        <td data-testid={`text-admin-stock-name-${index}`}>{card.cardholderName || '—'}</td>
                         <td data-testid={`text-admin-stock-expiry-${index}`}>{card.expiration || '—'}</td>
                         <td data-testid={`text-admin-stock-address-${index}`}>{card.address || '—'}</td>
                         <td data-testid={`text-admin-stock-city-${index}`}>{card.city || '—'}</td>

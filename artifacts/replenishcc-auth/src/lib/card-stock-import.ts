@@ -2,6 +2,7 @@ export type ImportedGiftCard = {
   cardNumber: string;
   expiration: string;
   securityCode: string;
+  cardholderName: string;
   email: string | null;
   phone: string | null;
   address: string;
@@ -24,6 +25,9 @@ type CardField =
   | 'expirationMonth'
   | 'expirationYear'
   | 'securityCode'
+  | 'cardholderName'
+  | 'firstName'
+  | 'lastName'
   | 'address'
   | 'state'
   | 'city'
@@ -44,6 +48,9 @@ const aliases: [CardField, string[]][] = [
   ['expirationMonth', ['expiration month', 'expiry month', 'exp month', 'expmonth', 'month']],
   ['expirationYear', ['expiration year', 'expiry year', 'exp year', 'expyear', 'year']],
   ['securityCode', ['security code', 'security number', 'cvv', 'cvc', 'cvn', 'cv2', 'csc', 'verification code']],
+  ['cardholderName', ['name', 'cardholder name', 'card holder name', 'cardholder', 'card holder', 'full name', 'name on card']],
+  ['firstName', ['first name', 'given name', 'forename']],
+  ['lastName', ['last name', 'surname', 'family name']],
   ['address', ['address', 'full address', 'address line', 'address line 1', 'address line 2', 'address 1', 'address 2', 'billing address', 'billing address 1', 'street address', 'street address 1', 'street address 2', 'street address line 1', 'street', 'redemption address', 'card address']],
   ['state', ['state', 'province', 'region', 'province code']],
   ['city', ['city', 'town', 'municipality']],
@@ -166,6 +173,10 @@ function cardFromRaw(raw: RawCard): ImportedGiftCard {
   }
   const expiration = normalizeExpiration(expirationValue);
   const securityCode = values.securityCode ?? '';
+  const cardholderName = (
+    values.cardholderName
+    || [values.firstName, values.lastName].filter(Boolean).join(' ')
+  ).trim().replace(/\s+/g, ' ');
   const contact = detectContacts([
     values.contact ?? '',
     values.phone ?? '',
@@ -198,6 +209,7 @@ function cardFromRaw(raw: RawCard): ImportedGiftCard {
   if (phone && (phone.length > 40 || !phonePattern.test(phone) || digitsOnly(phone).length < 10 || digitsOnly(phone).length > 15)) {
     issues.push('Check the phone number.');
   }
+  if (cardholderName.length > 120) issues.push('The cardholder name cannot exceed 120 characters.');
   if (regionZip && !zipPattern.test(regionZip)) issues.push('Check the ZIP code.');
   if (address.length > 255 || state.length > 80 || city.length > 120) {
     issues.push('A location field is too long.');
@@ -207,6 +219,7 @@ function cardFromRaw(raw: RawCard): ImportedGiftCard {
     cardNumber,
     expiration,
     securityCode,
+    cardholderName,
     email: email || null,
     phone: phone || null,
     address,

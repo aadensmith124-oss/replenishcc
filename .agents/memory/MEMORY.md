@@ -4,7 +4,8 @@
 - [Support ticket business rules](support-ticket-business-rules.md) — Orders are planned for later; current support refunds credit account balance and replacements are unavailable.
 - [License-key store scope](license-key-store-scope.md) — Members buy admin-listed license keys with account balance; admins create products and add stock.
 - [Coupon and deposit rules](coupon-and-deposit-rules.md) — Coupons discount balance-funded log orders; deposit minimums apply to manual and crypto deposits, not referrals.
-- [Vanilla gift-card store](vanilla-gift-card-store.md) — Look up mixed BIN prefixes per card; hide street addresses in member views and retain city/state/ZIP.
+- [Vanilla gift-card store](vanilla-gift-card-store.md) — Look up mixed BIN prefixes per card; keep Name, Base, City/State/ZIP distinct and hide street addresses.
 - [Workflow port ownership](workflow-port-ownership.md) — Failed artifact launches can leave child dev servers holding ports; inspect listeners before retrying.
 - [Development API database environment](database-workflow-env.md) — The current custom `DATABASE_URL` is production/external; never run development schema pushes against it.
 - [TypeScript build-info cache](typescript-build-cache.md) — After dependency changes, rule out stale build info before editing source to fix contradictory type errors.
+- [Patch application verification](patch-application-verification.md) — Verify intended symbols and diffs after multi-hunk patches; success output alone is not enough.

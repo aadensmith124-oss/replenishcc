@@ -2261,6 +2261,7 @@ components:
         securityCode: { type: string, minLength: 3, maxLength: 4, pattern: "^[0-9]+$" }
         email: { type: ["string", "null"], format: email, maxLength: 320 }
         phone: { type: ["string", "null"], maxLength: 40 }
+        cardholderName: { type: ["string", "null"], maxLength: 120 }
         publicLocation: { $ref: "#/components/schemas/GiftCardPublicLocationInput" }
       required: [cardNumber, expiration, securityCode]
     AddGiftCardStockInput:
@@ -2303,6 +2304,7 @@ components:
         securityCode: { type: string }
         email: { type: ["string", "null"], format: email, maxLength: 320 }
         phone: { type: ["string", "null"], maxLength: 40 }
+        cardholderName: { type: ["string", "null"], maxLength: 120 }
         cardType: { type: string, maxLength: 80 }
         issuer: { type: string, maxLength: 80 }
         brand: { type: string, maxLength: 80 }
