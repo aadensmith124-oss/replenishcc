@@ -40,7 +40,7 @@ function pageSettingsFromRow(row?: typeof memberPageVisibilitySettingsTable.$inf
           accountManagement: row.accountManagement,
         }
       : defaultMemberPageVisibility,
-    updatedAt: row?.updatedAt ?? new Date(0),
+    updatedAt: row?.updatedAt ?? new Date(),
   };
 }
 

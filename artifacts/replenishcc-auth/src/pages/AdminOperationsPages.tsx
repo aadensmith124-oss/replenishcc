@@ -2,7 +2,6 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Activity, AlertCircle, ArrowRight, Banknote, Boxes, Check, Eye, EyeOff, RefreshCw, UsersRound } from 'lucide-react';
 import {
-  getGetAdminDashboardOverviewQueryKey,
   getGetAdminDepositMethodsQueryKey,
   getGetDepositMethodsQueryKey,
   getGetMemberPageVisibilityQueryKey,
@@ -38,7 +37,7 @@ export function AdminOverviewPage() {
     <QueryState loading={overview.isLoading} error={overview.isError ? overview.error : undefined} onRetry={() => void overview.refetch()} />
     {total && <div className="admin-overview-grid" aria-busy={overview.isFetching}>
       <article className="admin-overview-metric">
-        <span className="admin-overview-icon"><UsersRound /></span><small>Registered accounts</small><strong data-testid="text-admin-total-users">{total.totalUsers.toLocaleString()}</strong><em>Real member count</em>
+        <span className="admin-overview-icon"><UsersRound /></span><small>Total users</small><strong data-testid="text-admin-total-users">{total.totalUsers.toLocaleString()}</strong><em>Real member count</em>
       </article>
       <article className="admin-overview-metric is-sales">
         <span className="admin-overview-icon"><Banknote /></span><small>Recorded sales</small><strong data-testid="text-admin-total-sales">{money(total.totalSalesCents)}</strong><em>Completed transactions</em>
