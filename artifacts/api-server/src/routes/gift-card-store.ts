@@ -47,6 +47,39 @@ const MAX_AVAILABLE_CARDS_PER_BASE = 1_000;
 
 class DuplicateGiftCardBatchError extends Error {}
 
+let perCardBinMetadataSupportCache: {
+  supported: boolean;
+  checkedAt: number;
+} | null = null;
+
+async function supportsPerCardBinMetadata(): Promise<boolean> {
+  if (
+    perCardBinMetadataSupportCache &&
+    Date.now() - perCardBinMetadataSupportCache.checkedAt < 30_000
+  ) {
+    return perCardBinMetadataSupportCache.supported;
+  }
+  try {
+    const result = await db.execute(sql`
+      SELECT COUNT(*)::integer AS count
+      FROM information_schema.columns
+      WHERE table_schema = current_schema()
+        AND table_name = 'gift_card_inventory'
+        AND column_name IN ('card_type', 'issuer', 'brand')
+    `);
+    const row = result.rows[0] as { count?: number | string } | undefined;
+    const supported = Number(row?.count ?? 0) === 3;
+    perCardBinMetadataSupportCache = { supported, checkedAt: Date.now() };
+    return supported;
+  } catch {
+    perCardBinMetadataSupportCache = {
+      supported: false,
+      checkedAt: Date.now(),
+    };
+    return false;
+  }
+}
+
 async function listProducts({
   includeStockEligibility = false,
   includeArchived = false,
@@ -58,6 +91,16 @@ async function listProducts({
   includeBins?: boolean;
   includeBaseAddress?: boolean;
 } = {}) {
+  const hasPerCardMetadata = await supportsPerCardBinMetadata();
+  const cardTypeMetadata = hasPerCardMetadata
+    ? sql`COALESCE(${giftCardInventoryTable.cardType}, ${giftCardProductsTable.cardType})`
+    : sql`${giftCardProductsTable.cardType}`;
+  const issuerMetadata = hasPerCardMetadata
+    ? sql`COALESCE(${giftCardInventoryTable.issuer}, ${giftCardProductsTable.issuer})`
+    : sql`${giftCardProductsTable.issuer}`;
+  const brandMetadata = hasPerCardMetadata
+    ? sql`COALESCE(${giftCardInventoryTable.brand}, ${giftCardProductsTable.brand})`
+    : sql`${giftCardProductsTable.brand}`;
   const availableCount = count(giftCardInventoryTable.id);
   const products = await db
     .select({
@@ -80,9 +123,9 @@ async function listProducts({
           json_agg(
             json_build_object(
               'inventoryId', ${giftCardInventoryTable.id},
-              'cardType', COALESCE(${giftCardInventoryTable.cardType}, ${giftCardProductsTable.cardType}),
-              'issuer', COALESCE(${giftCardInventoryTable.issuer}, ${giftCardProductsTable.issuer}),
-              'brand', COALESCE(${giftCardInventoryTable.brand}, ${giftCardProductsTable.brand}),
+              'cardType', ${cardTypeMetadata},
+              'issuer', ${issuerMetadata},
+              'brand', ${brandMetadata},
               'city', COALESCE(${giftCardInventoryTable.publicCity}, ${giftCardProductsTable.city}),
               'state', COALESCE(${giftCardInventoryTable.publicState}, ${giftCardProductsTable.state}),
               'regionZip', COALESCE(${giftCardInventoryTable.publicRegionZip}, ${giftCardProductsTable.regionZip}),
@@ -384,9 +427,30 @@ router.get("/orders/gift-cards", async (req, res): Promise<void> => {
   );
 
   const orderIds = orders.map((order) => order.id);
+  const hasPerCardMetadata = await supportsPerCardBinMetadata();
   const inventory = orderIds.length
     ? await db
-        .select()
+        .select({
+          id: giftCardInventoryTable.id,
+          productId: giftCardInventoryTable.productId,
+          orderId: giftCardInventoryTable.orderId,
+          credentialCiphertext: giftCardInventoryTable.credentialCiphertext,
+          credentialIv: giftCardInventoryTable.credentialIv,
+          credentialTag: giftCardInventoryTable.credentialTag,
+          publicAddress: giftCardInventoryTable.publicAddress,
+          publicCity: giftCardInventoryTable.publicCity,
+          publicState: giftCardInventoryTable.publicState,
+          publicRegionZip: giftCardInventoryTable.publicRegionZip,
+          cardType: hasPerCardMetadata
+            ? giftCardInventoryTable.cardType
+            : sql<string | null>`NULL`,
+          issuer: hasPerCardMetadata
+            ? giftCardInventoryTable.issuer
+            : sql<string | null>`NULL`,
+          brand: hasPerCardMetadata
+            ? giftCardInventoryTable.brand
+            : sql<string | null>`NULL`,
+        })
         .from(giftCardInventoryTable)
         .where(
           and(
@@ -460,6 +524,7 @@ router.post("/orders/gift-cards", async (req, res): Promise<void> => {
     return;
   }
 
+  const hasPerCardMetadata = await supportsPerCardBinMetadata();
   const result = await db.transaction(async (tx) => {
     await tx
       .select({ id: usersTable.id })
@@ -501,7 +566,25 @@ router.post("/orders/gift-cards", async (req, res): Promise<void> => {
     }
 
     const [stock] = await tx
-      .select()
+      .select({
+        id: giftCardInventoryTable.id,
+        credentialCiphertext: giftCardInventoryTable.credentialCiphertext,
+        credentialIv: giftCardInventoryTable.credentialIv,
+        credentialTag: giftCardInventoryTable.credentialTag,
+        publicAddress: giftCardInventoryTable.publicAddress,
+        publicCity: giftCardInventoryTable.publicCity,
+        publicState: giftCardInventoryTable.publicState,
+        publicRegionZip: giftCardInventoryTable.publicRegionZip,
+        cardType: hasPerCardMetadata
+          ? giftCardInventoryTable.cardType
+          : sql<string | null>`NULL`,
+        issuer: hasPerCardMetadata
+          ? giftCardInventoryTable.issuer
+          : sql<string | null>`NULL`,
+        brand: hasPerCardMetadata
+          ? giftCardInventoryTable.brand
+          : sql<string | null>`NULL`,
+      })
       .from(giftCardInventoryTable)
       .where(
         and(
@@ -662,7 +745,10 @@ router.post("/orders/gift-cards/bulk", async (req, res): Promise<void> => {
 
     const productsById = new Map(selectedProducts.map((product) => [product.id, product]));
     const stockRows = await tx
-      .select()
+      .select({
+        id: giftCardInventoryTable.id,
+        productId: giftCardInventoryTable.productId,
+      })
       .from(giftCardInventoryTable)
       .where(
         and(
@@ -1053,6 +1139,13 @@ router.post(
       res.status(404).json({ error: "Gift-card product not found." });
       return;
     }
+    if (!(await supportsPerCardBinMetadata())) {
+      res.status(409).json({
+        error:
+          "Per-card BIN metadata is not enabled for this database. No public lookup was sent.",
+      });
+      return;
+    }
 
     const inventory = await db
       .select({
@@ -1317,7 +1410,10 @@ router.post(
       ids.push(item.id);
       cardsByPrefix.set(item.prefix, ids);
     }
-    const lookups = await lookupBinMetadataForPrefixes([...cardsByPrefix.keys()]);
+    const metadataStorageAvailable = await supportsPerCardBinMetadata();
+    const lookups = metadataStorageAvailable
+      ? await lookupBinMetadataForPrefixes([...cardsByPrefix.keys()])
+      : new Map<string, BinLookupResult>();
     let binMetadataCardsUpdated = 0;
     let unavailablePrefixCount = 0;
     for (const [prefix, result] of lookups) {

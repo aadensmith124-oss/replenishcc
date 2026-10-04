@@ -823,7 +823,9 @@ export function AdminCardInventoryPage() {
             const label = `${result.addedCount} card${result.addedCount === 1 ? '' : 's'}`;
             const binMetadataFeedback = result.binMetadataApplied
               ? `BIN metadata auto-filled for ${result.binMetadataCardsUpdated} card${result.binMetadataCardsUpdated === 1 ? '' : 's'} across ${result.binMetadataPrefixesLookedUp} distinct prefix${result.binMetadataPrefixesLookedUp === 1 ? '' : 'es'}.`
-              : 'The public BIN lookup returned no metadata or was unavailable. You can retry the lookup or edit the base defaults.';
+              : result.binMetadataPrefixesLookedUp === 0
+                ? 'Per-card BIN metadata is not enabled for the connected database, so no public lookup was sent. Apply the schema update before retrying.'
+                : 'The public BIN lookup returned no metadata or was unavailable. You can retry the lookup or edit the base defaults.';
             setFeedback(`${label} added. This base now has ${result.availableCount}/${MAX_CARDS_PER_BASE} available. ${binMetadataFeedback} ${result.locationMetadataApplied ? 'Per-card public locations saved.' : 'Base location defaults were used.'} ${result.redemptionZipApplied ? 'Per-card ZIP values saved.' : 'Base ZIP defaults were used where available.'}`);
           }, onError: () => setFeedback('Stock upload was rejected. Check the preview, duplicates, and the base’s remaining capacity.') });
         })} className="gift-form">
@@ -902,7 +904,7 @@ export function AdminCardInventoryPage() {
                       : '';
                     setFeedback(`Checked ${result.prefixesLookedUp} distinct prefixes and saved metadata for ${result.cardsUpdated} of ${result.cardCount} cards.${unavailable}`);
                   },
-                  onError: () => setFeedback('Existing-card BIN metadata could not be refreshed. Try again.'),
+                  onError: () => setFeedback('Existing-card BIN metadata could not be refreshed. Check that the database schema is updated, then try again.'),
                 })} data-testid={`button-refresh-card-bin-metadata-${product.id}`}><RefreshCw /> {refreshBinMetadata.isPending ? 'Checking…' : 'Refresh BIN data'}</button>{' '}
                 {product.isArchived
                   ? <button className="gift-edit" disabled={restore.isPending || remove.isPending} title="Restore this base to member sales" onClick={() => restore.mutate({ productId: product.id }, { onSuccess: () => { invalidate(); setFeedback('Base restored to member sales. Its inventory and purchase history are unchanged.'); }, onError: () => setFeedback('Base could not be restored. Try again.') })} data-testid={`button-restore-card-listing-${product.id}`}><RotateCcw /> Restore</button>

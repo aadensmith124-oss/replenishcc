@@ -6,5 +6,5 @@
 - [Coupon and deposit rules](coupon-and-deposit-rules.md) — Coupons discount balance-funded log orders; deposit minimums apply to manual and crypto deposits, not referrals.
 - [Vanilla gift-card store](vanilla-gift-card-store.md) — Look up mixed BIN prefixes per card; hide street addresses in member views and retain city/state/ZIP.
 - [Workflow port ownership](workflow-port-ownership.md) — Failed artifact launches can leave child dev servers holding ports; inspect listeners before retrying.
-- [Development API database environment](database-workflow-env.md) — When the DB tool works but API startup lacks `DATABASE_URL`, check for an overriding secret/config instead of bypassing the DB guard.
+- [Development API database environment](database-workflow-env.md) — The current custom `DATABASE_URL` is production/external; never run development schema pushes against it.
 - [TypeScript build-info cache](typescript-build-cache.md) — After dependency changes, rule out stale build info before editing source to fix contradictory type errors.
