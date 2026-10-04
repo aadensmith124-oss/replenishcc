@@ -65,6 +65,8 @@ export * from './giftCardCredentialInput';
 export * from './giftCardOrder';
 export * from './giftCardProduct';
 export * from './giftCardProductsResponse';
+export * from './giftCardPublicLocation';
+export * from './giftCardPublicLocationInput';
 export * from './giftCardPurchaseResult';
 export * from './healthStatus';
 export * from './licenseOrder';

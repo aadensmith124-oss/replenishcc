@@ -899,6 +899,17 @@ export interface LicenseOrderPurchaseResult {
   balanceCents: number;
 }
 
+export interface GiftCardPublicLocation {
+  address: string;
+  city: string;
+  state: string;
+  /**
+     * @maxLength 10
+     * @nullable
+     */
+  regionZip: string | null;
+}
+
 export interface GiftCardProduct {
   id: string;
   name: string;
@@ -924,6 +935,7 @@ export interface GiftCardProduct {
   faceValueCents: number;
   priceCents: number;
   availableCount: number;
+  availableCardLocations: GiftCardPublicLocation[];
   hasEmail: boolean;
   hasPhone: boolean;
   createdAt: string;
@@ -1036,6 +1048,21 @@ export interface UpdateGiftCardProductMetadataInput {
   brand: string;
 }
 
+export interface GiftCardPublicLocationInput {
+  /** @maxLength 255 */
+  address?: string;
+  /** @maxLength 120 */
+  city?: string;
+  /** @maxLength 80 */
+  state?: string;
+  /**
+     * @maxLength 10
+     * @nullable
+     * @pattern ^[0-9]{5}(-[0-9]{4})?$
+     */
+  regionZip?: string | null;
+}
+
 export interface GiftCardCredentialInput {
   /**
      * @minLength 13
@@ -1064,6 +1091,7 @@ export interface GiftCardCredentialInput {
      * @nullable
      */
   phone?: string | null;
+  publicLocation?: GiftCardPublicLocationInput;
 }
 
 export interface AddGiftCardStockInput {
@@ -1108,6 +1136,7 @@ export interface GiftCardCredential {
      * @nullable
      */
   phone?: string | null;
+  publicLocation?: GiftCardPublicLocation;
 }
 
 export interface PurchaseGiftCardInput {

@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { GiftCardPublicLocation } from './giftCardPublicLocation';
 
 export interface GiftCardCredential {
   cardNumber: string;
@@ -20,4 +21,5 @@ export interface GiftCardCredential {
      * @nullable
      */
   phone?: string | null;
+  publicLocation?: GiftCardPublicLocation;
 }

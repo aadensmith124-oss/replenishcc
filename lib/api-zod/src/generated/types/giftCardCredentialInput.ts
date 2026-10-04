@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { GiftCardPublicLocationInput } from './giftCardPublicLocationInput';
 
 export interface GiftCardCredentialInput {
   /**
@@ -34,4 +35,5 @@ export interface GiftCardCredentialInput {
      * @nullable
      */
   phone?: string | null;
+  publicLocation?: GiftCardPublicLocationInput;
 }

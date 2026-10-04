@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { GiftCardPublicLocation } from './giftCardPublicLocation';
 
 export interface GiftCardProduct {
   id: string;
@@ -31,6 +32,7 @@ export interface GiftCardProduct {
   faceValueCents: number;
   priceCents: number;
   availableCount: number;
+  availableCardLocations: GiftCardPublicLocation[];
   hasEmail: boolean;
   hasPhone: boolean;
   createdAt: Date;
