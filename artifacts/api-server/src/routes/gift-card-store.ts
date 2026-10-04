@@ -15,6 +15,8 @@ import {
   GetMyGiftCardOrdersResponse,
   PurchaseGiftCardBody,
   PurchaseGiftCardResponse,
+  RefreshAdminGiftCardBinMetadataParams,
+  RefreshAdminGiftCardBinMetadataResponse,
   RestoreAdminGiftCardProductParams,
   UpdateAdminGiftCardProductMetadataBody,
   UpdateAdminGiftCardProductMetadataParams,
@@ -34,6 +36,7 @@ import {
   decryptGiftCardCredential,
   encryptGiftCardCredential,
   getGiftCardBinPrefix,
+  getGiftCardBinMetadataPrefix,
   getGiftCardLastFour,
   hashGiftCardCredential,
   type GiftCardCredential,
@@ -77,6 +80,9 @@ async function listProducts({
           json_agg(
             json_build_object(
               'inventoryId', ${giftCardInventoryTable.id},
+              'cardType', COALESCE(${giftCardInventoryTable.cardType}, ${giftCardProductsTable.cardType}),
+              'issuer', COALESCE(${giftCardInventoryTable.issuer}, ${giftCardProductsTable.issuer}),
+              'brand', COALESCE(${giftCardInventoryTable.brand}, ${giftCardProductsTable.brand}),
               'city', COALESCE(${giftCardInventoryTable.publicCity}, ${giftCardProductsTable.city}),
               'state', COALESCE(${giftCardInventoryTable.publicState}, ${giftCardProductsTable.state}),
               'regionZip', COALESCE(${giftCardInventoryTable.publicRegionZip}, ${giftCardProductsTable.regionZip}),
@@ -231,9 +237,15 @@ function cleanBinLabel(value: unknown): string | null {
   return cleaned && cleaned.length <= 80 ? cleaned : null;
 }
 
-async function lookupBinMetadata(bin: string): Promise<BinLookupResult> {
+const binMetadataCache = new Map<
+  string,
+  { result: BinLookupResult; expiresAt: number }
+>();
+const binMetadataInFlight = new Map<string, Promise<BinLookupResult>>();
+
+async function requestBinMetadata(binPrefix: string): Promise<BinLookupResult> {
   try {
-    const response = await fetch(`https://lookup.binlist.net/${bin}`, {
+    const response = await fetch(`https://lookup.binlist.net/${binPrefix}`, {
       headers: {
         Accept: "application/json",
         "Accept-Version": "3",
@@ -275,6 +287,59 @@ async function lookupBinMetadata(bin: string): Promise<BinLookupResult> {
   }
 }
 
+async function lookupBinMetadata(binPrefix: string): Promise<BinLookupResult> {
+  if (!/^\d{8}$/.test(binPrefix)) return { kind: "not_found" };
+
+  const cached = binMetadataCache.get(binPrefix);
+  if (cached && cached.expiresAt > Date.now()) return cached.result;
+  if (cached) binMetadataCache.delete(binPrefix);
+
+  const inFlight = binMetadataInFlight.get(binPrefix);
+  if (inFlight) return inFlight;
+
+  const pending = requestBinMetadata(binPrefix);
+  binMetadataInFlight.set(binPrefix, pending);
+  try {
+    const result = await pending;
+    const cacheDuration =
+      result.kind === "found"
+        ? 24 * 60 * 60 * 1000
+        : result.kind === "not_found"
+          ? 6 * 60 * 60 * 1000
+          : 30 * 1000;
+    binMetadataCache.set(binPrefix, {
+      result,
+      expiresAt: Date.now() + cacheDuration,
+    });
+    return result;
+  } finally {
+    binMetadataInFlight.delete(binPrefix);
+  }
+}
+
+async function lookupBinMetadataForPrefixes(
+  prefixes: string[],
+): Promise<Map<string, BinLookupResult>> {
+  const uniquePrefixes = [...new Set(prefixes)].filter((prefix) =>
+    /^\d{8}$/.test(prefix),
+  );
+  const results = new Map<string, BinLookupResult>();
+  let nextIndex = 0;
+  const worker = async () => {
+    while (nextIndex < uniquePrefixes.length) {
+      const prefix = uniquePrefixes[nextIndex++]!;
+      results.set(prefix, await lookupBinMetadata(prefix));
+    }
+  };
+  await Promise.all(
+    Array.from(
+      { length: Math.min(5, uniquePrefixes.length) },
+      () => worker(),
+    ),
+  );
+  return results;
+}
+
 router.get("/gift-card-products", async (req, res): Promise<void> => {
   const user = await getCurrentUser(req);
   if (!user) {
@@ -307,6 +372,9 @@ router.get("/orders/gift-cards", async (req, res): Promise<void> => {
           city: giftCardProductsTable.city,
           state: giftCardProductsTable.state,
           regionZip: giftCardProductsTable.regionZip,
+          cardType: giftCardProductsTable.cardType,
+          issuer: giftCardProductsTable.issuer,
+          brand: giftCardProductsTable.brand,
         })
         .from(giftCardProductsTable)
         .where(inArray(giftCardProductsTable.id, productIds))
@@ -328,9 +396,17 @@ router.get("/orders/gift-cards", async (req, res): Promise<void> => {
         )
         .orderBy(giftCardInventoryTable.createdAt)
     : [];
-  const cardsByOrder = new Map<string, Array<GiftCardCredential & {
-    publicLocation: GiftCardPublicLocation;
-  }>>();
+  const cardsByOrder = new Map<
+    string,
+    Array<
+      GiftCardCredential & {
+        cardType: string;
+        issuer: string;
+        brand: string;
+        publicLocation: GiftCardPublicLocation;
+      }
+    >
+  >();
   for (const item of inventory) {
     if (!item.orderId) continue;
     const baseLocation = productLocationsById.get(item.productId);
@@ -340,6 +416,9 @@ router.get("/orders/gift-cards", async (req, res): Promise<void> => {
     const cards = cardsByOrder.get(item.orderId) ?? [];
     cards.push({
       ...decryptGiftCardCredential(item),
+      cardType: item.cardType ?? baseLocation.cardType,
+      issuer: item.issuer ?? baseLocation.issuer,
+      brand: item.brand ?? baseLocation.brand,
       publicLocation: {
         address: item.publicAddress ?? baseLocation.address,
         city: item.publicCity ?? baseLocation.city,
@@ -485,6 +564,9 @@ router.post("/orders/gift-cards", async (req, res): Promise<void> => {
         totalCents: order.totalCents,
         deliveredCards: [{
           ...decryptGiftCardCredential(stock),
+          cardType: stock.cardType ?? product.cardType,
+          issuer: stock.issuer ?? product.issuer,
+          brand: stock.brand ?? product.brand,
           publicLocation: {
             address: stock.publicAddress ?? product.address,
             city: stock.publicCity ?? product.city,
@@ -945,6 +1027,121 @@ router.post(
 );
 
 router.post(
+  "/admin/gift-card-products/:productId/refresh-bin-metadata",
+  async (req, res): Promise<void> => {
+    const user = await getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: "Sign in to refresh card metadata." });
+      return;
+    }
+    if (!isDepositAdmin(user)) {
+      res.status(403).json({ error: "Admin access is required." });
+      return;
+    }
+
+    const params = RefreshAdminGiftCardBinMetadataParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "Choose a valid gift-card base." });
+      return;
+    }
+    const [product] = await db
+      .select({ id: giftCardProductsTable.id })
+      .from(giftCardProductsTable)
+      .where(eq(giftCardProductsTable.id, params.data.productId))
+      .limit(1);
+    if (!product) {
+      res.status(404).json({ error: "Gift-card product not found." });
+      return;
+    }
+
+    const inventory = await db
+      .select({
+        id: giftCardInventoryTable.id,
+        credentialCiphertext: giftCardInventoryTable.credentialCiphertext,
+        credentialIv: giftCardInventoryTable.credentialIv,
+        credentialTag: giftCardInventoryTable.credentialTag,
+        cardType: giftCardInventoryTable.cardType,
+        issuer: giftCardInventoryTable.issuer,
+        brand: giftCardInventoryTable.brand,
+      })
+      .from(giftCardInventoryTable)
+      .where(eq(giftCardInventoryTable.productId, product.id));
+    const inventoryByPrefix = new Map<
+      string,
+      Array<{ id: string; cardType: string | null; issuer: string | null; brand: string | null }>
+    >();
+    for (const item of inventory) {
+      if (item.cardType && item.issuer && item.brand) continue;
+      const credential = decryptGiftCardCredential(item);
+      const prefix = getGiftCardBinMetadataPrefix(credential.cardNumber);
+      if (!prefix) continue;
+      const cards = inventoryByPrefix.get(prefix) ?? [];
+      cards.push({
+        id: item.id,
+        cardType: item.cardType,
+        issuer: item.issuer,
+        brand: item.brand,
+      });
+      inventoryByPrefix.set(prefix, cards);
+    }
+
+    const lookups = await lookupBinMetadataForPrefixes([
+      ...inventoryByPrefix.keys(),
+    ]);
+    let cardsUpdated = 0;
+    let prefixesUnavailable = 0;
+    for (const [prefix, result] of lookups) {
+      if (result.kind === "unavailable") {
+        prefixesUnavailable += 1;
+        continue;
+      }
+      if (result.kind !== "found") continue;
+      const changes = {
+        ...(result.metadata.cardType
+          ? {
+              cardType: sql`COALESCE(${giftCardInventoryTable.cardType}, ${result.metadata.cardType})`,
+            }
+          : {}),
+        ...(result.metadata.issuer
+          ? {
+              issuer: sql`COALESCE(${giftCardInventoryTable.issuer}, ${result.metadata.issuer})`,
+            }
+          : {}),
+        ...(result.metadata.brand
+          ? {
+              brand: sql`COALESCE(${giftCardInventoryTable.brand}, ${result.metadata.brand})`,
+            }
+          : {}),
+      };
+      if (Object.keys(changes).length === 0) continue;
+      const ids = inventoryByPrefix.get(prefix)?.map((card) => card.id) ?? [];
+      if (!ids.length) continue;
+      try {
+        const updated = await db
+          .update(giftCardInventoryTable)
+          .set(changes)
+          .where(inArray(giftCardInventoryTable.id, ids))
+          .returning({ id: giftCardInventoryTable.id });
+        cardsUpdated += updated.length;
+      } catch {
+        req.log.error(
+          { cardCount: ids.length },
+          "Automatic gift-card metadata could not be saved for an existing batch.",
+        );
+      }
+    }
+    res.json(
+      RefreshAdminGiftCardBinMetadataResponse.parse({
+        cardCount: inventory.length,
+        prefixesLookedUp: lookups.size,
+        cardsUpdated,
+        prefixesUnavailable,
+      }),
+    );
+  },
+);
+
+router.post(
   "/admin/gift-card-products/:productId/stock",
   async (req, res): Promise<void> => {
     const user = await getCurrentUser(req);
@@ -996,7 +1193,17 @@ router.post(
       | { kind: "missing" }
       | { kind: "archived" }
       | { kind: "capacity"; remainingCount: number }
-      | { kind: "success"; availableCount: number };
+      | {
+          kind: "success";
+          availableCount: number;
+          inventoryItems: Array<{ id: string; prefix: string }>;
+        };
+    const prefixByHash = new Map(
+      hashes.map((hash, index) => [
+        hash,
+        getGiftCardBinMetadataPrefix(credentials[index]!.cardNumber),
+      ]),
+    );
     try {
       stockResult = await db.transaction(async (tx) => {
         const [product] = await tx
@@ -1050,7 +1257,10 @@ router.post(
           .onConflictDoNothing({
             target: giftCardInventoryTable.credentialHash,
           })
-          .returning({ id: giftCardInventoryTable.id });
+          .returning({
+            id: giftCardInventoryTable.id,
+            credentialHash: giftCardInventoryTable.credentialHash,
+          });
         if (inserted.length !== values.length) {
           // Throw to roll back every row rather than commit a partial batch.
           throw new DuplicateGiftCardBatchError();
@@ -1067,6 +1277,10 @@ router.post(
         return {
           kind: "success" as const,
           availableCount: Number(availableStock?.count ?? 0),
+          inventoryItems: inserted.flatMap((item) => {
+            const prefix = prefixByHash.get(item.credentialHash);
+            return prefix ? [{ id: item.id, prefix }] : [];
+          }),
         };
       });
     } catch (error) {
@@ -1096,54 +1310,66 @@ router.post(
       });
       return;
     }
-    // Only look up a shared BIN after the full batch has been accepted.
-    const binPrefixes = new Set(
-      credentials.map((credential) => credential.cardNumber.slice(0, 8)),
-    );
-    const binLookup =
-      binPrefixes.size === 1
-        ? await lookupBinMetadata([...binPrefixes][0]!)
-        : ({ kind: "not_found" } as const);
-    if (binLookup.kind === "unavailable") {
-      req.log.warn(
-        { status: binLookup.status },
-        "Public BIN lookup was unavailable; existing product metadata was kept.",
-      );
+    // Only look up distinct 8-digit prefixes after the full batch has been accepted.
+    const cardsByPrefix = new Map<string, string[]>();
+    for (const item of stockResult.inventoryItems) {
+      const ids = cardsByPrefix.get(item.prefix) ?? [];
+      ids.push(item.id);
+      cardsByPrefix.set(item.prefix, ids);
     }
-    const metadataChanges: {
-      cardType?: string;
-      issuer?: string;
-      brand?: string;
-    } = {};
-    if (binLookup.kind === "found") {
-      if (binLookup.metadata.cardType) {
-        metadataChanges.cardType = binLookup.metadata.cardType;
+    const lookups = await lookupBinMetadataForPrefixes([...cardsByPrefix.keys()]);
+    let binMetadataCardsUpdated = 0;
+    let unavailablePrefixCount = 0;
+    for (const [prefix, result] of lookups) {
+      if (result.kind === "unavailable") {
+        unavailablePrefixCount += 1;
+        continue;
       }
-      if (binLookup.metadata.issuer) {
-        metadataChanges.issuer = binLookup.metadata.issuer;
+      if (result.kind !== "found") continue;
+      const metadataChanges: {
+        cardType?: string;
+        issuer?: string;
+        brand?: string;
+      } = {};
+      if (result.metadata.cardType) {
+        metadataChanges.cardType = result.metadata.cardType;
       }
-      if (binLookup.metadata.brand) {
-        metadataChanges.brand = binLookup.metadata.brand;
+      if (result.metadata.issuer) {
+        metadataChanges.issuer = result.metadata.issuer;
       }
-    }
-    let metadataSaved = false;
-    if (Object.keys(metadataChanges).length > 0) {
+      if (result.metadata.brand) {
+        metadataChanges.brand = result.metadata.brand;
+      }
+      if (Object.keys(metadataChanges).length === 0) continue;
+      const ids = cardsByPrefix.get(prefix) ?? [];
+      if (!ids.length) continue;
       try {
-        const [updated] = await db
-          .update(giftCardProductsTable)
+        const updated = await db
+          .update(giftCardInventoryTable)
           .set(metadataChanges)
-          .where(eq(giftCardProductsTable.id, params.data.productId))
-          .returning({ id: giftCardProductsTable.id });
-        metadataSaved = Boolean(updated);
+          .where(inArray(giftCardInventoryTable.id, ids))
+          .returning({ id: giftCardInventoryTable.id });
+        binMetadataCardsUpdated += updated.length;
       } catch {
-        req.log.error("Automatic gift-card metadata could not be saved.");
+        req.log.error(
+          { cardCount: ids.length },
+          "Automatic gift-card metadata could not be saved for an accepted batch.",
+        );
       }
+    }
+    if (unavailablePrefixCount > 0) {
+      req.log.warn(
+        { prefixCount: unavailablePrefixCount },
+        "Some public BIN lookups were unavailable; the accepted card batch remains available.",
+      );
     }
     res.json(
       AddAdminGiftCardStockResponse.parse({
         addedCount: credentials.length,
         availableCount: stockResult.availableCount,
-        binMetadataApplied: metadataSaved && binLookup.kind === "found",
+        binMetadataApplied: binMetadataCardsUpdated > 0,
+        binMetadataCardsUpdated,
+        binMetadataPrefixesLookedUp: lookups.size,
         redemptionZipApplied: cardLocations.some((location) => location.regionZip !== null),
         locationMetadataApplied: cardLocations.some(
           (location) => Boolean(location.address || location.state || location.city),

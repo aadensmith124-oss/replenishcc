@@ -21,5 +21,11 @@ export interface GiftCardCredential {
      * @nullable
      */
   phone?: string | null;
+  /** @maxLength 80 */
+  cardType?: string;
+  /** @maxLength 80 */
+  issuer?: string;
+  /** @maxLength 80 */
+  brand?: string;
   publicLocation?: GiftCardPublicLocation;
 }

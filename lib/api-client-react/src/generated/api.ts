@@ -86,6 +86,7 @@ import type {
   RedeemCodeInput,
   RedeemCodeResult,
   ReferralSummary,
+  RefreshGiftCardBinMetadataResponse,
   RegisterInput,
   ResetPasswordInput,
   ReviewAccountDeletionRequestInput,
@@ -5168,6 +5169,80 @@ export const useAddAdminGiftCardStock = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getAddAdminGiftCardStockMutationOptions(options));
+    }
+
+export const getRefreshAdminGiftCardBinMetadataUrl = (productId: string,) => {
+
+
+
+
+  return `/api/admin/gift-card-products/${productId}/refresh-bin-metadata`
+}
+
+/**
+ * @summary Look up BIN metadata for cards already in a base
+ */
+export const refreshAdminGiftCardBinMetadata = async (productId: string, options?: Parameters<typeof customFetch>[1]): Promise<RefreshGiftCardBinMetadataResponse> => {
+
+  return customFetch<RefreshGiftCardBinMetadataResponse>(getRefreshAdminGiftCardBinMetadataUrl(productId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRefreshAdminGiftCardBinMetadataMutationKey = () => ['refreshAdminGiftCardBinMetadata'] as const;
+
+export const getRefreshAdminGiftCardBinMetadataMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshAdminGiftCardBinMetadata>>, TError,RefreshAdminGiftCardBinMetadataMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof refreshAdminGiftCardBinMetadata>>, TError,RefreshAdminGiftCardBinMetadataMutationVariables, TContext> => {
+
+const mutationKey = getRefreshAdminGiftCardBinMetadataMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof refreshAdminGiftCardBinMetadata>>, RefreshAdminGiftCardBinMetadataMutationVariables> = (props) => {
+          const {productId} = props ?? {};
+
+          return  refreshAdminGiftCardBinMetadata(productId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RefreshAdminGiftCardBinMetadataMutationResult = NonNullable<Awaited<ReturnType<typeof refreshAdminGiftCardBinMetadata>>>
+
+    export type RefreshAdminGiftCardBinMetadataMutationError = ErrorType<void>
+    export type RefreshAdminGiftCardBinMetadataMutationVariables = {productId: string}
+
+    /**
+ * @summary Look up BIN metadata for cards already in a base
+ */
+export const useRefreshAdminGiftCardBinMetadata = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshAdminGiftCardBinMetadata>>, TError,RefreshAdminGiftCardBinMetadataMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof refreshAdminGiftCardBinMetadata>>,
+        TError,
+        RefreshAdminGiftCardBinMetadataMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRefreshAdminGiftCardBinMetadataMutationOptions(options));
     }
 
 export const getGetAdminCouponsUrl = () => {

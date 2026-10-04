@@ -8,7 +8,7 @@ import { Archive, ArrowRight, Check, ChevronRight, Clipboard, Columns3, CreditCa
 import {
   getGetAdminGiftCardProductsQueryKey, getGetAuthMeQueryKey, getGetGiftCardProductsQueryKey, getGetMyGiftCardOrdersQueryKey, getGetMyDepositsQueryKey,
   useAddAdminGiftCardStock, useCreateAdminGiftCardProduct, useDeleteAdminGiftCardProduct, useRestoreAdminGiftCardProduct, useBulkPurchaseGiftCards,
-  useGetAdminGiftCardProducts, useGetAuthMe, useGetGiftCardProducts, useGetMyGiftCardOrders, usePurchaseGiftCard, useUpdateAdminGiftCardProductMetadata,
+  useGetAdminGiftCardProducts, useGetAuthMe, useGetGiftCardProducts, useGetMyGiftCardOrders, usePurchaseGiftCard, useRefreshAdminGiftCardBinMetadata, useUpdateAdminGiftCardProductMetadata,
   type AuthMeResponse,
   type GiftCardCredential,
 } from '@workspace/api-client-react';
@@ -58,6 +58,9 @@ type PublicCardLocation = {
   inventoryId: string;
   bin: string | null;
   lastFour: string | null;
+  cardType: string;
+  issuer: string;
+  brand: string;
   city: string;
   state: string;
   regionZip: string | null;
@@ -209,17 +212,17 @@ export function BuyCardsPage() {
     const matchesSearch = !normalizedSearch
       || product.name.toLowerCase().includes(normalizedSearch)
       || product.description.toLowerCase().includes(normalizedSearch)
-      || product.brand.toLowerCase().includes(normalizedSearch)
-      || product.cardType.toLowerCase().includes(normalizedSearch)
-      || product.issuer.toLowerCase().includes(normalizedSearch)
+      || (card.brand || product.brand).toLowerCase().includes(normalizedSearch)
+      || (card.cardType || product.cardType).toLowerCase().includes(normalizedSearch)
+      || (card.issuer || product.issuer).toLowerCase().includes(normalizedSearch)
       || card.city.toLowerCase().includes(normalizedSearch)
       || card.state.toLowerCase().includes(normalizedSearch)
       || (card.regionZip ?? '').toLowerCase().includes(normalizedSearch);
     return matchesBase
       && matchesSearch
-      && exactMatch(product.brand, filters.brand)
-      && exactMatch(product.cardType, filters.cardType)
-      && exactMatch(product.issuer, filters.issuer)
+      && exactMatch(card.brand || product.brand, filters.brand)
+      && exactMatch(card.cardType || product.cardType, filters.cardType)
+      && exactMatch(card.issuer || product.issuer, filters.issuer)
       && exactMatch(card.state, filters.state)
       && exactMatch(card.city, filters.city)
       && (!filters.zip || (card.regionZip ?? '').toLowerCase().includes(filters.zip.trim().toLowerCase()))
@@ -228,12 +231,12 @@ export function BuyCardsPage() {
       && matchesCatalogPrice(product.priceCents, filters.price);
   });
   const catalogOptions = useMemo(() => ({
-    brand: [...new Set(products.map((product) => product.brand.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
-    cardType: [...new Set(products.map((product) => product.cardType.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
-    issuer: [...new Set(products.map((product) => product.issuer.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    brand: [...new Set(availableCardRows.map(({ product, card }) => (card.brand || product.brand).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    cardType: [...new Set(availableCardRows.map(({ product, card }) => (card.cardType || product.cardType).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    issuer: [...new Set(availableCardRows.map(({ product, card }) => (card.issuer || product.issuer).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
     state: [...new Set(products.flatMap(locationsForProduct).map((location) => location.state.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
     city: [...new Set(products.flatMap(locationsForProduct).map((location) => location.city.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
-  }), [products]);
+  }), [availableCardRows]);
   const filteredCardRows = useMemo(
     () => filterCardRows(availableCardRows, catalogFilters),
     [availableCardRows, catalogFilters, baseId, normalizedSearch],
@@ -467,11 +470,11 @@ export function BuyCardsPage() {
                     case 'name':
                       return <td key={column} data-testid={`text-gift-product-name-${product.id}-${card.inventoryId}`}>{product.name}</td>;
                     case 'brand':
-                      return <td key={column} data-testid={`text-gift-card-brand-${card.inventoryId}`}>{product.brand || '—'}</td>;
+                      return <td key={column} data-testid={`text-gift-card-brand-${card.inventoryId}`}>{card.brand || product.brand || '—'}</td>;
                     case 'cardType':
-                      return <td key={column} data-testid={`text-gift-card-type-${card.inventoryId}`}>{product.cardType || '—'}</td>;
+                      return <td key={column} data-testid={`text-gift-card-type-${card.inventoryId}`}>{card.cardType || product.cardType || '—'}</td>;
                     case 'issuer':
-                      return <td key={column} data-testid={`text-gift-card-issuer-${card.inventoryId}`}>{product.issuer || '—'}</td>;
+                      return <td key={column} data-testid={`text-gift-card-issuer-${card.inventoryId}`}>{card.issuer || product.issuer || '—'}</td>;
                     case 'city':
                       return <td key={column} data-testid={`text-gift-city-${card.inventoryId}`}>{card.city || '—'}</td>;
                     case 'state':
@@ -550,6 +553,9 @@ export function MyCardOrdersPage() {
           `Card number: ${plainTextLine(card.cardNumber)}`,
           `Expiration: ${plainTextLine(card.expiration)}`,
           `Security code: ${plainTextLine(card.securityCode)}`,
+      `Card type: ${plainTextLine(card.cardType || 'Not specified')}`,
+      `Issuer: ${plainTextLine(card.issuer || 'Not specified')}`,
+      `Brand: ${plainTextLine(card.brand || 'Not specified')}`,
           ...(card.email ? [`Email: ${plainTextLine(card.email)}`] : []),
           ...(card.phone ? [`Phone: ${plainTextLine(card.phone)}`] : []),
           ...(card.publicLocation ? [`Public location: ${[
@@ -595,6 +601,9 @@ function Credential({ card, index, visible, toggle, copy, copied, orderId }: { c
   return <section className="gift-credential" data-testid={`card-credential-${orderId}-${index}`}>
     <div className="gift-credential-head"><strong>Card {String(index + 1).padStart(2, '0')}</strong><button onClick={toggle} data-testid={`button-toggle-credential-${orderId}-${index}`}>{visible ? 'Hide details' : 'Reveal details'}</button></div>
     <div className="gift-credential-grid">{[
+      ['Card type', card.cardType || '—', '', 'type'],
+      ['Issuer', card.issuer || '—', '', 'issuer'],
+      ['Brand', card.brand || '—', '', 'brand'],
       ['Card number', visible ? card.cardNumber : '•••• •••• •••• ••••', card.cardNumber, 'number'],
       ['Expiration', visible ? card.expiration : '•• / ••', card.expiration, 'expiration'],
       ['Security code', visible ? card.securityCode : '•••', card.securityCode, 'security'],
@@ -630,6 +639,7 @@ export function AdminCardInventoryPage() {
   const remove = useDeleteAdminGiftCardProduct();
   const restore = useRestoreAdminGiftCardProduct();
   const updateMetadata = useUpdateAdminGiftCardProductMetadata();
+  const refreshBinMetadata = useRefreshAdminGiftCardBinMetadata();
   const [feedback, setFeedback] = useState('');
   const [stockFileName, setStockFileName] = useState('');
   const [stockFileError, setStockFileError] = useState('');
@@ -812,10 +822,8 @@ export function AdminCardInventoryPage() {
             invalidate();
             const label = `${result.addedCount} card${result.addedCount === 1 ? '' : 's'}`;
             const binMetadataFeedback = result.binMetadataApplied
-              ? 'BIN metadata auto-filled.'
-              : stockBinPrefixes.size > 1
-                ? `BIN lookup skipped because this batch has ${stockBinPrefixes.size} different 8-digit prefixes. Upload one prefix per batch to auto-fill type, issuer, and brand.`
-                : 'BIN metadata was not applied for this prefix; the public lookup may have no matching data or may be unavailable. Edit the base metadata if needed.';
+              ? `BIN metadata auto-filled for ${result.binMetadataCardsUpdated} card${result.binMetadataCardsUpdated === 1 ? '' : 's'} across ${result.binMetadataPrefixesLookedUp} distinct prefix${result.binMetadataPrefixesLookedUp === 1 ? '' : 'es'}.`
+              : 'The public BIN lookup returned no metadata or was unavailable. You can retry the lookup or edit the base defaults.';
             setFeedback(`${label} added. This base now has ${result.availableCount}/${MAX_CARDS_PER_BASE} available. ${binMetadataFeedback} ${result.locationMetadataApplied ? 'Per-card public locations saved.' : 'Base location defaults were used.'} ${result.redemptionZipApplied ? 'Per-card ZIP values saved.' : 'Base ZIP defaults were used where available.'}`);
           }, onError: () => setFeedback('Stock upload was rejected. Check the preview, duplicates, and the base’s remaining capacity.') });
         })} className="gift-form">
@@ -829,11 +837,11 @@ export function AdminCardInventoryPage() {
            </div>
            <FormField control={stockForm.control} name="cards" render={({ field }) => <FormItem><FormLabel>Card data · {stockCards.length}/{MAX_CARDS_PER_BATCH} detected</FormLabel><FormControl><Textarea {...field} onChange={(event) => { field.onChange(event); setStockFileName(''); setStockFileError(''); setFeedback(''); }} rows={8} maxLength={100_000} placeholder="Import a file or paste CSV, TSV, JSON, labeled fields, or delimited card rows." data-testid="input-admin-card-stock" /></FormControl>
              <div className="gift-stock-detection" aria-live="polite"><span className={stockLocationCounts.address ? 'is-detected' : ''}>{stockLocationCounts.address ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Address {stockLocationCounts.address}/{stockCards.length}</span><span className={stockLocationCounts.state ? 'is-detected' : ''}>{stockLocationCounts.state ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}State {stockLocationCounts.state}/{stockCards.length}</span><span className={stockLocationCounts.city ? 'is-detected' : ''}>{stockLocationCounts.city ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}City {stockLocationCounts.city}/{stockCards.length}</span><span className={stockLocationCounts.zip ? 'is-detected' : ''}>{stockLocationCounts.zip ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}ZIP {stockLocationCounts.zip}/{stockCards.length}</span><span className={stockContactCounts.email ? 'is-detected' : ''}>{stockContactCounts.email ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Email {stockContactCounts.email}/{stockCards.length}</span><span className={stockContactCounts.phone ? 'is-detected' : ''}>{stockContactCounts.phone ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Phone {stockContactCounts.phone}/{stockCards.length}</span></div>
-              {stockCards.length > 0 && <p className={`gift-stock-bin-hint${stockBinPrefixes.size > 1 ? ' is-warning' : stockBinPrefixes.size === 1 ? ' is-ready' : ''}`} role="status" data-testid="text-stock-bin-lookup-status">
+              {stockCards.length > 0 && <p className={`gift-stock-bin-hint${stockBinPrefixes.size > 0 ? ' is-ready' : ''}`} role="status" data-testid="text-stock-bin-lookup-status">
                 {stockBinPrefixes.size === 1
-                  ? 'One shared 8-digit BIN detected. Type, issuer, and brand will be looked up after upload.'
+                  ? 'One 8-digit BIN prefix detected. Type, issuer, and brand will be looked up after upload.'
                   : stockBinPrefixes.size > 1
-                    ? `${stockBinPrefixes.size} different 8-digit BIN prefixes detected. Upload one prefix per batch to auto-fill type, issuer, and brand.`
+                    ? `${stockBinPrefixes.size} distinct 8-digit BIN prefixes detected. Metadata will be looked up once per prefix after upload.`
                     : 'No valid 8-digit BIN prefix detected in this batch.'}
               </p>}
               <div className="gift-stock-preview" aria-live="polite" data-testid="preview-admin-card-stock">
@@ -885,6 +893,17 @@ export function AdminCardInventoryPage() {
                  <td><span className="gift-count-chip">{product.availableCount}/{MAX_CARDS_PER_BASE}</span></td><td>{product.isArchived ? 'Archived' : product.canReceiveStock ? product.hasHistory ? 'Ready for more cards' : 'Ready for first upload' : '1,000-card limit reached'}</td><td>{date(product.createdAt)}</td>
               <td>
                 <button className="gift-edit" type="button" onClick={() => { setEditingMetadata({ productId: product.id, productName: product.name }); setMetadataDraft({ address: product.address, state: product.state, city: product.city, regionZip: product.regionZip ?? '', cardType: product.cardType, issuer: product.issuer, brand: product.brand }); }} data-testid={`button-edit-card-metadata-${product.id}`}><Pencil /> Edit metadata</button>{' '}
+                <button className="gift-edit" type="button" disabled={refreshBinMetadata.isPending} title="Recheck BIN metadata on this base’s existing cards. Only 8-digit prefixes are sent to the public lookup." aria-label={`Refresh BIN metadata for ${product.name}`} onClick={() => refreshBinMetadata.mutate({ productId: product.id }, {
+                  onSuccess: (result) => {
+                    invalidate();
+                    void queryClient.invalidateQueries({ queryKey: getGetMyGiftCardOrdersQueryKey() });
+                    const unavailable = result.prefixesUnavailable
+                      ? ` ${result.prefixesUnavailable} prefix lookup${result.prefixesUnavailable === 1 ? ' was' : 's were'} unavailable; you can retry.`
+                      : '';
+                    setFeedback(`Checked ${result.prefixesLookedUp} distinct prefixes and saved metadata for ${result.cardsUpdated} of ${result.cardCount} cards.${unavailable}`);
+                  },
+                  onError: () => setFeedback('Existing-card BIN metadata could not be refreshed. Try again.'),
+                })} data-testid={`button-refresh-card-bin-metadata-${product.id}`}><RefreshCw /> {refreshBinMetadata.isPending ? 'Checking…' : 'Refresh BIN data'}</button>{' '}
                 {product.isArchived
                   ? <button className="gift-edit" disabled={restore.isPending || remove.isPending} title="Restore this base to member sales" onClick={() => restore.mutate({ productId: product.id }, { onSuccess: () => { invalidate(); setFeedback('Base restored to member sales. Its inventory and purchase history are unchanged.'); }, onError: () => setFeedback('Base could not be restored. Try again.') })} data-testid={`button-restore-card-listing-${product.id}`}><RotateCcw /> Restore</button>
                   : <button className="gift-delete" disabled={remove.isPending || restore.isPending} title={product.hasHistory ? 'Archive while preserving its stock and purchase history' : 'Delete this empty base'} onClick={() => {

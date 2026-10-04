@@ -1029,6 +1029,12 @@ export interface AvailableGiftCardLocation {
      * @pattern ^[0-9]{4}$
      */
   lastFour: string | null;
+  /** @maxLength 80 */
+  cardType: string;
+  /** @maxLength 80 */
+  issuer: string;
+  /** @maxLength 80 */
+  brand: string;
   city: string;
   state: string;
   /**
@@ -1262,8 +1268,17 @@ export interface AddGiftCardStockResponse {
   addedCount: number;
   availableCount: number;
   binMetadataApplied: boolean;
+  binMetadataCardsUpdated: number;
+  binMetadataPrefixesLookedUp: number;
   redemptionZipApplied: boolean;
   locationMetadataApplied: boolean;
+}
+
+export interface RefreshGiftCardBinMetadataResponse {
+  cardCount: number;
+  prefixesLookedUp: number;
+  cardsUpdated: number;
+  prefixesUnavailable: number;
 }
 
 export interface GiftCardPublicLocation {
@@ -1291,6 +1306,12 @@ export interface GiftCardCredential {
      * @nullable
      */
   phone?: string | null;
+  /** @maxLength 80 */
+  cardType?: string;
+  /** @maxLength 80 */
+  issuer?: string;
+  /** @maxLength 80 */
+  brand?: string;
   publicLocation?: GiftCardPublicLocation;
 }
 

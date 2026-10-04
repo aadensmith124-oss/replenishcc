@@ -1359,6 +1359,12 @@ export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemLa
 
 
 export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemLastFourRegExp = new RegExp('^[0-9]{4}$');
+export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemCardTypeMax = 80;
+
+export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemIssuerMax = 80;
+
+export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBrandMax = 80;
+
 export const getGiftCardProductsResponseProductsItemAvailableCardLocationsItemRegionZipMax = 10;
 
 
@@ -1381,6 +1387,9 @@ export const GetGiftCardProductsResponse = zod.object({
   "inventoryId": zod.string().uuid(),
   "bin": zod.string().min(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBinMin).max(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBinMax).regex(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBinRegExp).nullable(),
   "lastFour": zod.string().min(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemLastFourMin).max(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemLastFourMax).regex(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemLastFourRegExp).nullable(),
+  "cardType": zod.string().max(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemCardTypeMax),
+  "issuer": zod.string().max(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemIssuerMax),
+  "brand": zod.string().max(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemBrandMax),
   "city": zod.string(),
   "state": zod.string(),
   "regionZip": zod.string().max(getGiftCardProductsResponseProductsItemAvailableCardLocationsItemRegionZipMax).nullable(),
@@ -1400,6 +1409,12 @@ export const GetGiftCardProductsResponse = zod.object({
 export const getMyGiftCardOrdersResponseOrdersItemDeliveredCardsItemEmailMax = 320;
 
 export const getMyGiftCardOrdersResponseOrdersItemDeliveredCardsItemPhoneMax = 40;
+
+export const getMyGiftCardOrdersResponseOrdersItemDeliveredCardsItemCardTypeMax = 80;
+
+export const getMyGiftCardOrdersResponseOrdersItemDeliveredCardsItemIssuerMax = 80;
+
+export const getMyGiftCardOrdersResponseOrdersItemDeliveredCardsItemBrandMax = 80;
 
 export const getMyGiftCardOrdersResponseOrdersItemDeliveredCardsItemPublicLocationRegionZipMax = 10;
 
@@ -1421,6 +1436,9 @@ export const GetMyGiftCardOrdersResponse = zod.object({
   "securityCode": zod.string(),
   "email": zod.string().email().max(getMyGiftCardOrdersResponseOrdersItemDeliveredCardsItemEmailMax).nullish(),
   "phone": zod.string().max(getMyGiftCardOrdersResponseOrdersItemDeliveredCardsItemPhoneMax).nullish(),
+  "cardType": zod.string().max(getMyGiftCardOrdersResponseOrdersItemDeliveredCardsItemCardTypeMax).optional(),
+  "issuer": zod.string().max(getMyGiftCardOrdersResponseOrdersItemDeliveredCardsItemIssuerMax).optional(),
+  "brand": zod.string().max(getMyGiftCardOrdersResponseOrdersItemDeliveredCardsItemBrandMax).optional(),
   "publicLocation": zod.object({
   "address": zod.string(),
   "city": zod.string(),
@@ -1450,6 +1468,12 @@ export const purchaseGiftCardResponseOrderDeliveredCardsItemEmailMax = 320;
 
 export const purchaseGiftCardResponseOrderDeliveredCardsItemPhoneMax = 40;
 
+export const purchaseGiftCardResponseOrderDeliveredCardsItemCardTypeMax = 80;
+
+export const purchaseGiftCardResponseOrderDeliveredCardsItemIssuerMax = 80;
+
+export const purchaseGiftCardResponseOrderDeliveredCardsItemBrandMax = 80;
+
 export const purchaseGiftCardResponseOrderDeliveredCardsItemPublicLocationRegionZipMax = 10;
 
 
@@ -1470,6 +1494,9 @@ export const PurchaseGiftCardResponse = zod.object({
   "securityCode": zod.string(),
   "email": zod.string().email().max(purchaseGiftCardResponseOrderDeliveredCardsItemEmailMax).nullish(),
   "phone": zod.string().max(purchaseGiftCardResponseOrderDeliveredCardsItemPhoneMax).nullish(),
+  "cardType": zod.string().max(purchaseGiftCardResponseOrderDeliveredCardsItemCardTypeMax).optional(),
+  "issuer": zod.string().max(purchaseGiftCardResponseOrderDeliveredCardsItemIssuerMax).optional(),
+  "brand": zod.string().max(purchaseGiftCardResponseOrderDeliveredCardsItemBrandMax).optional(),
   "publicLocation": zod.object({
   "address": zod.string(),
   "city": zod.string(),
@@ -1769,8 +1796,25 @@ export const AddAdminGiftCardStockResponse = zod.object({
   "addedCount": zod.number().int(),
   "availableCount": zod.number().int(),
   "binMetadataApplied": zod.boolean(),
+  "binMetadataCardsUpdated": zod.number().int(),
+  "binMetadataPrefixesLookedUp": zod.number().int(),
   "redemptionZipApplied": zod.boolean(),
   "locationMetadataApplied": zod.boolean()
+})
+
+
+/**
+ * @summary Look up BIN metadata for cards already in a base
+ */
+export const RefreshAdminGiftCardBinMetadataParams = zod.object({
+  "productId": zod.coerce.string().uuid()
+})
+
+export const RefreshAdminGiftCardBinMetadataResponse = zod.object({
+  "cardCount": zod.number().int(),
+  "prefixesLookedUp": zod.number().int(),
+  "cardsUpdated": zod.number().int(),
+  "prefixesUnavailable": zod.number().int()
 })
 
 

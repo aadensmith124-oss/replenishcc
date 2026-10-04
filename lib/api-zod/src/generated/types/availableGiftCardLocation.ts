@@ -22,6 +22,12 @@ export interface AvailableGiftCardLocation {
      * @pattern ^[0-9]{4}$
      */
   lastFour: string | null;
+  /** @maxLength 80 */
+  cardType: string;
+  /** @maxLength 80 */
+  issuer: string;
+  /** @maxLength 80 */
+  brand: string;
   city: string;
   state: string;
   /**

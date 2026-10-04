@@ -102,6 +102,7 @@ export * from './redeemCodeBatchInput';
 export * from './redeemCodeInput';
 export * from './redeemCodeResult';
 export * from './referralSummary';
+export * from './refreshGiftCardBinMetadataResponse';
 export * from './registerInput';
 export * from './resetPasswordInput';
 export * from './reviewAccountDeletionRequestInput';

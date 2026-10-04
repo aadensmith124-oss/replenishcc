@@ -1361,6 +1361,29 @@ paths:
           description: Product not found
         "409":
           description: Base already has or previously had inventory or orders
+  /admin/gift-card-products/{productId}/refresh-bin-metadata:
+    post:
+      operationId: refreshAdminGiftCardBinMetadata
+      tags: [giftCardStore]
+      summary: Look up BIN metadata for cards already in a base
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: BIN lookup results saved to individual cards
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshGiftCardBinMetadataResponse"
+        "401":
+          description: Sign-in required
+        "403":
+          description: Admin access required
+        "404":
+          description: Product not found
   /admin/coupons:
     get:
       operationId: getAdminCoupons
@@ -2146,12 +2169,15 @@ components:
         inventoryId: { type: string, format: uuid }
         bin: { type: ["string", "null"], minLength: 6, maxLength: 6, pattern: "^[0-9]{6}$" }
         lastFour: { type: ["string", "null"], minLength: 4, maxLength: 4, pattern: "^[0-9]{4}$" }
+        cardType: { type: string, maxLength: 80 }
+        issuer: { type: string, maxLength: 80 }
+        brand: { type: string, maxLength: 80 }
         city: { type: string }
         state: { type: string }
         regionZip: { type: ["string", "null"], maxLength: 10 }
         hasEmail: { type: boolean }
         hasPhone: { type: boolean }
-      required: [inventoryId, bin, lastFour, city, state, regionZip, hasEmail, hasPhone]
+      required: [inventoryId, bin, lastFour, cardType, issuer, brand, city, state, regionZip, hasEmail, hasPhone]
     GiftCardProductsResponse:
       type: object
       properties:
@@ -2256,9 +2282,19 @@ components:
         addedCount: { type: integer }
         availableCount: { type: integer }
         binMetadataApplied: { type: boolean }
+        binMetadataCardsUpdated: { type: integer }
+        binMetadataPrefixesLookedUp: { type: integer }
         redemptionZipApplied: { type: boolean }
         locationMetadataApplied: { type: boolean }
-      required: [addedCount, availableCount, binMetadataApplied, redemptionZipApplied, locationMetadataApplied]
+      required: [addedCount, availableCount, binMetadataApplied, binMetadataCardsUpdated, binMetadataPrefixesLookedUp, redemptionZipApplied, locationMetadataApplied]
+    RefreshGiftCardBinMetadataResponse:
+      type: object
+      properties:
+        cardCount: { type: integer }
+        prefixesLookedUp: { type: integer }
+        cardsUpdated: { type: integer }
+        prefixesUnavailable: { type: integer }
+      required: [cardCount, prefixesLookedUp, cardsUpdated, prefixesUnavailable]
     GiftCardCredential:
       type: object
       properties:
@@ -2267,6 +2303,9 @@ components:
         securityCode: { type: string }
         email: { type: ["string", "null"], format: email, maxLength: 320 }
         phone: { type: ["string", "null"], maxLength: 40 }
+        cardType: { type: string, maxLength: 80 }
+        issuer: { type: string, maxLength: 80 }
+        brand: { type: string, maxLength: 80 }
         publicLocation: { $ref: "#/components/schemas/GiftCardPublicLocation" }
       required: [cardNumber, expiration, securityCode]
     PurchaseGiftCardInput:
