@@ -970,21 +970,12 @@ export interface CreateGiftCardProductInput {
      * @pattern ^[0-9]{5}(-[0-9]{4})?$
      */
   regionZip: string | null;
-  /**
-     * @minLength 1
-     * @maxLength 80
-     */
-  cardType: string;
-  /**
-     * @minLength 1
-     * @maxLength 80
-     */
-  issuer: string;
-  /**
-     * @minLength 1
-     * @maxLength 80
-     */
-  brand: string;
+  /** @maxLength 80 */
+  cardType?: string;
+  /** @maxLength 80 */
+  issuer?: string;
+  /** @maxLength 80 */
+  brand?: string;
   /**
      * @minimum 1
      * @maximum 1000000
@@ -1058,6 +1049,12 @@ export interface GiftCardCredentialInput {
 
 export interface AddGiftCardStockInput {
   /**
+     * @maxLength 10
+     * @nullable
+     * @pattern ^[0-9]{5}(-[0-9]{4})?$
+     */
+  redemptionRegionZip?: string | null;
+  /**
      * @minItems 1
      * @maxItems 1
      */
@@ -1067,6 +1064,8 @@ export interface AddGiftCardStockInput {
 export interface AddGiftCardStockResponse {
   addedCount: number;
   availableCount: number;
+  binMetadataApplied: boolean;
+  redemptionZipApplied: boolean;
 }
 
 export interface GiftCardCredential {

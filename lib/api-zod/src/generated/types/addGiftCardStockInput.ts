@@ -9,6 +9,12 @@ import type { GiftCardCredentialInput } from './giftCardCredentialInput';
 
 export interface AddGiftCardStockInput {
   /**
+     * @maxLength 10
+     * @nullable
+     * @pattern ^[0-9]{5}(-[0-9]{4})?$
+     */
+  redemptionRegionZip?: string | null;
+  /**
      * @minItems 1
      * @maxItems 1
      */

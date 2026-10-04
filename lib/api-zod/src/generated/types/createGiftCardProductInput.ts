@@ -20,21 +20,12 @@ export interface CreateGiftCardProductInput {
      * @pattern ^[0-9]{5}(-[0-9]{4})?$
      */
   regionZip: string | null;
-  /**
-     * @minLength 1
-     * @maxLength 80
-     */
-  cardType: string;
-  /**
-     * @minLength 1
-     * @maxLength 80
-     */
-  issuer: string;
-  /**
-     * @minLength 1
-     * @maxLength 80
-     */
-  brand: string;
+  /** @maxLength 80 */
+  cardType?: string;
+  /** @maxLength 80 */
+  issuer?: string;
+  /** @maxLength 80 */
+  brand?: string;
   /**
      * @minimum 1
      * @maximum 1000000

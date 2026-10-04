@@ -125,6 +125,67 @@ function normalizeCredential(
   };
 }
 
+type DetectedBinMetadata = {
+  cardType: string | null;
+  issuer: string | null;
+  brand: string | null;
+};
+
+type BinLookupResult =
+  | { kind: "found"; metadata: DetectedBinMetadata }
+  | { kind: "not_found" }
+  | { kind: "unavailable"; status?: number };
+
+function cleanBinLabel(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const cleaned = value.trim().replace(/\s+/g, " ");
+  return cleaned && cleaned.length <= 80 ? cleaned : null;
+}
+
+async function lookupBinMetadata(bin: string): Promise<BinLookupResult> {
+  try {
+    const response = await fetch(`https://lookup.binlist.net/${bin}`, {
+      headers: {
+        Accept: "application/json",
+        "Accept-Version": "3",
+      },
+      signal: AbortSignal.timeout(4000),
+    });
+    if (response.status === 404) return { kind: "not_found" };
+    if (!response.ok) return { kind: "unavailable", status: response.status };
+
+    const payload: unknown = await response.json();
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return { kind: "not_found" };
+    }
+    const data = payload as Record<string, unknown>;
+    const bank =
+      data.bank && typeof data.bank === "object" && !Array.isArray(data.bank)
+        ? (data.bank as Record<string, unknown>)
+        : null;
+    const rawType = cleanBinLabel(data.type);
+    const typeLabel = rawType
+      ? rawType.charAt(0).toUpperCase() + rawType.slice(1)
+      : null;
+    const cardType = [
+      data.prepaid === true ? "Prepaid" : null,
+      typeLabel,
+    ]
+      .filter((part): part is string => part !== null)
+      .join(" ");
+    const metadata: DetectedBinMetadata = {
+      cardType: cardType || null,
+      issuer: cleanBinLabel(bank?.name),
+      brand: cleanBinLabel(data.brand) ?? cleanBinLabel(data.scheme),
+    };
+    return Object.values(metadata).some(Boolean)
+      ? { kind: "found", metadata }
+      : { kind: "not_found" };
+  } catch {
+    return { kind: "unavailable" };
+  }
+}
+
 router.get("/gift-card-products", async (req, res): Promise<void> => {
   const user = await getCurrentUser(req);
   if (!user) {
@@ -359,12 +420,12 @@ router.post("/admin/gift-card-products", async (req, res): Promise<void> => {
   }
   const name = parsed.data.name.trim();
   const description = parsed.data.description.trim();
-  const cardType = parsed.data.cardType.trim();
-  const issuer = parsed.data.issuer.trim();
-  const brand = parsed.data.brand.trim();
-  if (!name || !cardType || !issuer || !brand) {
+  const cardType = parsed.data.cardType?.trim() ?? "";
+  const issuer = parsed.data.issuer?.trim() ?? "";
+  const brand = parsed.data.brand?.trim() ?? "";
+  if (!name) {
     res.status(400).json({
-      error: "Product name, card type, issuer, and brand cannot be blank.",
+      error: "Product name cannot be blank.",
     });
     return;
   }
@@ -556,6 +617,7 @@ router.post(
       return;
     }
 
+    const redemptionRegionZip = parsed.data.redemptionRegionZip ?? null;
     const values = credentials.map((credential) => ({
       productId: params.data.productId,
       hasEmail: Boolean(credential.email),
@@ -597,7 +659,10 @@ router.post(
       if (inserted.length !== values.length) {
         return { kind: "duplicate" as const };
       }
-      return { kind: "success" as const, availableCount: inserted.length };
+      return {
+        kind: "success" as const,
+        availableCount: inserted.length,
+      };
     });
 
     if (stockResult.kind === "missing") {
@@ -618,10 +683,51 @@ router.post(
       return;
     }
 
+    // Only disclose a card's BIN prefix to the public lookup after stock was accepted.
+    const binLookup = await lookupBinMetadata(credentials[0]!.cardNumber.slice(0, 8));
+    if (binLookup.kind === "unavailable") {
+      req.log.warn(
+        { status: binLookup.status },
+        "Public BIN lookup was unavailable; existing product metadata was kept.",
+      );
+    }
+    const metadataChanges: {
+      regionZip?: string;
+      cardType?: string;
+      issuer?: string;
+      brand?: string;
+    } = {};
+    if (redemptionRegionZip) metadataChanges.regionZip = redemptionRegionZip;
+    if (binLookup.kind === "found") {
+      if (binLookup.metadata.cardType) {
+        metadataChanges.cardType = binLookup.metadata.cardType;
+      }
+      if (binLookup.metadata.issuer) {
+        metadataChanges.issuer = binLookup.metadata.issuer;
+      }
+      if (binLookup.metadata.brand) {
+        metadataChanges.brand = binLookup.metadata.brand;
+      }
+    }
+    let metadataSaved = false;
+    if (Object.keys(metadataChanges).length > 0) {
+      try {
+        const [updated] = await db
+          .update(giftCardProductsTable)
+          .set(metadataChanges)
+          .where(eq(giftCardProductsTable.id, params.data.productId))
+          .returning({ id: giftCardProductsTable.id });
+        metadataSaved = Boolean(updated);
+      } catch {
+        req.log.error("Automatic gift-card metadata could not be saved.");
+      }
+    }
     res.json(
       AddAdminGiftCardStockResponse.parse({
         addedCount: values.length,
         availableCount: stockResult.availableCount,
+        binMetadataApplied: metadataSaved && binLookup.kind === "found",
+        redemptionZipApplied: metadataSaved && redemptionRegionZip !== null,
       }),
     );
   },

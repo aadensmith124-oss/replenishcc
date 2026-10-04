@@ -1930,12 +1930,12 @@ components:
         name: { type: string, minLength: 1, maxLength: 100 }
         description: { type: string, maxLength: 1000 }
         regionZip: { type: ["string", "null"], maxLength: 10, pattern: "^[0-9]{5}(-[0-9]{4})?$" }
-        cardType: { type: string, minLength: 1, maxLength: 80 }
-        issuer: { type: string, minLength: 1, maxLength: 80 }
-        brand: { type: string, minLength: 1, maxLength: 80 }
+        cardType: { type: string, maxLength: 80 }
+        issuer: { type: string, maxLength: 80 }
+        brand: { type: string, maxLength: 80 }
         faceValueCents: { type: integer, minimum: 1, maximum: 1000000 }
         priceCents: { type: integer, minimum: 1, maximum: 1000000 }
-      required: [name, description, regionZip, cardType, issuer, brand, faceValueCents, priceCents]
+      required: [name, description, regionZip, faceValueCents, priceCents]
     UpdateGiftCardProductMetadataInput:
       type: object
       properties:
@@ -1957,6 +1957,7 @@ components:
     AddGiftCardStockInput:
       type: object
       properties:
+        redemptionRegionZip: { type: ["string", "null"], maxLength: 10, pattern: "^[0-9]{5}(-[0-9]{4})?$" }
         cards:
           type: array
           minItems: 1
@@ -1968,7 +1969,9 @@ components:
       properties:
         addedCount: { type: integer }
         availableCount: { type: integer }
-      required: [addedCount, availableCount]
+        binMetadataApplied: { type: boolean }
+        redemptionZipApplied: { type: boolean }
+      required: [addedCount, availableCount, binMetadataApplied, redemptionZipApplied]
     GiftCardCredential:
       type: object
       properties:
