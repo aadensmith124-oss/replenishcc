@@ -490,6 +490,20 @@ paths:
           description: Admin access required
         "404":
           description: Announcement not found
+  /support/orders/me:
+    get:
+      operationId: getMySupportOrders
+      tags: [support]
+      summary: List safe order summaries for support-ticket references
+      responses:
+        "200":
+          description: Gift-card and log orders belonging to the signed-in member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MySupportOrdersResponse"
+        "401":
+          description: Sign-in required
   /support/tickets:
     post:
       operationId: createSupportTicket
@@ -1525,6 +1539,24 @@ components:
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
       required: [id, category, subject, orderReference, status, createdAt, updatedAt]
+    SupportOrder:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        category: { type: string, enum: [card_purchase, log_purchase] }
+        productName: { type: string }
+        description: { type: string }
+        quantity: { type: integer, minimum: 1 }
+        totalCents: { type: integer, minimum: 0 }
+        createdAt: { type: string, format: date-time }
+      required: [id, category, productName, description, quantity, totalCents, createdAt]
+    MySupportOrdersResponse:
+      type: object
+      properties:
+        orders:
+          type: array
+          items: { $ref: "#/components/schemas/SupportOrder" }
+      required: [orders]
     SupportTicketMessage:
       type: object
       properties:
@@ -1548,6 +1580,10 @@ components:
       type: object
       properties:
         ticket: { $ref: "#/components/schemas/SupportTicket" }
+        matchedOrder:
+          anyOf:
+            - $ref: "#/components/schemas/SupportOrder"
+            - type: "null"
         messages:
           type: array
           items: { $ref: "#/components/schemas/SupportTicketMessage" }
@@ -1557,7 +1593,7 @@ components:
             - type: "null"
         memberName: { type: string }
         memberEmail: { type: string, format: email }
-      required: [ticket, messages, refund, memberName, memberEmail]
+      required: [ticket, matchedOrder, messages, refund, memberName, memberEmail]
     SupportTicketListResponse:
       type: object
       properties:
@@ -1578,7 +1614,8 @@ components:
         memberName: { type: string }
         memberEmail: { type: string, format: email }
         hasRefund: { type: boolean }
-      required: [id, category, subject, orderReference, status, createdAt, updatedAt, memberName, memberEmail, hasRefund]
+        orderMatchStatus: { type: string, enum: [verified, unmatched, none] }
+      required: [id, category, subject, orderReference, status, createdAt, updatedAt, memberName, memberEmail, hasRefund, orderMatchStatus]
     AdminSupportTicketListResponse:
       type: object
       properties:

@@ -2,15 +2,15 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft, ArrowRight, Check, CircleAlert, Clock3, Headphones, MessageSquareText,
+  ArrowLeft, ArrowRight, Check, CircleAlert, Clock3, Copy, Headphones, MessageSquareText,
   RefreshCw, Send, ShieldCheck, Ticket, WalletCards,
 } from 'lucide-react';
 import {
-  getGetAdminSupportTicketsQueryKey, getGetMyDepositsQueryKey, getGetMySupportTicketsQueryKey,
+  getGetAdminSupportTicketsQueryKey, getGetMyDepositsQueryKey, getGetMySupportOrdersQueryKey, getGetMySupportTicketsQueryKey,
   getGetSupportTicketQueryKey, useCreateSupportTicket, useCreateSupportTicketRefund,
-  useGetAdminSupportTickets, useGetAuthMe, useGetMySupportTickets, useGetSupportTicket,
+  useGetAdminSupportTickets, useGetAuthMe, useGetMySupportOrders, useGetMySupportTickets, useGetSupportTicket,
   usePatchAdminSupportTicketStatus, usePostSupportTicketMessage,
-  type AdminSupportTicket, type AuthMeResponse, type SupportTicket, type SupportTicketCategory, type SupportTicketInputCategory, type SupportTicketMessage, type SupportTicketStatus,
+  type AdminSupportTicket, type AuthMeResponse, type SupportOrder, type SupportTicket, type SupportTicketCategory, type SupportTicketInputCategory, type SupportTicketMessage, type SupportTicketStatus,
 } from '@workspace/api-client-react';
 import { Link, useLocation, useParams } from 'wouter';
 import { Form } from '@/components/ui/form';
@@ -106,12 +106,24 @@ type TicketForm = {
 
 export function CreateSupportTicketPage() {
   const create = useCreateSupportTicket();
+  const session = useGetAuthMe();
+  const orders = useGetMySupportOrders({
+    query: {
+      queryKey: getGetMySupportOrdersQueryKey(),
+      enabled: Boolean(session.data?.user),
+    },
+  });
   const client = useQueryClient();
   const [, setLocation] = useLocation();
   const [feedback, setFeedback] = useState<{ kind: 'error'; text: string } | null>(null);
   const form = useForm<TicketForm>({
     defaultValues: { category: 'card_purchase', subject: '', orderReference: '', message: '' },
   });
+  const categoryField = form.register('category', { required: true });
+  const selectedCategory = form.watch('category');
+  const selectedOrderId = form.watch('orderReference');
+  const categoryOrders = orders.data?.orders.filter((order) => order.category === selectedCategory) ?? [];
+  const selectedOrder = categoryOrders.find((order) => order.id === selectedOrderId);
   useEffect(() => { document.title = 'Create a support ticket | ReplenishCC'; }, []);
 
   const submit = form.handleSubmit((values) => {
@@ -152,7 +164,10 @@ export function CreateSupportTicketPage() {
             <form className="support-form" onSubmit={submit} noValidate>
               <div className="support-field">
                 <label htmlFor="support-category">Category</label>
-                <select id="support-category" {...form.register('category', { required: true })} data-testid="select-support-category">
+                <select id="support-category" {...categoryField} onChange={(event) => {
+                  categoryField.onChange(event);
+                  form.setValue('orderReference', '');
+                }} data-testid="select-support-category">
                   {categoryOptions.map((category) => <option value={category} key={category}>{categoryLabels[category]}</option>)}
                 </select>
               </div>
@@ -162,11 +177,20 @@ export function CreateSupportTicketPage() {
                 {form.formState.errors.subject && <small className="support-field-error">{form.formState.errors.subject.message}</small>}
                 <small className="support-counter">{form.watch('subject').length}/140</small>
               </div>
-              <div className="support-field">
-                <label htmlFor="support-order-reference">Order reference <span>Optional · unverified</span></label>
-                <input id="support-order-reference" maxLength={120} placeholder="Enter a reference if you have one" {...form.register('orderReference')} data-testid="input-support-order-reference" />
-                <small className="support-field-note">This is free text only and is not checked against an order record.</small>
-              </div>
+              {selectedCategory !== 'deposits' && <div className="support-field">
+                <label htmlFor="support-order-reference">Order ID <span>Optional · verified against your account</span></label>
+                <select id="support-order-reference" {...form.register('orderReference')} data-testid="input-support-order-reference">
+                  <option value="">No order linked</option>
+                  {categoryOrders.map((order) => <option value={order.id} key={order.id}>{order.productName} · {order.quantity} item{order.quantity === 1 ? '' : 's'} · {dollars(order.totalCents)} · {dateTime(order.createdAt)}</option>)}
+                </select>
+                {selectedOrder && <div className="support-selected-order" data-testid="text-selected-support-order">
+                  <strong>Selected order ID</strong><code>{selectedOrder.id}</code>
+                </div>}
+                {orders.isLoading && <small className="support-field-note">Loading your card and log purchase orders…</small>}
+                {orders.isError && <small className="support-field-error">Your orders could not be checked. You can continue without linking an order.</small>}
+                {!orders.isLoading && !orders.isError && categoryOrders.length === 0 && <small className="support-field-note">No orders of this type are available to link.</small>}
+                <small className="support-field-note">Only orders in your account that match this ticket category can be selected.</small>
+              </div>}
               <div className="support-field">
                 <label htmlFor="support-message">First message</label>
                 <textarea id="support-message" rows={7} maxLength={4000} placeholder="Include the details that will help us understand your request." {...form.register('message', { required: 'Write a first message.', maxLength: { value: 4000, message: 'Keep your message under 4,000 characters.' } })} aria-invalid={Boolean(form.formState.errors.message)} data-testid="textarea-support-message" />
@@ -185,16 +209,64 @@ export function CreateSupportTicketPage() {
 }
 
 function TicketList({ ticket, admin = false }: { ticket: SupportTicket | AdminSupportTicket; admin?: boolean }) {
+  const adminTicket = ticket as AdminSupportTicket;
   return <Link href={`/support/tickets/${encodeURIComponent(ticket.id)}`} className="support-ticket-row" data-testid={`link-support-ticket-${ticket.id}`}>
     <span className="support-ticket-mark"><Ticket aria-hidden="true" /></span>
     <span className="support-ticket-main">
       <strong data-testid={`text-ticket-subject-${ticket.id}`}>{ticket.subject}</strong>
       <span>{categoryLabels[ticket.category]} · Updated <time dateTime={ticket.updatedAt} data-testid={`text-ticket-updated-${ticket.id}`}>{dateTime(ticket.updatedAt)}</time></span>
-      {admin && <small data-testid={`text-ticket-member-${ticket.id}`}>{(ticket as AdminSupportTicket).memberName} · {(ticket as AdminSupportTicket).memberEmail}</small>}
+      {admin && <small data-testid={`text-ticket-member-${ticket.id}`}>{adminTicket.memberName} · {adminTicket.memberEmail}</small>}
+      {admin && ticket.orderReference && <small className={`support-ticket-order-match ${adminTicket.orderMatchStatus === 'verified' ? 'is-verified' : 'is-unmatched'}`} data-testid={`status-ticket-order-match-${ticket.id}`}>
+        {adminTicket.orderMatchStatus === 'verified' ? 'Order ID verified' : 'Order ID not matched'}
+      </small>}
     </span>
     <span className="support-ticket-side"><StatusPill status={ticket.status} /><span className="support-ticket-id">#{ticket.id}</span></span>
     <ArrowRight className="support-ticket-arrow" aria-hidden="true" />
   </Link>;
+}
+
+type OrderCopyState = 'idle' | 'copied' | 'failed';
+
+function SupportOrderCard({
+  reference,
+  order,
+  copyState,
+  onCopy,
+}: {
+  reference: string;
+  order: SupportOrder | null;
+  copyState: OrderCopyState;
+  onCopy: () => void;
+}) {
+  return <section className="workspace-panel support-detail-card support-order-card" aria-labelledby="support-order-title" data-testid="card-support-order">
+    <div className="section-kicker"><Ticket aria-hidden="true" /> Order verification</div>
+    <h2 id="support-order-title">{order ? 'Verified order' : 'Order not matched'}</h2>
+    <div className="support-order-id-row">
+      <code data-testid="text-support-order-id">{reference}</code>
+      <button type="button" className="support-copy-order-button" onClick={onCopy} aria-label="Copy order ID" data-testid="button-copy-support-order-id">
+        {copyState === 'copied' ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+        {copyState === 'copied' ? 'Copied' : 'Copy ID'}
+      </button>
+    </div>
+    {copyState === 'failed' && <small className="support-order-copy-status" role="status">Copy failed. Select the order ID to copy it manually.</small>}
+    {order ? <>
+      <div className="support-order-verified-summary">
+        <strong>{order.productName}</strong>
+        <span>{order.category === 'card_purchase' ? 'Gift-card purchase' : 'Log purchase'} · {order.quantity} item{order.quantity === 1 ? '' : 's'} · {dollars(order.totalCents)}</span>
+      </div>
+      <details className="support-order-details" data-testid="details-support-order">
+        <summary>View order details</summary>
+        <dl className="support-detail-facts">
+          <div><dt>Order type</dt><dd>{order.category === 'card_purchase' ? 'Gift card' : 'Log'}</dd></div>
+          <div><dt>Product</dt><dd>{order.productName}</dd></div>
+          <div><dt>Order details</dt><dd>{order.description || '—'}</dd></div>
+          <div><dt>Quantity</dt><dd>{order.quantity}</dd></div>
+          <div><dt>Order total</dt><dd>{dollars(order.totalCents)}</dd></div>
+          <div><dt>Placed</dt><dd>{dateTime(order.createdAt)}</dd></div>
+        </dl>
+      </details>
+    </> : <p className="support-order-unmatched">This ID does not match an order in this member’s account for the ticket category.</p>}
+  </section>;
 }
 
 export function MySupportTicketsPage() {
@@ -242,11 +314,21 @@ export function SupportTicketDetailPage() {
   const [replyNotice, setReplyNotice] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
   const [statusNotice, setStatusNotice] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
   const [refundNotice, setRefundNotice] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
+  const [orderCopyState, setOrderCopyState] = useState<OrderCopyState>('idle');
   const replyForm = useForm<ReplyForm>({ defaultValues: { message: '' } });
   const refundForm = useForm<RefundForm>({ defaultValues: { amount: '', reason: '' } });
   useEffect(() => { document.title = 'Support ticket | ReplenishCC'; }, []);
   const ticket = detail.data?.ticket;
   const closed = ticket?.status === 'closed';
+  const copyOrderId = async () => {
+    if (!ticket?.orderReference) return;
+    try {
+      await navigator.clipboard.writeText(ticket.orderReference);
+      setOrderCopyState('copied');
+    } catch {
+      setOrderCopyState('failed');
+    }
+  };
 
   const invalidateSupport = () => {
     void client.invalidateQueries({ queryKey: getGetSupportTicketQueryKey(ticketId) });
@@ -310,7 +392,7 @@ export function SupportTicketDetailPage() {
   return <PortalGate title="Support ticket">{(user) => {
     const adminView = Boolean(user.isDepositAdmin);
     return <div className="workspace-page support-page">
-      <Heading eyebrow={adminView ? 'Administration · member care' : 'Member care'} title={detail.data?.ticket.subject ?? 'Support ticket'} copy={detail.data ? `Ticket #${detail.data.ticket.id} · ${categoryLabels[detail.data.ticket.category]}` : 'Your support conversation and request details.'} action={<Link href={adminView ? '/admin/dashboard/tickets' : '/support/tickets'} className="workspace-secondary-button" data-testid="link-back-support-tickets"><ArrowLeft aria-hidden="true" /> {adminView ? 'Inbox' : 'My tickets'}</Link>} />
+      <Heading eyebrow={adminView ? 'Administration · member care' : 'Member care'} title={detail.data?.ticket.subject ?? 'Support ticket'} copy={detail.data ? `Ticket #${detail.data.ticket.id} · ${categoryLabels[detail.data.ticket.category]}` : 'Your support conversation and request details.'} action={<Link href={adminView ? '/admin/support/tickets' : '/support/tickets'} className="workspace-secondary-button" data-testid="link-back-support-tickets"><ArrowLeft aria-hidden="true" /> {adminView ? 'Inbox' : 'My tickets'}</Link>} />
       {detail.isLoading ? <div className="support-detail-loading"><div className="workspace-panel"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div><SkeletonRows count={2} /></div>
         : detail.isError ? <QueryError error={detail.error} retry={() => void detail.refetch()} label="This ticket could not be loaded." />
         : !detail.data ? <div className="support-query-error" role="alert" data-testid="error-support-ticket-missing"><CircleAlert aria-hidden="true" /><div><strong>Ticket unavailable</strong><span>This ticket could not be found in your support records.</span></div></div>
@@ -321,9 +403,7 @@ export function SupportTicketDetailPage() {
               <div className="support-conversation-meta">
                 <span><strong>Category</strong>{categoryLabels[detail.data.ticket.category]}</span>
                 <span><strong>Created</strong><time dateTime={detail.data.ticket.createdAt}>{dateTime(detail.data.ticket.createdAt)}</time></span>
-                {detail.data.ticket.orderReference && <span className="support-order-reference"><strong>Order reference · unverified</strong><span data-testid="text-ticket-order-reference">{detail.data.ticket.orderReference}</span></span>}
               </div>
-              {detail.data.ticket.orderReference && <p className="support-unverified-note">This free-text reference has not been checked against an order record.</p>}
               <div className="support-messages" data-testid="list-support-messages">
                 {detail.data.messages.map((message) => <MessageCard key={message.id} message={message} viewerIsAdmin={adminView} />)}
               </div>
@@ -350,12 +430,22 @@ export function SupportTicketDetailPage() {
                 <div className="support-admin-status"><label htmlFor="support-status">Change status</label><select id="support-status" value={detail.data.ticket.status} onChange={(event) => updateStatus(event.target.value as SupportTicketStatus)} disabled={changeStatus.isPending} data-testid="select-support-status">{statuses.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}</select></div>
               </>}
             </section>
+            {detail.data.ticket.orderReference && <SupportOrderCard
+              reference={detail.data.ticket.orderReference}
+              order={detail.data.matchedOrder}
+              copyState={orderCopyState}
+              onCopy={() => void copyOrderId()}
+            />}
             {adminView && <section className="workspace-panel support-refund-card" aria-labelledby="support-refund-title">
               <div className="section-kicker"><WalletCards aria-hidden="true" /> Balance adjustment</div><h2 id="support-refund-title">One-time refund credit</h2>
               {detail.data.refund ? <div className="support-refund-record" data-testid="card-support-refund">
-                <strong data-testid="text-support-refund-amount">{dollars(detail.data.refund.amountCents)}</strong><span>Credited by {detail.data.refund.adminName}</span><p data-testid="text-support-refund-reason">{detail.data.refund.reason}</p><small className="support-refund-unverified">Amount was not verified against an order.</small><time dateTime={detail.data.refund.createdAt}>{dateTime(detail.data.refund.createdAt)}</time>
+                <strong data-testid="text-support-refund-amount">{dollars(detail.data.refund.amountCents)}</strong><span>Credited by {detail.data.refund.adminName}</span><p data-testid="text-support-refund-reason">{detail.data.refund.reason}</p><small className="support-refund-unverified">{detail.data.matchedOrder ? 'This ticket is linked to a verified order.' : 'The amount was not verified against an order.'}</small><time dateTime={detail.data.refund.createdAt}>{dateTime(detail.data.refund.createdAt)}</time>
               </div> : <>
-                <p className="support-refund-explainer">Issue one credit to the member’s ReplenishCC balance. The amount is not verified against an order.</p>
+                <p className="support-refund-explainer">{detail.data.matchedOrder
+                  ? `Order verified for ${dollars(detail.data.matchedOrder.totalCents)}. Review the order details before deciding whether to credit the member’s balance.`
+                  : detail.data.ticket.orderReference
+                    ? 'This order ID did not match a purchase for this member. Review the ticket before issuing any manual balance credit.'
+                    : 'No purchase order is linked. Issue a balance credit only if needed and record the reason.'}</p>
                 {refundNotice && <Alert kind={refundNotice.kind}>{refundNotice.text}</Alert>}
                 <Form {...refundForm}><form className="support-form support-refund-form" onSubmit={submitRefund} noValidate>
                   <div className="support-field"><label htmlFor="support-refund-amount">Credit amount (USD)</label><div className="support-money-input"><span>$</span><input id="support-refund-amount" type="number" min="0.01" step="0.01" inputMode="decimal" placeholder="0.00" {...refundForm.register('amount', { required: true })} data-testid="input-support-refund-amount" /></div></div>
@@ -364,7 +454,7 @@ export function SupportTicketDetailPage() {
                 </form></Form>
               </>}
             </section>}
-            {!adminView && detail.data.refund && <section className="workspace-panel support-refund-card" aria-labelledby="member-refund-title"><div className="section-kicker"><WalletCards aria-hidden="true" /> Account balance</div><h2 id="member-refund-title">Credit recorded</h2><div className="support-refund-record"><strong data-testid="text-member-refund-amount">{dollars(detail.data.refund.amountCents)}</strong><span>One-time credit · {detail.data.refund.adminName}</span><p>{detail.data.refund.reason}</p><time dateTime={detail.data.refund.createdAt}>{dateTime(detail.data.refund.createdAt)}</time></div><p className="support-refund-explainer">This credit was entered by support and was not verified against an order.</p></section>}
+            {!adminView && detail.data.refund && <section className="workspace-panel support-refund-card" aria-labelledby="member-refund-title"><div className="section-kicker"><WalletCards aria-hidden="true" /> Account balance</div><h2 id="member-refund-title">Credit recorded</h2><div className="support-refund-record"><strong data-testid="text-member-refund-amount">{dollars(detail.data.refund.amountCents)}</strong><span>One-time credit · {detail.data.refund.adminName}</span><p>{detail.data.refund.reason}</p><time dateTime={detail.data.refund.createdAt}>{dateTime(detail.data.refund.createdAt)}</time></div><p className="support-refund-explainer">{detail.data.matchedOrder ? 'The linked purchase order was verified.' : 'This balance credit was not verified against an order.'}</p></section>}
           </aside>
         </div>}
     </div>;

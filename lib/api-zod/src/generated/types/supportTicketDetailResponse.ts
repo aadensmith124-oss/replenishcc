@@ -5,12 +5,14 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { SupportOrder } from './supportOrder';
 import type { SupportTicket } from './supportTicket';
 import type { SupportTicketMessage } from './supportTicketMessage';
 import type { SupportTicketRefund } from './supportTicketRefund';
 
 export interface SupportTicketDetailResponse {
   ticket: SupportTicket;
+  matchedOrder: SupportOrder | null;
   messages: SupportTicketMessage[];
   refund: SupportTicketRefund | null;
   memberName: string;

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AdminSupportTicketCategory } from './adminSupportTicketCategory';
+import type { AdminSupportTicketOrderMatchStatus } from './adminSupportTicketOrderMatchStatus';
 import type { AdminSupportTicketStatus } from './adminSupportTicketStatus';
 
 export interface AdminSupportTicket {
@@ -20,4 +21,5 @@ export interface AdminSupportTicket {
   memberName: string;
   memberEmail: string;
   hasRefund: boolean;
+  orderMatchStatus: AdminSupportTicketOrderMatchStatus;
 }

@@ -79,6 +79,7 @@ import type {
   MyDepositsResponse,
   MyGiftCardOrdersResponse,
   MyLicenseOrdersResponse,
+  MySupportOrdersResponse,
   NowPaymentsWebhookInput,
   PurchaseGiftCardInput,
   RedeemCodeBatchInput,
@@ -1870,6 +1871,83 @@ export const useUpdateAnnouncement = <TError = ErrorType<void>,
       > => {
       return useMutation(getUpdateAnnouncementMutationOptions(options));
     }
+
+export const getGetMySupportOrdersUrl = () => {
+
+
+
+
+  return `/api/support/orders/me`
+}
+
+/**
+ * @summary List safe order summaries for support-ticket references
+ */
+export const getMySupportOrders = async ( options?: Parameters<typeof customFetch>[1]): Promise<MySupportOrdersResponse> => {
+
+  return customFetch<MySupportOrdersResponse>(getGetMySupportOrdersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMySupportOrdersQueryKey = () => {
+    return [
+    `/api/support/orders/me`
+    ] as const;
+    }
+
+
+export const getGetMySupportOrdersQueryOptions = <TData = Awaited<ReturnType<typeof getMySupportOrders>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMySupportOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMySupportOrdersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMySupportOrders>>> = ({ signal }) => getMySupportOrders({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMySupportOrders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMySupportOrdersQueryResult = NonNullable<Awaited<ReturnType<typeof getMySupportOrders>>>
+export type GetMySupportOrdersQueryError = ErrorType<void>
+
+
+/**
+ * @summary List safe order summaries for support-ticket references
+ */
+
+export function useGetMySupportOrders<TData = Awaited<ReturnType<typeof getMySupportOrders>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMySupportOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMySupportOrdersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getCreateSupportTicketUrl = () => {
 

@@ -512,6 +512,27 @@ export const UpdateAnnouncementResponse = zod.object({
 
 
 /**
+ * @summary List safe order summaries for support-ticket references
+ */
+
+export const getMySupportOrdersResponseOrdersItemTotalCentsMin = 0;
+
+
+
+export const GetMySupportOrdersResponse = zod.object({
+  "orders": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "category": zod.enum(['card_purchase', 'log_purchase']),
+  "productName": zod.string(),
+  "description": zod.string(),
+  "quantity": zod.number().int().min(1),
+  "totalCents": zod.number().int().min(getMySupportOrdersResponseOrdersItemTotalCentsMin),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
  * @summary Create a support ticket
  */
 export const createSupportTicketBodySubjectMax = 140;
@@ -530,6 +551,9 @@ export const CreateSupportTicketBody = zod.object({
 })
 
 
+export const createSupportTicketResponseMatchedOrderOneTotalCentsMin = 0;
+
+
 
 
 export const CreateSupportTicketResponse = zod.object({
@@ -542,6 +566,15 @@ export const CreateSupportTicketResponse = zod.object({
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 }),
+  "matchedOrder": zod.union([zod.object({
+  "id": zod.string().uuid(),
+  "category": zod.enum(['card_purchase', 'log_purchase']),
+  "productName": zod.string(),
+  "description": zod.string(),
+  "quantity": zod.number().int().min(1),
+  "totalCents": zod.number().int().min(createSupportTicketResponseMatchedOrderOneTotalCentsMin),
+  "createdAt": zod.coerce.date()
+}),zod.null()]),
   "messages": zod.array(zod.object({
   "id": zod.string().uuid(),
   "authorUserId": zod.string().uuid().nullable(),
@@ -586,6 +619,9 @@ export const GetSupportTicketParams = zod.object({
 })
 
 
+export const getSupportTicketResponseMatchedOrderOneTotalCentsMin = 0;
+
+
 
 
 export const GetSupportTicketResponse = zod.object({
@@ -598,6 +634,15 @@ export const GetSupportTicketResponse = zod.object({
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 }),
+  "matchedOrder": zod.union([zod.object({
+  "id": zod.string().uuid(),
+  "category": zod.enum(['card_purchase', 'log_purchase']),
+  "productName": zod.string(),
+  "description": zod.string(),
+  "quantity": zod.number().int().min(1),
+  "totalCents": zod.number().int().min(getSupportTicketResponseMatchedOrderOneTotalCentsMin),
+  "createdAt": zod.coerce.date()
+}),zod.null()]),
   "messages": zod.array(zod.object({
   "id": zod.string().uuid(),
   "authorUserId": zod.string().uuid().nullable(),
@@ -659,7 +704,8 @@ export const GetAdminSupportTicketsResponse = zod.object({
   "updatedAt": zod.coerce.date(),
   "memberName": zod.string(),
   "memberEmail": zod.string().email(),
-  "hasRefund": zod.boolean()
+  "hasRefund": zod.boolean(),
+  "orderMatchStatus": zod.enum(['verified', 'unmatched', 'none'])
 }))
 })
 
@@ -676,6 +722,9 @@ export const PatchAdminSupportTicketStatusBody = zod.object({
 })
 
 
+export const patchAdminSupportTicketStatusResponseMatchedOrderOneTotalCentsMin = 0;
+
+
 
 
 export const PatchAdminSupportTicketStatusResponse = zod.object({
@@ -688,6 +737,15 @@ export const PatchAdminSupportTicketStatusResponse = zod.object({
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 }),
+  "matchedOrder": zod.union([zod.object({
+  "id": zod.string().uuid(),
+  "category": zod.enum(['card_purchase', 'log_purchase']),
+  "productName": zod.string(),
+  "description": zod.string(),
+  "quantity": zod.number().int().min(1),
+  "totalCents": zod.number().int().min(patchAdminSupportTicketStatusResponseMatchedOrderOneTotalCentsMin),
+  "createdAt": zod.coerce.date()
+}),zod.null()]),
   "messages": zod.array(zod.object({
   "id": zod.string().uuid(),
   "authorUserId": zod.string().uuid().nullable(),

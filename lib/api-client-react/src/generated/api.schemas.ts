@@ -166,6 +166,30 @@ export interface SupportTicket {
   updatedAt: string;
 }
 
+export type SupportOrderCategory = typeof SupportOrderCategory[keyof typeof SupportOrderCategory];
+
+
+export const SupportOrderCategory = {
+  card_purchase: 'card_purchase',
+  log_purchase: 'log_purchase',
+} as const;
+
+export interface SupportOrder {
+  id: string;
+  category: SupportOrderCategory;
+  productName: string;
+  description: string;
+  /** @minimum 1 */
+  quantity: number;
+  /** @minimum 0 */
+  totalCents: number;
+  createdAt: string;
+}
+
+export interface MySupportOrdersResponse {
+  orders: SupportOrder[];
+}
+
 export type SupportTicketMessageAuthorRole = typeof SupportTicketMessageAuthorRole[keyof typeof SupportTicketMessageAuthorRole];
 
 
@@ -195,6 +219,7 @@ export interface SupportTicketRefund {
 
 export interface SupportTicketDetailResponse {
   ticket: SupportTicket;
+  matchedOrder: SupportOrder | null;
   messages: SupportTicketMessage[];
   refund: SupportTicketRefund | null;
   memberName: string;
@@ -228,6 +253,15 @@ export const AdminSupportTicketStatus = {
   closed: 'closed',
 } as const;
 
+export type AdminSupportTicketOrderMatchStatus = typeof AdminSupportTicketOrderMatchStatus[keyof typeof AdminSupportTicketOrderMatchStatus];
+
+
+export const AdminSupportTicketOrderMatchStatus = {
+  verified: 'verified',
+  unmatched: 'unmatched',
+  none: 'none',
+} as const;
+
 export interface AdminSupportTicket {
   id: string;
   category: AdminSupportTicketCategory;
@@ -240,6 +274,7 @@ export interface AdminSupportTicket {
   memberName: string;
   memberEmail: string;
   hasRefund: boolean;
+  orderMatchStatus: AdminSupportTicketOrderMatchStatus;
 }
 
 export interface AdminSupportTicketListResponse {

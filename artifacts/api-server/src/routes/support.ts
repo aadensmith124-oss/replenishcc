@@ -1,4 +1,4 @@
-import { desc, eq, inArray, sum } from "drizzle-orm";
+import { and, desc, eq, inArray, sum } from "drizzle-orm";
 import { Router, type IRouter, type Request } from "express";
 import {
   AdminSupportTicketListResponse,
@@ -7,6 +7,7 @@ import {
   CreateSupportTicketRefundBody,
   CreateSupportTicketRefundResponse,
   GetAdminSupportTicketsResponse,
+  GetMySupportOrdersResponse,
   GetMySupportTicketsResponse,
   GetSupportTicketParams,
   GetSupportTicketResponse,
@@ -20,6 +21,8 @@ import {
 import {
   accountLedgerTable,
   db,
+  giftCardOrdersTable,
+  licenseOrdersTable,
   supportTicketMessagesTable,
   supportTicketRefundsTable,
   supportTicketsTable,
@@ -42,6 +45,72 @@ const createMessageLimit = createRateLimit(
   60 * 60 * 1000,
   "support-ticket-message",
 );
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+type SupportOrderCategory = "card_purchase" | "log_purchase";
+type SupportOrderSummary = {
+  id: string;
+  category: SupportOrderCategory;
+  productName: string;
+  description: string;
+  quantity: number;
+  totalCents: number;
+  createdAt: string;
+};
+
+function normalizedOrderId(reference: string | null): string | null {
+  const value = reference?.trim() ?? "";
+  return uuidPattern.test(value) ? value.toLowerCase() : null;
+}
+
+async function findSupportOrder(
+  userId: string,
+  category: string,
+  reference: string | null,
+): Promise<SupportOrderSummary | null> {
+  const orderId = normalizedOrderId(reference);
+  if (!orderId) return null;
+
+  if (category === "card_purchase") {
+    const [order] = await db
+      .select({
+        id: giftCardOrdersTable.id,
+        productName: giftCardOrdersTable.productName,
+        description: giftCardOrdersTable.description,
+        quantity: giftCardOrdersTable.quantity,
+        totalCents: giftCardOrdersTable.totalCents,
+        createdAt: giftCardOrdersTable.createdAt,
+      })
+      .from(giftCardOrdersTable)
+      .where(and(
+        eq(giftCardOrdersTable.id, orderId),
+        eq(giftCardOrdersTable.userId, userId),
+      ))
+      .limit(1);
+    return order ? { ...order, category: "card_purchase", createdAt: order.createdAt.toISOString() } : null;
+  }
+
+  if (category === "log_purchase") {
+    const [order] = await db
+      .select({
+        id: licenseOrdersTable.id,
+        productName: licenseOrdersTable.productName,
+        description: licenseOrdersTable.description,
+        quantity: licenseOrdersTable.quantity,
+        totalCents: licenseOrdersTable.totalCents,
+        createdAt: licenseOrdersTable.createdAt,
+      })
+      .from(licenseOrdersTable)
+      .where(and(
+        eq(licenseOrdersTable.id, orderId),
+        eq(licenseOrdersTable.userId, userId),
+      ))
+      .limit(1);
+    return order ? { ...order, category: "log_purchase", createdAt: order.createdAt.toISOString() } : null;
+  }
+
+  return null;
+}
 
 function isSameOriginWrite(req: Request): boolean {
   const origin = req.get("origin");
@@ -129,15 +198,68 @@ async function getTicketDetail(ticketId: string) {
   ]);
   const member = members[0];
   if (!member) return null;
+  const matchedOrder = await findSupportOrder(
+    ticket.userId,
+    ticket.category,
+    ticket.orderReference,
+  );
 
   return GetSupportTicketResponse.parse({
     ticket: serializeTicket(ticket),
+    matchedOrder,
     messages: messages.map(serializeMessage),
     refund: refunds[0] ? serializeRefund(refunds[0]) : null,
     memberName: member.fullName,
     memberEmail: member.email,
   });
 }
+
+router.get("/support/orders/me", async (req, res): Promise<void> => {
+  const user = await getCurrentUser(req);
+  if (!user) {
+    res.status(401).json({ error: "Sign in to view orders for support tickets." });
+    return;
+  }
+
+  const [giftCardOrders, logOrders] = await Promise.all([
+    db
+      .select({
+        id: giftCardOrdersTable.id,
+        productName: giftCardOrdersTable.productName,
+        description: giftCardOrdersTable.description,
+        quantity: giftCardOrdersTable.quantity,
+        totalCents: giftCardOrdersTable.totalCents,
+        createdAt: giftCardOrdersTable.createdAt,
+      })
+      .from(giftCardOrdersTable)
+      .where(eq(giftCardOrdersTable.userId, user.id)),
+    db
+      .select({
+        id: licenseOrdersTable.id,
+        productName: licenseOrdersTable.productName,
+        description: licenseOrdersTable.description,
+        quantity: licenseOrdersTable.quantity,
+        totalCents: licenseOrdersTable.totalCents,
+        createdAt: licenseOrdersTable.createdAt,
+      })
+      .from(licenseOrdersTable)
+      .where(eq(licenseOrdersTable.userId, user.id)),
+  ]);
+  const orders: SupportOrderSummary[] = [
+    ...giftCardOrders.map((order) => ({
+      ...order,
+      category: "card_purchase" as const,
+      createdAt: order.createdAt.toISOString(),
+    })),
+    ...logOrders.map((order) => ({
+      ...order,
+      category: "log_purchase" as const,
+      createdAt: order.createdAt.toISOString(),
+    })),
+  ].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+
+  res.json(GetMySupportOrdersResponse.parse({ orders }));
+});
 
 router.post(
   "/support/tickets",
@@ -161,6 +283,16 @@ router.post(
     if (!subject || !message) {
       res.status(400).json({
         error: "A ticket subject and message cannot be blank.",
+      });
+      return;
+    }
+    if (orderReference && !await findSupportOrder(
+      user.id,
+      parsed.data.category,
+      orderReference,
+    )) {
+      res.status(400).json({
+        error: "That order ID does not match an order in your account for this ticket category.",
       });
       return;
     }
@@ -359,6 +491,30 @@ router.get("/admin/support/tickets", async (req, res): Promise<void> => {
         .where(inArray(supportTicketRefundsTable.ticketId, ticketIds))
     : [];
   const refundedTicketIds = new Set(refunds.map((refund) => refund.ticketId));
+  const giftOrderIds = [...new Set(rows
+    .filter(({ ticket }) => ticket.category === "card_purchase")
+    .map(({ ticket }) => normalizedOrderId(ticket.orderReference))
+    .filter((id): id is string => Boolean(id)))];
+  const logOrderIds = [...new Set(rows
+    .filter(({ ticket }) => ticket.category === "log_purchase")
+    .map(({ ticket }) => normalizedOrderId(ticket.orderReference))
+    .filter((id): id is string => Boolean(id)))];
+  const [giftOrderMatches, logOrderMatches] = await Promise.all([
+    giftOrderIds.length
+      ? db
+          .select({ id: giftCardOrdersTable.id, userId: giftCardOrdersTable.userId })
+          .from(giftCardOrdersTable)
+          .where(inArray(giftCardOrdersTable.id, giftOrderIds))
+      : [],
+    logOrderIds.length
+      ? db
+          .select({ id: licenseOrdersTable.id, userId: licenseOrdersTable.userId })
+          .from(licenseOrdersTable)
+          .where(inArray(licenseOrdersTable.id, logOrderIds))
+      : [],
+  ]);
+  const matchingGiftOwners = new Map(giftOrderMatches.map((order) => [order.id, order.userId]));
+  const matchingLogOwners = new Map(logOrderMatches.map((order) => [order.id, order.userId]));
 
   res.json(
     GetAdminSupportTicketsResponse.parse({
@@ -367,6 +523,15 @@ router.get("/admin/support/tickets", async (req, res): Promise<void> => {
         memberName,
         memberEmail,
         hasRefund: refundedTicketIds.has(ticket.id),
+        orderMatchStatus: !ticket.orderReference
+          ? "none"
+          : (ticket.category === "card_purchase"
+              ? matchingGiftOwners.get(normalizedOrderId(ticket.orderReference) ?? "") === ticket.userId
+              : ticket.category === "log_purchase"
+                ? matchingLogOwners.get(normalizedOrderId(ticket.orderReference) ?? "") === ticket.userId
+                : false)
+            ? "verified"
+            : "unmatched",
       })),
     }),
   );
