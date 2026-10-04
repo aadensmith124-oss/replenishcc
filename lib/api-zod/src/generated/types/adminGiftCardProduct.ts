@@ -33,7 +33,10 @@ export interface AdminGiftCardProduct {
   availableCount: number;
   hasEmail: boolean;
   hasPhone: boolean;
+  /** True when the base is active and can receive another stock batch. */
   canReceiveStock: boolean;
+  /** True when the base has inventory or purchase history and therefore must be archived rather than deleted. */
+  hasHistory: boolean;
   isArchived: boolean;
   createdAt: Date;
 }

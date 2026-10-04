@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,51 +18,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { downloadTextFile, plainTextLine } from '../lib/download-text-file';
+import { parseCardStockInput } from '../lib/card-stock-import';
 
 const money = (cents: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 const date = (value: string) => new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
-const emailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
-
-function detectStockContactFields(contactField: string) {
-  let remaining = contactField.trim();
-  let email: string | null = null;
-  let phone: string | null = null;
-  const emailMatch = emailPattern.exec(remaining);
-  if (emailMatch) {
-    email = emailMatch[0];
-    remaining = remaining.replace(emailMatch[0], ' ');
-  }
-
-  const labelledPhone = /\b(?:phone|mobile|tel|telephone)\s*[:=]\s*(\+?\d[\d\s().-]{7,}\d)/i.exec(remaining);
-  if (labelledPhone) {
-    phone = labelledPhone[1]?.trim() ?? null;
-    remaining = remaining.replace(labelledPhone[0], ' ');
-  }
-  const phoneCandidates: string[] = remaining.match(/\+?\d[\d\s().-]{7,}\d/g) ?? [];
-  const phoneCandidate = phoneCandidates.find((candidate: string) => {
-    const digits = candidate.replace(/\D/g, '').length;
-    return digits >= 10 && digits <= 15;
-  });
-  if (!phone && phoneCandidate) phone = phoneCandidate.trim();
-  return { email, phone };
-}
-
-function detectRedemptionRegionZip(text: string): string | null {
-  const zipField = text.split('|')[6]?.trim() ?? '';
-  return /^(\d{5}(?:-\d{4})?)$/.exec(zipField)?.[1] ?? /\b(\d{5}(?:-\d{4})?)\b/.exec(zipField)?.[1] ?? null;
-}
-
-function parseStockProductMetadata(line: string) {
-  const fields = line.split('|').map((field) => field.trim());
-  return {
-    address: fields[3] ?? '',
-    state: fields[4] ?? '',
-    city: fields[5] ?? '',
-    redemptionRegionZip: detectRedemptionRegionZip(line),
-  };
-}
-
 const MAX_CARDS_PER_BATCH = 100;
+const MAX_STOCK_FILE_BYTES = 100_000;
+const STOCK_FILE_EXTENSIONS = new Set(['txt', 'text', 'csv', 'tsv', 'json', 'jsonl', 'ndjson', 'log', 'dat']);
 
 function ContactIndicator({ available, label }: { available: boolean; label: string }) {
   return <span className={`gift-contact-indicator${available ? ' is-present' : ''}`} aria-label={`${label} ${available ? 'included' : 'not included'}`} title={`${label} ${available ? 'included' : 'not included'}`}>
@@ -623,12 +585,9 @@ function Credential({ card, index, visible, toggle, copy, copied, orderId }: { c
 const stockSchema = z.object({
   productId: z.string().min(1, 'Choose a base'),
   cards: z.string()
-    .min(1, 'Paste at least one card')
+    .trim()
+    .min(1, 'Paste or import at least one card')
     .max(100_000, 'Keep the batch under 100 KB')
-    .refine(
-      (value) => value.split(/\r?\n/).filter((line) => line.trim()).length <= MAX_CARDS_PER_BATCH,
-      `Upload no more than ${MAX_CARDS_PER_BATCH} cards at a time.`,
-    ),
 });
 type StockForm = z.infer<typeof stockSchema>;
 
@@ -643,26 +602,26 @@ export function AdminCardInventoryPage() {
   const restore = useRestoreAdminGiftCardProduct();
   const updateMetadata = useUpdateAdminGiftCardProductMetadata();
   const [feedback, setFeedback] = useState('');
+  const [stockFileName, setStockFileName] = useState('');
+  const [stockFileError, setStockFileError] = useState('');
+  const stockFileInput = useRef<HTMLInputElement>(null);
   const [editingMetadata, setEditingMetadata] = useState<{ productId: string; productName: string } | null>(null);
   const [metadataDraft, setMetadataDraft] = useState({ address: '', state: '', city: '', regionZip: '', cardType: '', issuer: '', brand: '' });
   const form = useForm<BaseForm>({ resolver: zodResolver(baseSchema), defaultValues: { name: '', price: 0 } });
   const stockForm = useForm<StockForm>({ resolver: zodResolver(stockSchema), defaultValues: { productId: '', cards: '' } });
-  const stockText = stockForm.watch('cards');
-  const stockLines = stockText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  const stockMetadataByLine = stockLines.map(parseStockProductMetadata);
-  const stockContactByLine = stockLines.map((line) => {
-    const fields = line.split('|').map((field) => field.trim());
-    return detectStockContactFields(fields[7] ?? '');
-  });
+  const stockText = stockForm.watch('cards') ?? '';
+  const stockImport = useMemo(() => parseCardStockInput(stockText), [stockText]);
+  const stockCards = stockImport.cards;
+  const stockIssueCount = stockCards.filter((card) => card.issues.length > 0).length;
   const stockLocationCounts = {
-    address: stockMetadataByLine.filter((metadata) => metadata.address).length,
-    state: stockMetadataByLine.filter((metadata) => metadata.state).length,
-    city: stockMetadataByLine.filter((metadata) => metadata.city).length,
-    zip: stockMetadataByLine.filter((metadata) => metadata.redemptionRegionZip).length,
+    address: stockCards.filter((card) => card.address).length,
+    state: stockCards.filter((card) => card.state).length,
+    city: stockCards.filter((card) => card.city).length,
+    zip: stockCards.filter((card) => card.regionZip).length,
   };
   const stockContactCounts = {
-    email: stockContactByLine.filter((contact) => contact.email).length,
-    phone: stockContactByLine.filter((contact) => contact.phone).length,
+    email: stockCards.filter((card) => card.email).length,
+    phone: stockCards.filter((card) => card.phone).length,
   };
   const rows = products.data?.products ?? [];
   const selectedStockProduct = rows.find((product) => product.id === stockForm.watch('productId'));
@@ -670,6 +629,38 @@ export function AdminCardInventoryPage() {
   useEffect(() => { document.title = 'Bases | ReplenishCC Admin'; }, []);
   useEffect(() => { if (!session.isLoading && (session.isError || !session.data?.authenticated)) setLocation('/login'); else if (!session.isLoading && session.data?.user && !session.data.user.isDepositAdmin) setLocation('/dashboard'); }, [session.isLoading, session.isError, session.data?.authenticated, session.data?.user, setLocation]);
   const invalidate = () => { void queryClient.invalidateQueries({ queryKey: getGetAdminGiftCardProductsQueryKey() }); void queryClient.invalidateQueries({ queryKey: getGetGiftCardProductsQueryKey() }); };
+  const loadStockFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file) return;
+    const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+    const isTextMime = file.type.startsWith('text/') || file.type === 'application/json' || file.type === 'application/x-ndjson';
+    if (!STOCK_FILE_EXTENSIONS.has(extension) && !isTextMime) {
+      setStockFileError('Choose a text, CSV, TSV, JSON, or JSON Lines file. Binary files are not supported.');
+      input.value = '';
+      return;
+    }
+    if (file.size > MAX_STOCK_FILE_BYTES) {
+      setStockFileError('Keep the file under 100 KB. Split larger uploads into separate batches.');
+      input.value = '';
+      return;
+    }
+    try {
+      const text = await file.text();
+      if (!text.trim()) {
+        setStockFileError('That file is empty. Choose another file or paste card data.');
+        input.value = '';
+        return;
+      }
+      stockForm.setValue('cards', text, { shouldDirty: true, shouldValidate: true });
+      setStockFileName(file.name);
+      setStockFileError('');
+      setFeedback('');
+    } catch {
+      setStockFileError('The file could not be read as text. Choose a supported text, CSV, TSV, JSON, or JSON Lines file.');
+      input.value = '';
+    }
+  };
   const saveMetadata = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!editingMetadata) return;
@@ -712,13 +703,13 @@ export function AdminCardInventoryPage() {
       <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>01</span><div><h3>Create a base</h3><p>The base name and Price apply to every card uploaded under it.</p></div></div>
         <Form {...form}><form onSubmit={form.handleSubmit((values) => {
           const priceCents = Math.round(values.price * 100);
-          create.mutate({ data: {
+            create.mutate({ data: {
             name: values.name.trim(),
             description: '',
             regionZip: null,
             faceValueCents: priceCents,
             priceCents,
-          } }, { onSuccess: () => { form.reset(); invalidate(); setFeedback('Base created. Upload verified cards, one per line, to add stock.'); }, onError: () => setFeedback('Base could not be created. Review the values and try again.') });
+          } }, { onSuccess: () => { form.reset(); invalidate(); setFeedback('Base created. Import or paste card data to add stock.'); }, onError: () => setFeedback('Base could not be created. Review the values and try again.') });
         })} className="gift-form">
           <div className="gift-form-pair">
             <FormField control={form.control} name="name" render={({ field }) => <FormItem><FormLabel>Base name</FormLabel><FormControl><Input {...field} placeholder="Vanilla Visa · Standard" data-testid="input-admin-card-name" /></FormControl><FormMessage /></FormItem>} />
@@ -727,51 +718,79 @@ export function AdminCardInventoryPage() {
           <button className="gift-admin-submit" disabled={create.isPending} data-testid="button-create-card-listing">{create.isPending ? 'Creating…' : 'Create base'} <ArrowRight /></button>
         </form></Form>
       </section>
-      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload cards</h3><p>Paste up to {MAX_CARDS_PER_BATCH} cards, one per line: number | expiration | security code | address | state | city | ZIP | optional email/phone. Each base accepts one initial batch; use a new base for a separate upload.</p></div></div>
+      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload cards</h3><p>Import or paste up to {MAX_CARDS_PER_BATCH} cards per batch. Fields are detected from common headers, delimiters, and labeled text. Active bases can receive additional batches.</p></div></div>
         <Form {...stockForm}><form onSubmit={stockForm.handleSubmit((values) => {
-          const lines = values.cards.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-          if (!lines.length || lines.length > MAX_CARDS_PER_BATCH) { setFeedback(`Upload between 1 and ${MAX_CARDS_PER_BATCH} cards, one card per line.`); return; }
-          const metadataByLine = lines.map(parseStockProductMetadata);
-          const invalidLocationIndex = metadataByLine.findIndex((metadata) =>
-            metadata.address.length > 255
-            || metadata.state.length > 80
-            || metadata.city.length > 120,
-          );
-          if (invalidLocationIndex >= 0) {
-            setFeedback(`Line ${invalidLocationIndex + 1} has a location field that exceeds its maximum length.`);
+          const parsedBatch = parseCardStockInput(values.cards);
+          if (!parsedBatch.cards.length) {
+            setFeedback(parsedBatch.message || 'No card records were detected.');
             return;
           }
-          const cards: GiftCardCredential[] = lines.map((line, index) => {
-            const fields = line.split('|').map((part) => part.trim());
-            const detected = detectStockContactFields(fields[7] ?? '');
-            const metadata = metadataByLine[index]!;
-            return {
-              cardNumber: fields[0] ?? '',
-              expiration: fields[1] ?? '',
-              securityCode: fields[2] ?? '',
-              email: detected.email,
-              phone: detected.phone,
-              publicLocation: {
-                address: metadata.address,
-                state: metadata.state,
-                city: metadata.city,
-                regionZip: metadata.redemptionRegionZip,
-              },
-            };
-          });
-          const invalidLineIndex = cards.findIndex((card) => !card.cardNumber || !card.expiration || !card.securityCode);
-          if (invalidLineIndex >= 0) { setFeedback(`Line ${invalidLineIndex + 1} must include card number, expiration, and security code separated by |.`); return; }
+          if (parsedBatch.cards.length > MAX_CARDS_PER_BATCH) {
+            setFeedback(`Split this upload into batches of no more than ${MAX_CARDS_PER_BATCH} cards.`);
+            return;
+          }
+          const invalidCardIndex = parsedBatch.cards.findIndex((card) => card.issues.length > 0);
+          if (invalidCardIndex >= 0) {
+            setFeedback(`Card ${invalidCardIndex + 1} needs review: ${parsedBatch.cards[invalidCardIndex]!.issues.join(' ')}`);
+            return;
+          }
+          if (selectedStockProduct?.isArchived) {
+            setFeedback('Restore this base before uploading more cards.');
+            return;
+          }
+          const cards: GiftCardCredential[] = parsedBatch.cards.map((card) => ({
+            cardNumber: card.cardNumber,
+            expiration: card.expiration,
+            securityCode: card.securityCode,
+            email: card.email,
+            phone: card.phone,
+            publicLocation: {
+              address: card.address,
+              state: card.state,
+              city: card.city,
+              regionZip: card.regionZip,
+            },
+          }));
           addStock.mutate({
             productId: values.productId,
             data: { cards },
-          }, { onSuccess: (result) => { stockForm.reset(); invalidate(); const label = `${result.addedCount} card${result.addedCount === 1 ? '' : 's'}`; setFeedback(`${label} added. ${result.binMetadataApplied ? 'BIN metadata auto-filled.' : 'BIN metadata was not applied; edit the base metadata if needed.'} ${result.locationMetadataApplied ? 'Per-card public locations saved.' : 'Base location defaults were used.'} ${result.redemptionZipApplied ? 'Per-card ZIP values saved.' : 'Base ZIP defaults were used where available.'}`); }, onError: () => setFeedback('Stock upload was rejected. Check each line and try again.') });
+          }, { onSuccess: (result) => {
+            stockForm.reset();
+            setStockFileName('');
+            setStockFileError('');
+            if (stockFileInput.current) stockFileInput.current.value = '';
+            invalidate();
+            const label = `${result.addedCount} card${result.addedCount === 1 ? '' : 's'}`;
+            setFeedback(`${label} added. This base now has ${result.availableCount} available. ${result.binMetadataApplied ? 'BIN metadata auto-filled.' : 'BIN metadata was not applied; edit the base metadata if needed.'} ${result.locationMetadataApplied ? 'Per-card public locations saved.' : 'Base location defaults were used.'} ${result.redemptionZipApplied ? 'Per-card ZIP values saved.' : 'Base ZIP defaults were used where available.'}`);
+          }, onError: () => setFeedback('Stock upload was rejected. Check the preview and try again.') });
         })} className="gift-form">
-           <FormField control={stockForm.control} name="productId" render={({ field }) => <FormItem><FormLabel>Base</FormLabel><FormControl><select {...field} data-testid="select-admin-stock-product"><option value="">Select a base</option>{rows.map((product) => <option key={product.id} value={product.id} disabled={!product.canReceiveStock}>{product.name} · {product.isArchived ? 'archived — restore before use' : product.canReceiveStock ? 'ready for batch upload' : 'batch already uploaded'}</option>)}</select></FormControl><FormMessage /></FormItem>} />
-          <FormField control={stockForm.control} name="cards" render={({ field }) => <FormItem><FormLabel>Cards · one per line ({stockLines.length}/{MAX_CARDS_PER_BATCH})</FormLabel><FormControl><Textarea {...field} rows={8} maxLength={100_000} placeholder="number | expiration | security code | address | state | city | ZIP | email/phone&#10;One card on each line" data-testid="input-admin-card-stock" /></FormControl><div className="gift-stock-detection" aria-live="polite"><span className={stockLocationCounts.address ? 'is-detected' : ''}>{stockLocationCounts.address ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Address {stockLocationCounts.address}/{stockLines.length}</span><span className={stockLocationCounts.state ? 'is-detected' : ''}>{stockLocationCounts.state ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}State {stockLocationCounts.state}/{stockLines.length}</span><span className={stockLocationCounts.city ? 'is-detected' : ''}>{stockLocationCounts.city ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}City {stockLocationCounts.city}/{stockLines.length}</span><span className={stockLocationCounts.zip ? 'is-detected' : ''}>{stockLocationCounts.zip ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}ZIP {stockLocationCounts.zip}/{stockLines.length}</span><span className={stockContactCounts.email ? 'is-detected' : ''}>{stockContactCounts.email ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Email {stockContactCounts.email}/{stockLines.length}</span><span className={stockContactCounts.phone ? 'is-detected' : ''}>{stockContactCounts.phone ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Phone {stockContactCounts.phone}/{stockLines.length}</span></div><FormMessage /></FormItem>} />
-          <div className="gift-upload-note"><LockKeyhole /> Address, state, city, and ZIP are public per card; lines may use different locations. Blank fields use the base defaults. BIN lookup uses the first 8 digits only after the batch is accepted.</div>
-          <div className="gift-upload-note"><LockKeyhole /> Card number, expiration, security code, and actual email/phone values are encrypted and revealed only to the purchaser.</div>
-          <button className="gift-admin-submit" disabled={addStock.isPending || !rows.some((product) => product.canReceiveStock) || !selectedStockProduct?.canReceiveStock} data-testid="button-upload-card-stock">{addStock.isPending ? 'Uploading…' : `Upload ${stockLines.length || ''} card${stockLines.length === 1 ? '' : 's'}`} <ArrowRight /></button>
-        </form></Form>
+           <FormField control={stockForm.control} name="productId" render={({ field }) => <FormItem><FormLabel>Base</FormLabel><FormControl><select {...field} data-testid="select-admin-stock-product"><option value="">Select a base</option>{rows.map((product) => <option key={product.id} value={product.id} disabled={product.isArchived}>{product.name} · {product.isArchived ? 'archived — restore before use' : 'ready for more cards'}</option>)}</select></FormControl><FormMessage /></FormItem>} />
+           <div className="gift-stock-file">
+             <label htmlFor="input-admin-card-stock-file">Choose a card file</label>
+             <input ref={stockFileInput} id="input-admin-card-stock-file" type="file" accept=".txt,.text,.csv,.tsv,.json,.jsonl,.ndjson,.log,.dat,text/*,application/json" onChange={(event) => void loadStockFile(event)} data-testid="input-admin-card-stock-file" />
+             <span>Common text, CSV, TSV, JSON, or JSON Lines formats · maximum 100 KB</span>
+             {stockFileName && <span className="gift-stock-file-name">Loaded: {stockFileName}</span>}
+             {stockFileError && <span className="gift-stock-file-error" role="alert">{stockFileError}</span>}
+           </div>
+           <FormField control={stockForm.control} name="cards" render={({ field }) => <FormItem><FormLabel>Card data · {stockCards.length}/{MAX_CARDS_PER_BATCH} detected</FormLabel><FormControl><Textarea {...field} onChange={(event) => { field.onChange(event); setStockFileName(''); setStockFileError(''); setFeedback(''); }} rows={8} maxLength={100_000} placeholder="Import a file or paste CSV, TSV, JSON, labeled fields, or delimited card rows." data-testid="input-admin-card-stock" /></FormControl>
+             <div className="gift-stock-detection" aria-live="polite"><span className={stockLocationCounts.address ? 'is-detected' : ''}>{stockLocationCounts.address ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Address {stockLocationCounts.address}/{stockCards.length}</span><span className={stockLocationCounts.state ? 'is-detected' : ''}>{stockLocationCounts.state ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}State {stockLocationCounts.state}/{stockCards.length}</span><span className={stockLocationCounts.city ? 'is-detected' : ''}>{stockLocationCounts.city ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}City {stockLocationCounts.city}/{stockCards.length}</span><span className={stockLocationCounts.zip ? 'is-detected' : ''}>{stockLocationCounts.zip ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}ZIP {stockLocationCounts.zip}/{stockCards.length}</span><span className={stockContactCounts.email ? 'is-detected' : ''}>{stockContactCounts.email ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Email {stockContactCounts.email}/{stockCards.length}</span><span className={stockContactCounts.phone ? 'is-detected' : ''}>{stockContactCounts.phone ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Phone {stockContactCounts.phone}/{stockCards.length}</span></div>
+             <div className="gift-stock-preview" aria-live="polite" data-testid="preview-admin-card-stock">
+               <div className="gift-stock-preview-header"><strong>{stockCards.length ? `${stockCards.length} card${stockCards.length === 1 ? '' : 's'} detected · ${stockImport.format}` : stockImport.format}</strong><span>{stockCards.length ? `${stockCards.length - stockIssueCount} ready · ${stockIssueCount} need review` : ''}</span></div>
+               {stockCards.length ? <div className="gift-stock-preview-list">
+                 {stockCards.slice(0, 4).map((card, index) => <div className="gift-stock-preview-row" key={`${card.sourceRow}-${index}`}>
+                   <span>Card {index + 1} · {card.cardNumber.length >= 4 ? `•••• ${card.cardNumber.slice(-4)}` : 'number missing'} · {card.expiration || 'expiration missing'}</span>
+                   <span className={card.issues.length ? 'needs-review' : 'ready'}>{card.issues.length ? card.issues.join(' ') : 'Ready'}</span>
+                 </div>)}
+                 {stockCards.length > 4 && <span className="gift-stock-preview-more">Plus {stockCards.length - 4} more records</span>}
+                 {stockCards.length > MAX_CARDS_PER_BATCH && <span className="gift-stock-file-error">Split this into batches of at most {MAX_CARDS_PER_BATCH} cards.</span>}
+               </div> : <p>{stockImport.message}</p>}
+             </div>
+             <FormMessage />
+           </FormItem>} />
+           <div className="gift-upload-note"><LockKeyhole /> Address, state, city, and ZIP are public per card; each card can have a different location. Blank fields use the base defaults. BIN lookup uses the first 8 digits only after the batch is accepted.</div>
+           <div className="gift-upload-note"><LockKeyhole /> Parsing stays in your browser. On upload, card credentials are sent to ReplenishCC and encrypted; actual credentials are revealed only to the purchaser.</div>
+           <button className="gift-admin-submit" disabled={addStock.isPending || !rows.some((product) => !product.isArchived) || !selectedStockProduct || selectedStockProduct.isArchived || stockCards.length === 0 || stockCards.length > MAX_CARDS_PER_BATCH || stockIssueCount > 0 || Boolean(stockImport.message)} data-testid="button-upload-card-stock">{addStock.isPending ? 'Uploading…' : `Upload ${stockCards.length || ''} card${stockCards.length === 1 ? '' : 's'}`} <ArrowRight /></button>
+         </form></Form>
       </section>
     </div>
       <section className="gift-inventory-panel"><header><div><h3>Bases</h3><p>Price, base location defaults, contact-presence indicators, and available quantity only. Archived bases are hidden from members; their stock and purchase history are preserved. Actual card details stay private.</p></div><button onClick={() => void products.refetch()} aria-label="Refresh bases" data-testid="button-refresh-card-inventory"><RefreshCw /></button></header>
@@ -788,16 +807,16 @@ export function AdminCardInventoryPage() {
               <td>{product.cardType || '—'}</td><td>{product.issuer || '—'}</td><td>{product.brand || '—'}</td>
               <td>{money(product.priceCents)}</td>
               <td><ContactIndicator available={product.hasEmail} label="Email" /></td><td><ContactIndicator available={product.hasPhone} label="Phone" /></td>
-               <td><span className="gift-count-chip">{product.availableCount}</span></td><td>{product.isArchived ? 'Archived' : product.canReceiveStock ? 'Ready for first batch' : 'Batch already uploaded'}</td><td>{date(product.createdAt)}</td>
+                <td><span className="gift-count-chip">{product.availableCount}</span></td><td>{product.isArchived ? 'Archived' : product.hasHistory ? 'Ready for more cards' : 'Ready for first upload'}</td><td>{date(product.createdAt)}</td>
               <td>
                 <button className="gift-edit" type="button" onClick={() => { setEditingMetadata({ productId: product.id, productName: product.name }); setMetadataDraft({ address: product.address, state: product.state, city: product.city, regionZip: product.regionZip ?? '', cardType: product.cardType, issuer: product.issuer, brand: product.brand }); }} data-testid={`button-edit-card-metadata-${product.id}`}><Pencil /> Edit metadata</button>{' '}
                 {product.isArchived
                   ? <button className="gift-edit" disabled={restore.isPending || remove.isPending} title="Restore this base to member sales" onClick={() => restore.mutate({ productId: product.id }, { onSuccess: () => { invalidate(); setFeedback('Base restored to member sales. Its inventory and purchase history are unchanged.'); }, onError: () => setFeedback('Base could not be restored. Try again.') })} data-testid={`button-restore-card-listing-${product.id}`}><RotateCcw /> Restore</button>
-                  : <button className="gift-delete" disabled={remove.isPending || restore.isPending} title={product.canReceiveStock ? 'Delete this empty base' : 'Archive while preserving its stock and purchase history'} onClick={() => {
+                  : <button className="gift-delete" disabled={remove.isPending || restore.isPending} title={product.hasHistory ? 'Archive while preserving its stock and purchase history' : 'Delete this empty base'} onClick={() => {
                     const confirmation = `Remove base “${product.name}”? Empty bases are deleted. Bases with inventory or order history are archived and preserved, including purchased-card history, credentials, and accounting records.`;
                     if (!window.confirm(confirmation)) return;
                     remove.mutate({ productId: product.id }, { onSuccess: (result) => { invalidate(); setFeedback(result.action === 'archived' ? 'Base archived. Its stock, purchase history, credentials, and accounting are preserved.' : 'Empty base deleted.'); }, onError: () => setFeedback('Base could not be deleted or archived. Try again.') });
-                  }} data-testid={product.canReceiveStock ? `button-delete-card-listing-${product.id}` : `button-archive-card-listing-${product.id}`}>{product.canReceiveStock ? <Trash2 /> : <Archive />} {product.canReceiveStock ? 'Delete' : 'Archive'}</button>}
+                  }} data-testid={product.hasHistory ? `button-archive-card-listing-${product.id}` : `button-delete-card-listing-${product.id}`}>{product.hasHistory ? <Archive /> : <Trash2 />} {product.hasHistory ? 'Archive' : 'Delete'}</button>}
               </td>
             </tr>)}</tbody>
           </table>

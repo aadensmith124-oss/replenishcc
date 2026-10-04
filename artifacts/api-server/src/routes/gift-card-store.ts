@@ -112,12 +112,9 @@ async function listProducts({
             .where(inArray(giftCardOrdersTable.productId, productIds)),
         ])
       : [[], []];
-  const blockedProductIds = new Set([
+  const productsWithHistory = new Set([
     ...inventoryHistory.map((item) => item.productId),
     ...orderHistory.map((order) => order.productId),
-    ...products
-      .filter((product) => product.isArchived)
-      .map((product) => product.id),
   ]);
 
   return products.map((product) => {
@@ -125,7 +122,11 @@ async function listProducts({
     return {
       ...visibleProduct,
       ...(includeStockEligibility
-        ? { canReceiveStock: !blockedProductIds.has(product.id), isArchived }
+        ? {
+            canReceiveStock: !isArchived,
+            hasHistory: productsWithHistory.has(product.id),
+            isArchived,
+          }
         : {}),
       createdAt: product.createdAt.toISOString(),
     };
@@ -910,7 +911,6 @@ router.post(
     let stockResult:
       | { kind: "missing" }
       | { kind: "archived" }
-      | { kind: "ineligible" }
       | { kind: "success"; availableCount: number };
     try {
       stockResult = await db.transaction(async (tx) => {
@@ -929,22 +929,6 @@ router.post(
           .limit(1);
         if (!product) return { kind: "missing" as const };
         if (product.isArchived) return { kind: "archived" as const };
-
-        const [existingInventory, existingOrder] = await Promise.all([
-          tx
-            .select({ id: giftCardInventoryTable.id })
-            .from(giftCardInventoryTable)
-            .where(eq(giftCardInventoryTable.productId, product.id))
-            .limit(1),
-          tx
-            .select({ id: giftCardOrdersTable.id })
-            .from(giftCardOrdersTable)
-            .where(eq(giftCardOrdersTable.productId, product.id))
-            .limit(1),
-        ]);
-        if (existingInventory.length > 0 || existingOrder.length > 0) {
-          return { kind: "ineligible" as const };
-        }
 
         const values = credentials.map((credential, index) => ({
           productId: product.id,
@@ -968,9 +952,18 @@ router.post(
           // Throw to roll back every row rather than commit a partial batch.
           throw new DuplicateGiftCardBatchError();
         }
+        const [availableStock] = await tx
+          .select({ count: count() })
+          .from(giftCardInventoryTable)
+          .where(
+            and(
+              eq(giftCardInventoryTable.productId, product.id),
+              eq(giftCardInventoryTable.status, "available"),
+            ),
+          );
         return {
           kind: "success" as const,
-          availableCount: inserted.length,
+          availableCount: Number(availableStock?.count ?? 0),
         };
       });
     } catch (error) {
@@ -988,13 +981,6 @@ router.post(
     if (stockResult.kind === "archived") {
       res.status(409).json({
         error: "Restore this base before uploading stock.",
-      });
-      return;
-    }
-    if (stockResult.kind === "ineligible") {
-      res.status(409).json({
-        error:
-          "This base already has or previously had inventory or orders. A base accepts one initial batch; create a new base for a separate upload.",
       });
       return;
     }

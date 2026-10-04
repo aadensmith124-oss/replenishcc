@@ -1475,7 +1475,8 @@ export const GetAdminGiftCardProductsResponse = zod.object({
   "availableCount": zod.number().int(),
   "hasEmail": zod.boolean(),
   "hasPhone": zod.boolean(),
-  "canReceiveStock": zod.boolean(),
+  "canReceiveStock": zod.boolean().describe('True when the base is active and can receive another stock batch.'),
+  "hasHistory": zod.boolean().describe('True when the base has inventory or purchase history and therefore must be archived rather than deleted.'),
   "isArchived": zod.boolean(),
   "createdAt": zod.coerce.date()
 }))

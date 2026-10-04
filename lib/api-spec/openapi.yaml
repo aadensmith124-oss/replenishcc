@@ -2129,10 +2129,11 @@ components:
         availableCount: { type: integer }
         hasEmail: { type: boolean }
         hasPhone: { type: boolean }
-        canReceiveStock: { type: boolean }
+        canReceiveStock: { type: boolean, description: "True when the base is active and can receive another stock batch." }
+        hasHistory: { type: boolean, description: "True when the base has inventory or purchase history and therefore must be archived rather than deleted." }
         isArchived: { type: boolean }
         createdAt: { type: string, format: date-time }
-      required: [id, name, description, address, state, city, regionZip, cardType, issuer, brand, faceValueCents, priceCents, availableCount, hasEmail, hasPhone, canReceiveStock, isArchived, createdAt]
+      required: [id, name, description, address, state, city, regionZip, cardType, issuer, brand, faceValueCents, priceCents, availableCount, hasEmail, hasPhone, canReceiveStock, hasHistory, isArchived, createdAt]
     GiftCardBaseRemovalResult:
       type: object
       properties:

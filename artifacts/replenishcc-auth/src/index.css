@@ -793,6 +793,22 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .gift-stock-detection svg,.gift-stock-detection i { width:12px; height:12px; }
 .gift-stock-detection svg { color:#90bd83; }
 .gift-stock-detection i { display:inline-block; border:1px solid #60695f; border-radius:50%; }
+.gift-stock-file { display:grid; gap:5px; padding:10px; border:1px solid #353c34; border-radius:6px; background:#151915; color:#90998d; font-size:9px; line-height:1.5; }
+.gift-stock-file > label { color:#d8d9c9; font-size:10px; font-weight:600; }
+.gift-stock-file input { min-height:34px!important; padding:5px!important; font-size:9px!important; }
+.gift-stock-file input::file-selector-button { margin-right:9px; padding:6px 9px; border:1px solid #555d49; border-radius:4px; color:#e1dec6; background:#252a22; cursor:pointer; }
+.gift-stock-file-name { color:#c8b45d; overflow-wrap:anywhere; }
+.gift-stock-file-error { color:#dfa08c!important; }
+.gift-stock-preview { display:grid; gap:7px; margin-top:10px; padding:10px; border:1px solid #353c34; border-radius:6px; background:#151915; color:#92998e; font-size:9px; line-height:1.5; }
+.gift-stock-preview > p { margin:0; }
+.gift-stock-preview-header { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; color:#aab1a5; }
+.gift-stock-preview-header strong { color:#dedfce; font-size:9px; font-weight:600; }
+.gift-stock-preview-list { display:grid; gap:6px; }
+.gift-stock-preview-row { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 12px; padding-top:6px; border-top:1px solid #30362f; overflow-wrap:anywhere; }
+.gift-stock-preview-row > span:first-child { color:#c3c8b9; }
+.gift-stock-preview-row .ready { color:#90bd83; }
+.gift-stock-preview-row .needs-review { color:#dfa08c; }
+.gift-stock-preview-more { padding-top:3px; }
 .gift-inventory-panel > header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
 .gift-inventory-panel > header button { width:31px;height:31px;display:grid;place-items:center;border:1px solid #40463c;border-radius:5px;color:#c8b45d;background:#20241e;cursor:pointer; }
 .gift-inventory-panel > header button svg { width:14px; }
