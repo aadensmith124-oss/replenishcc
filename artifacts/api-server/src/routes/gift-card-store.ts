@@ -14,6 +14,7 @@ import {
   GetMyGiftCardOrdersResponse,
   PurchaseGiftCardBody,
   PurchaseGiftCardResponse,
+  RestoreAdminGiftCardProductParams,
   UpdateAdminGiftCardProductMetadataBody,
   UpdateAdminGiftCardProductMetadataParams,
   type GiftCardPublicLocation,
@@ -776,41 +777,80 @@ router.delete(
       res.status(400).json({ error: "Choose a valid product." });
       return;
     }
-    const [product] = await db
-      .select({ id: giftCardProductsTable.id })
-      .from(giftCardProductsTable)
-      .where(eq(giftCardProductsTable.id, params.data.productId))
-      .limit(1);
-    if (!product) {
+    const result = await db.transaction(async (tx) => {
+      const [product] = await tx
+        .select({ id: giftCardProductsTable.id })
+        .from(giftCardProductsTable)
+        .where(eq(giftCardProductsTable.id, params.data.productId))
+        .for("update")
+        .limit(1);
+      if (!product) return { kind: "missing" as const };
+
+      const [orders, inventory] = await Promise.all([
+        tx
+          .select({ count: count() })
+          .from(giftCardOrdersTable)
+          .where(eq(giftCardOrdersTable.productId, product.id)),
+        tx
+          .select({ count: count() })
+          .from(giftCardInventoryTable)
+          .where(eq(giftCardInventoryTable.productId, product.id)),
+      ]);
+      const hasHistory =
+        Number(orders[0]?.count ?? 0) > 0 ||
+        Number(inventory[0]?.count ?? 0) > 0;
+
+      if (hasHistory) {
+        await tx
+          .update(giftCardProductsTable)
+          .set({ isArchived: true })
+          .where(eq(giftCardProductsTable.id, product.id));
+        return { kind: "archived" as const };
+      }
+
+      const [deleted] = await tx
+        .delete(giftCardProductsTable)
+        .where(eq(giftCardProductsTable.id, product.id))
+        .returning({ id: giftCardProductsTable.id });
+      return deleted
+        ? { kind: "deleted" as const }
+        : { kind: "missing" as const };
+    });
+
+    if (result.kind === "missing") {
       res.status(404).json({ error: "Gift-card product not found." });
       return;
     }
 
-    const [orders, inventory] = await Promise.all([
-      db
-        .select({ count: count() })
-        .from(giftCardOrdersTable)
-        .where(eq(giftCardOrdersTable.productId, product.id)),
-      db
-        .select({ count: count() })
-        .from(giftCardInventoryTable)
-        .where(eq(giftCardInventoryTable.productId, product.id)),
-    ]);
-    if (
-      Number(orders[0]?.count ?? 0) > 0 ||
-      Number(inventory[0]?.count ?? 0) > 0
-    ) {
-      res.status(409).json({
-        error: "This product has stock or order history and cannot be deleted.",
-      });
+    res.status(204).end();
+  },
+);
+
+router.post(
+  "/admin/gift-card-products/:productId/restore",
+  async (req, res): Promise<void> => {
+    const user = await getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: "Sign in to restore gift-card products." });
+      return;
+    }
+    if (!isDepositAdmin(user)) {
+      res.status(403).json({ error: "Admin access is required." });
       return;
     }
 
-    const [deleted] = await db
-      .delete(giftCardProductsTable)
-      .where(eq(giftCardProductsTable.id, product.id))
+    const params = RestoreAdminGiftCardProductParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "Choose a valid product." });
+      return;
+    }
+
+    const [restored] = await db
+      .update(giftCardProductsTable)
+      .set({ isArchived: false })
+      .where(eq(giftCardProductsTable.id, params.data.productId))
       .returning({ id: giftCardProductsTable.id });
-    if (!deleted) {
+    if (!restored) {
       res.status(404).json({ error: "Gift-card product not found." });
       return;
     }
@@ -868,6 +908,7 @@ router.post(
     }));
     let stockResult:
       | { kind: "missing" }
+      | { kind: "archived" }
       | { kind: "ineligible" }
       | { kind: "success"; availableCount: number };
     try {
@@ -879,12 +920,14 @@ router.post(
             city: giftCardProductsTable.city,
             state: giftCardProductsTable.state,
             regionZip: giftCardProductsTable.regionZip,
+            isArchived: giftCardProductsTable.isArchived,
           })
           .from(giftCardProductsTable)
           .where(eq(giftCardProductsTable.id, params.data.productId))
           .for("update")
           .limit(1);
         if (!product) return { kind: "missing" as const };
+        if (product.isArchived) return { kind: "archived" as const };
 
         const [existingInventory, existingOrder] = await Promise.all([
           tx
@@ -939,6 +982,12 @@ router.post(
 
     if (stockResult.kind === "missing") {
       res.status(404).json({ error: "Gift-card product not found." });
+      return;
+    }
+    if (stockResult.kind === "archived") {
+      res.status(409).json({
+        error: "Restore this base before uploading stock.",
+      });
       return;
     }
     if (stockResult.kind === "ineligible") {
