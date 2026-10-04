@@ -181,7 +181,6 @@ async function listProducts({
         cardIdentifiers.set(credential.id, {
           bin: getGiftCardBinPrefix(card.cardNumber),
           lastFour: getGiftCardLastFour(card.cardNumber),
-          cardholderName: card.cardholderName?.trim() || null,
         });
       }
     }
@@ -218,7 +217,6 @@ async function listProducts({
                 ...card,
                 bin: cardIdentifiers.get(card.inventoryId)?.bin ?? null,
                 lastFour: cardIdentifiers.get(card.inventoryId)?.lastFour ?? null,
-                cardholderName: cardIdentifiers.get(card.inventoryId)?.cardholderName ?? null,
               }),
             ),
           }
