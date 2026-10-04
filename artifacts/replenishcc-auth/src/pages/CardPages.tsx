@@ -92,6 +92,36 @@ type CatalogFilters = {
   phone: CatalogPresenceFilter;
   price: CatalogPriceFilter;
 };
+type PublicCardLocation = {
+  address: string;
+  city: string;
+  state: string;
+  regionZip: string | null;
+};
+type ProductWithCardLocations = PublicCardLocation & {
+  availableCardLocations: PublicCardLocation[];
+};
+
+function locationsForProduct(product: ProductWithCardLocations): PublicCardLocation[] {
+  return product.availableCardLocations.length > 0
+    ? product.availableCardLocations
+    : [{
+      address: product.address,
+      city: product.city,
+      state: product.state,
+      regionZip: product.regionZip,
+    }];
+}
+
+function productLocationValue(
+  product: ProductWithCardLocations,
+  field: 'city' | 'state' | 'regionZip',
+) {
+  const values = locationsForProduct(product).map((location) => (location[field] ?? '').trim());
+  if (new Set(values.map((value) => value.toLocaleLowerCase())).size > 1) return 'Varies';
+  return values[0] || '—';
+}
+
 const emptyCatalogFilters: CatalogFilters = {
   brand: '', cardType: '', issuer: '', state: '', city: '', zip: '',
   address: 'all', email: 'all', phone: 'all', price: 'all',
@@ -208,32 +238,40 @@ export function BuyCardsPage() {
     brand: [...new Set(products.map((product) => product.brand.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
     cardType: [...new Set(products.map((product) => product.cardType.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
     issuer: [...new Set(products.map((product) => product.issuer.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
-    state: [...new Set(products.map((product) => product.state.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
-    city: [...new Set(products.map((product) => product.city.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    state: [...new Set(products.flatMap(locationsForProduct).map((location) => location.state.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    city: [...new Set(products.flatMap(locationsForProduct).map((location) => location.city.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
   }), [products]);
   const searchFilteredProducts = useMemo(() => products.filter((product) => {
     const matchesBase = baseId === 'all' || product.id === baseId;
+    const matchesLocation = locationsForProduct(product).some((location) =>
+      location.address.toLowerCase().includes(normalizedSearch)
+      || location.city.toLowerCase().includes(normalizedSearch)
+      || location.state.toLowerCase().includes(normalizedSearch)
+      || (location.regionZip ?? '').toLowerCase().includes(normalizedSearch),
+    );
     const matchesSearch = !normalizedSearch
       || product.name.toLowerCase().includes(normalizedSearch)
       || product.description.toLowerCase().includes(normalizedSearch)
       || product.brand.toLowerCase().includes(normalizedSearch)
       || product.cardType.toLowerCase().includes(normalizedSearch)
       || product.issuer.toLowerCase().includes(normalizedSearch)
-      || product.city.toLowerCase().includes(normalizedSearch)
-      || product.state.toLowerCase().includes(normalizedSearch)
-      || (product.regionZip ?? '').toLowerCase().includes(normalizedSearch);
+      || matchesLocation;
     return matchesBase && matchesSearch;
   }), [products, baseId, normalizedSearch]);
   const filterProducts = (source: typeof products, filters: CatalogFilters) => source.filter((product) => {
     const exactMatch = (value: string, selection: string) => !selection || value.trim().toLocaleLowerCase() === selection.toLocaleLowerCase();
     const presenceMatch = (value: boolean, selection: CatalogPresenceFilter) => selection === 'all' || (selection === 'yes' ? value : !value);
+    const locations = locationsForProduct(product);
+    const matchesLocation = locations.some((location) =>
+      exactMatch(location.state, filters.state)
+      && exactMatch(location.city, filters.city)
+      && (!filters.zip || (location.regionZip ?? '').toLowerCase().includes(filters.zip.trim().toLowerCase())),
+    );
     return exactMatch(product.brand, filters.brand)
       && exactMatch(product.cardType, filters.cardType)
       && exactMatch(product.issuer, filters.issuer)
-      && exactMatch(product.state, filters.state)
-      && exactMatch(product.city, filters.city)
-      && (!filters.zip || (product.regionZip ?? '').toLowerCase().includes(filters.zip.trim().toLowerCase()))
-      && presenceMatch(Boolean(product.address.trim()), filters.address)
+      && matchesLocation
+      && presenceMatch(locations.some((location) => Boolean(location.address.trim())), filters.address)
       && presenceMatch(product.hasEmail, filters.email)
       && presenceMatch(product.hasPhone, filters.phone)
       && matchesCatalogPrice(product.priceCents, filters.price);
