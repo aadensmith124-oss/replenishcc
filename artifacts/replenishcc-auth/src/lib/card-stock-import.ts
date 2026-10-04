@@ -44,10 +44,10 @@ const aliases: [CardField, string[]][] = [
   ['expirationMonth', ['expiration month', 'expiry month', 'exp month', 'expmonth', 'month']],
   ['expirationYear', ['expiration year', 'expiry year', 'exp year', 'expyear', 'year']],
   ['securityCode', ['security code', 'security number', 'cvv', 'cvc', 'cvn', 'cv2', 'csc', 'verification code']],
-  ['address', ['address', 'billing address', 'street address', 'street', 'redemption address', 'card address']],
+  ['address', ['address', 'full address', 'address line', 'address line 1', 'address line 2', 'address 1', 'address 2', 'billing address', 'billing address 1', 'street address', 'street address 1', 'street address 2', 'street address line 1', 'street', 'redemption address', 'card address']],
   ['state', ['state', 'province', 'region', 'province code']],
   ['city', ['city', 'town', 'municipality']],
-  ['regionZip', ['zip', 'zip code', 'zipcode', 'postal', 'postal code', 'postcode', 'region zip', 'redemption zip']],
+  ['regionZip', ['zip', 'zip code', 'zipcode', 'postal', 'postal code', 'postcode', 'region zip', 'redemption zip', 'billing zip', 'shipping zip', 'zip postal code']],
   ['email', ['email', 'email address']],
   ['phone', ['phone', 'phone number', 'mobile', 'telephone', 'tel']],
   ['contact', ['contact', 'email phone', 'email/phone']],
@@ -63,6 +63,20 @@ for (const [field, names] of aliases) {
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const zipPattern = /^\d{5}(?:-\d{4})?$/;
 const phonePattern = /^\+?[\d\s().-]+$/;
+const stateAliases = new Set(`alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington|west virginia|wisconsin|wyoming|district of columbia|al|ak|az|ar|ca|co|ct|de|fl|ga|hi|id|il|in|ia|ks|ky|la|me|md|ma|mi|mn|ms|mo|mt|ne|nv|nh|nj|nm|ny|nc|nd|oh|ok|or|pa|ri|sc|sd|tn|tx|ut|vt|va|wa|wv|wi|wy|dc`.split('|'));
+const streetSuffixPattern = /\b(?:street|avenue|road|boulevard|lane|drive|court|circle|terrace|parkway|highway|hwy|route|rte|place|way)\b\.?$/i;
+const streetAbbreviationPattern = /\b(?:st|ave|rd|blvd|ln|dr|ct|cir|ter|pkwy|pl)\b\.?$/i;
+
+function isStateValue(value: string): boolean {
+  return stateAliases.has(value.trim().replace(/[.,]/g, '').toLocaleLowerCase());
+}
+
+function looksLikeAddress(value: string): boolean {
+  return /\b(?:p\.?\s*o\.?\s*box|suite|ste\.?|apartment|apt\.?|unit|floor|building|bldg\.?)\b/i.test(value)
+    || streetSuffixPattern.test(value)
+    || streetAbbreviationPattern.test(value)
+    || /^\s*\d{1,6}\s+[A-Za-z]/.test(value);
+}
 
 function normalizeHeader(value: string): string {
   return value.toLocaleLowerCase().replace(/[^a-z0-9]/g, '');
@@ -82,7 +96,10 @@ function setRawValue(raw: RawCard, field: CardField, value: unknown): void {
   if (typeof value === 'number' && (field === 'cardNumber' || field === 'securityCode')) {
     raw.numericSensitiveFields.add(field);
   }
-  raw.values[field] = String(value).trim();
+  const normalizedValue = String(value).trim();
+  raw.values[field] = field === 'address' && raw.values.address
+    ? `${raw.values.address}, ${normalizedValue}`
+    : normalizedValue;
 }
 
 function normalizeExpiration(value: string): string {
@@ -323,19 +340,38 @@ function rawFromColumns(
   }
   if (securityIndex >= 0) setRawValue(raw, 'securityCode', values[securityIndex]);
 
-  // Preserve the original layout for optional fields after detecting the required values.
-  const extras = values.filter((_, index) => !detectedIndexes.has(index));
-  const zipIndex = extras.findIndex((value) => zipPattern.test(value));
-  const emailContact = detectContacts(extras);
-  const remaining = extras.filter((value, index) =>
-    index !== zipIndex
-    && !(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(value))
+  // Detect location fields by their values first; positional guesses used to
+  // put a numeric street address in ZIP and swap city/state in common layouts.
+  const extras = values
+    .map((value, index) => ({ value, index }))
+    .filter(({ index }) => !detectedIndexes.has(index));
+  const emailContact = detectContacts(extras.map(({ value }) => value));
+  const locationEntries = extras.filter(({ value }) =>
+    !(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(value))
     && !(emailContact.phone && value.includes(emailContact.phone)),
   );
-  if (remaining[0]) setRawValue(raw, 'address', remaining[0]);
-  if (remaining[1]) setRawValue(raw, 'state', remaining[1]);
-  if (remaining[2]) setRawValue(raw, 'city', remaining[2]);
-  if (zipIndex >= 0) setRawValue(raw, 'regionZip', extras[zipIndex]);
+  const stateEntry = locationEntries.find(({ value }) => isStateValue(value));
+  const zipEntry = [...locationEntries].reverse().find(({ value, index }) =>
+    zipPattern.test(value)
+    && !looksLikeAddress(value)
+    && !locationEntries.some((entry) => entry.index > index && isStateValue(entry.value))
+    && locationEntries.some((entry) => entry.index < index && !isStateValue(entry.value) && !zipPattern.test(entry.value)),
+  );
+  const otherLocationEntries = locationEntries.filter((entry) =>
+    entry !== stateEntry && entry !== zipEntry,
+  );
+  const addressEntry = otherLocationEntries.find(({ value }) => looksLikeAddress(value))
+    ?? (otherLocationEntries.length >= 2 || (otherLocationEntries.length === 1 && /^\s*\d{1,6}\s*$/.test(otherLocationEntries[0]!.value))
+      ? otherLocationEntries[0]
+      : undefined);
+  const cityEntry = otherLocationEntries.find((entry) =>
+    entry !== addressEntry && /[A-Za-z]/.test(entry.value),
+  );
+
+  if (addressEntry) setRawValue(raw, 'address', addressEntry.value);
+  if (stateEntry) setRawValue(raw, 'state', stateEntry.value);
+  if (cityEntry) setRawValue(raw, 'city', cityEntry.value);
+  if (zipEntry) setRawValue(raw, 'regionZip', zipEntry.value);
   if (emailContact.email) setRawValue(raw, 'email', emailContact.email);
   if (emailContact.phone) setRawValue(raw, 'phone', emailContact.phone);
   return raw;

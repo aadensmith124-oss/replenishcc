@@ -823,14 +823,26 @@ export function AdminCardInventoryPage() {
              <div className="gift-stock-detection" aria-live="polite"><span className={stockLocationCounts.address ? 'is-detected' : ''}>{stockLocationCounts.address ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Address {stockLocationCounts.address}/{stockCards.length}</span><span className={stockLocationCounts.state ? 'is-detected' : ''}>{stockLocationCounts.state ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}State {stockLocationCounts.state}/{stockCards.length}</span><span className={stockLocationCounts.city ? 'is-detected' : ''}>{stockLocationCounts.city ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}City {stockLocationCounts.city}/{stockCards.length}</span><span className={stockLocationCounts.zip ? 'is-detected' : ''}>{stockLocationCounts.zip ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}ZIP {stockLocationCounts.zip}/{stockCards.length}</span><span className={stockContactCounts.email ? 'is-detected' : ''}>{stockContactCounts.email ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Email {stockContactCounts.email}/{stockCards.length}</span><span className={stockContactCounts.phone ? 'is-detected' : ''}>{stockContactCounts.phone ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Phone {stockContactCounts.phone}/{stockCards.length}</span></div>
              <div className="gift-stock-preview" aria-live="polite" data-testid="preview-admin-card-stock">
                <div className="gift-stock-preview-header"><strong>{stockCards.length ? `${stockCards.length} card${stockCards.length === 1 ? '' : 's'} detected · ${stockImport.format}` : stockImport.format}</strong><span>{stockCards.length ? `${stockCards.length - stockIssueCount} ready · ${stockIssueCount} need review` : ''}</span></div>
-               {stockCards.length ? <div className="gift-stock-preview-list">
-                 {stockCards.slice(0, 4).map((card, index) => <div className="gift-stock-preview-row" key={`${card.sourceRow}-${index}`}>
-                   <span>Card {index + 1} · {card.cardNumber.length >= 4 ? `•••• ${card.cardNumber.slice(-4)}` : 'number missing'} · {card.expiration || 'expiration missing'}</span>
-                   <span className={card.issues.length ? 'needs-review' : 'ready'}>{card.issues.length ? card.issues.join(' ') : 'Ready'}</span>
-                 </div>)}
-                 {stockCards.length > 4 && <span className="gift-stock-preview-more">Plus {stockCards.length - 4} more records</span>}
-                 {stockCards.length > MAX_CARDS_PER_BATCH && <span className="gift-stock-file-error">Split this into batches of at most {MAX_CARDS_PER_BATCH} cards.</span>}
-               </div> : <p>{stockImport.message}</p>}
+                {stockCards.length ? <>
+                  <div className="gift-stock-preview-table-wrap" role="region" aria-label="Parsed card fields" tabIndex={0}>
+                    <table className="gift-stock-preview-table">
+                      <thead><tr><th scope="col">Card</th><th scope="col">Last 4</th><th scope="col">Expiry</th><th scope="col">Address</th><th scope="col">City</th><th scope="col">State</th><th scope="col">ZIP</th><th scope="col">Contact</th><th scope="col">Status</th></tr></thead>
+                      <tbody>{stockCards.slice(0, 4).map((card, index) => <tr key={`${card.sourceRow}-${index}`} data-testid={`row-admin-stock-preview-${index}`}>
+                        <td>{index + 1}</td>
+                        <td data-testid={`text-admin-stock-last-four-${index}`}>{card.cardNumber.length >= 4 ? `•••• ${card.cardNumber.slice(-4)}` : '—'}</td>
+                        <td data-testid={`text-admin-stock-expiry-${index}`}>{card.expiration || '—'}</td>
+                        <td data-testid={`text-admin-stock-address-${index}`}>{card.address || '—'}</td>
+                        <td data-testid={`text-admin-stock-city-${index}`}>{card.city || '—'}</td>
+                        <td data-testid={`text-admin-stock-state-${index}`}>{card.state || '—'}</td>
+                        <td data-testid={`text-admin-stock-zip-${index}`}>{card.regionZip || '—'}</td>
+                        <td>{[card.email && 'Email', card.phone && 'Phone'].filter(Boolean).join(' · ') || '—'}</td>
+                        <td className={card.issues.length ? 'needs-review' : 'ready'}>{card.issues.length ? card.issues.join(' ') : 'Ready'}</td>
+                      </tr>)}</tbody>
+                    </table>
+                  </div>
+                  {stockCards.length > 4 && <span className="gift-stock-preview-more">Plus {stockCards.length - 4} more records</span>}
+                  {stockCards.length > MAX_CARDS_PER_BATCH && <span className="gift-stock-file-error">Split this into batches of at most {MAX_CARDS_PER_BATCH} cards.</span>}
+                </> : <p>{stockImport.message}</p>}
              </div>
              <FormMessage />
            </FormItem>} />
