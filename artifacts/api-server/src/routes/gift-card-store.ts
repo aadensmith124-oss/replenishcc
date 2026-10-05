@@ -391,7 +391,7 @@ async function requestBinMetadata(binPrefix: string): Promise<BinLookupResult> {
 }
 
 async function lookupBinMetadata(binPrefix: string): Promise<BinLookupResult> {
-  if (!/^\d{8}$/.test(binPrefix)) return { kind: "not_found" };
+  if (!/^\d{6}$/.test(binPrefix)) return { kind: "not_found" };
 
   const cached = binMetadataCache.get(binPrefix);
   if (cached && cached.expiresAt > Date.now()) return cached.result;
@@ -424,7 +424,7 @@ async function lookupBinMetadataForPrefixes(
   prefixes: string[],
 ): Promise<Map<string, BinLookupResult>> {
   const uniquePrefixes = [...new Set(prefixes)].filter((prefix) =>
-    /^\d{8}$/.test(prefix),
+    /^\d{6}$/.test(prefix),
   );
   const results = new Map<string, BinLookupResult>();
   let nextIndex = 0;
