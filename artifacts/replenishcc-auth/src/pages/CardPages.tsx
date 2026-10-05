@@ -881,7 +881,7 @@ export function AdminCardInventoryPage() {
                 : stockBinPrefixes.size === 0
                   ? 'No valid 8-digit BIN prefixes were available for lookup.'
                   : binMetadataPrefixesLookedUp === 0
-                    ? 'Per-card BIN metadata is not enabled for the connected database, so no public lookup was sent. Apply the schema update before retrying.'
+                    ? 'The card upload succeeded, but per-card BIN metadata is not enabled for this database, so no public lookup was sent.'
                     : 'The public BIN lookup returned no metadata or was unavailable. You can retry the lookup or edit the base defaults.';
             const resultText = `${addedCount} card${addedCount === 1 ? '' : 's'} added. This base now has ${availableCount}/${MAX_CARDS_PER_BASE} available. ${binMetadataFeedback} ${locationMetadataApplied ? 'Per-card public locations saved.' : 'Base location defaults were used.'} ${redemptionZipApplied ? 'Per-card ZIP values saved.' : 'Base ZIP defaults were used where available.'}`;
             setFeedback(warnings.length

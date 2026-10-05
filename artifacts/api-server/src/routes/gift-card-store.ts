@@ -1311,6 +1311,7 @@ router.post(
       location: cardLocations[index]!,
       prefix: getGiftCardBinMetadataPrefix(credential.cardNumber),
     }));
+    const binMetadataStorageAvailable = await supportsPerCardBinMetadata();
     let stockResult:
       | { kind: "missing" }
       | { kind: "archived" }
@@ -1393,6 +1394,13 @@ router.post(
           publicCity: location.city ?? product.city,
           publicState: location.state ?? product.state,
           publicRegionZip: location.regionZip ?? product.regionZip,
+          ...(binMetadataStorageAvailable
+            ? {
+                cardType: credential.cardType ?? null,
+                issuer: credential.issuer ?? null,
+                brand: credential.brand ?? null,
+              }
+            : {}),
           ...encryptGiftCardCredential(credential),
         }));
         const inserted = values.length
@@ -1475,8 +1483,7 @@ router.post(
       ids.push(item.id);
       cardsByPrefix.set(item.prefix, ids);
     }
-    const metadataStorageAvailable = await supportsPerCardBinMetadata();
-    const lookups = metadataStorageAvailable
+    const lookups = binMetadataStorageAvailable
       ? await lookupBinMetadataForPrefixes([...cardsByPrefix.keys()])
       : new Map<string, BinLookupResult>();
     let binMetadataCardsUpdated = 0;
