@@ -793,7 +793,7 @@ export function AdminCardInventoryPage() {
           <button className="gift-admin-submit" disabled={create.isPending} data-testid="button-create-card-listing">{create.isPending ? 'Creating…' : 'Create base'} <ArrowRight /></button>
         </form></Form>
       </section>
-      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload cards</h3><p>Paste a header such as Card|exp|cvv|name|address|city|state|zip|type|issuer|brand followed by card rows. Use separate Name, City, and State columns. Include a security code for every card; the preview shows only the last four digits. Uploads are automatically sent in batches of up to {MAX_CARDS_PER_BATCH} cards. Each active base can hold up to {MAX_CARDS_PER_BASE.toLocaleString()} available cards; sold cards remain in history and free space for restocking.</p></div></div>
+      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload cards</h3><p>Paste or import mixed content; detected card rows are parsed and unrelated rows are ignored. Headers such as Card|exp|cvv|name|address|city|state|zip|type|issuer|brand help map fields. Use separate Name, City, and State columns. Include a security code for every card; the preview shows only the last four digits. Uploads are automatically sent in batches of up to {MAX_CARDS_PER_BATCH} cards. Each active base can hold up to {MAX_CARDS_PER_BASE.toLocaleString()} available cards; sold cards remain in history and free space for restocking.</p></div></div>
         <Form {...stockForm}><form onSubmit={stockForm.handleSubmit(async (values) => {
           const parsedBatch = parseCardStockInput(values.cards);
           if (!parsedBatch.cards.length) {
@@ -803,7 +803,10 @@ export function AdminCardInventoryPage() {
           const uploadableCards = parsedBatch.cards.filter((card) => card.issues.length === 0);
           const invalidCount = parsedBatch.cards.length - uploadableCards.length;
           if (!uploadableCards.length) {
-            setFeedback(`Warning: no cards were uploaded. ${invalidCount} row${invalidCount === 1 ? '' : 's'} need review before they can be stored.`);
+            const ignoredRowsMessage = parsedBatch.ignoredRows
+              ? ` ${parsedBatch.ignoredRows} unrelated row${parsedBatch.ignoredRows === 1 ? '' : 's'} skipped.`
+              : '';
+            setFeedback(`Warning: no cards were uploaded. ${invalidCount} detected row${invalidCount === 1 ? '' : 's'} need review before they can be stored.${ignoredRowsMessage}`);
             return;
           }
           if (selectedStockProduct?.isArchived) {
@@ -858,6 +861,9 @@ export function AdminCardInventoryPage() {
             }
             invalidate();
             const warnings = [
+              parsedBatch.ignoredRows > 0
+                ? `${parsedBatch.ignoredRows} unrelated row${parsedBatch.ignoredRows === 1 ? '' : 's'} skipped.`
+                : '',
               invalidCount > 0
                 ? `${invalidCount} row${invalidCount === 1 ? '' : 's'} with invalid or incomplete fields skipped.`
                 : '',
@@ -949,6 +955,7 @@ export function AdminCardInventoryPage() {
                   {stockCards.length > 4 && <span className="gift-stock-preview-more">Plus {stockCards.length - 4} more records</span>}
                   {validStockCards.length > MAX_CARDS_PER_BATCH && <span className="gift-stock-upload-warning" role="status">This upload will be sent in {Math.ceil(validStockCards.length / MAX_CARDS_PER_BATCH)} batches.</span>}
                 </> : <p>{stockImport.message}</p>}
+                 {stockImport.ignoredRows > 0 && stockCards.length > 0 && <p className="gift-stock-upload-warning" role="status" data-testid="status-ignored-stock-rows">{stockImport.ignoredRows} unrelated row{stockImport.ignoredRows === 1 ? '' : 's'} will be ignored; detected card rows are processed separately.</p>}
                 {stockIssueCount > 0 && <p className="gift-stock-upload-warning" role="status" data-testid="status-invalid-stock-rows">{stockIssueCount} row{stockIssueCount === 1 ? '' : 's'} need review and will be skipped; valid cards will still be uploaded.</p>}
              </div>
              <FormMessage />

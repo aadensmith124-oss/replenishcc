@@ -297,6 +297,9 @@ function rawFromObject(value: Record<string, unknown>, sourceRow: number): RawCa
     for (const [key, fieldValue] of Object.entries(object)) {
       const field = fieldForHeader(key);
       if (field) {
+        if (field === 'cardNumber' && isExplicitCardNumberLabel(key)) {
+          raw.hasExplicitCardNumberField = true;
+        }
         setRawValue(raw, field, fieldValue);
       } else if (fieldValue && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
         visit(fieldValue as Record<string, unknown>, depth + 1);
@@ -472,22 +475,25 @@ function rawFromColumns(
 function parseTable(rows: unknown[][], format: string): CardStockImport | null {
   const nonemptyRows = rows.filter((row) => row.some((cell) => valueForCell(cell) !== ''));
   if (!nonemptyRows.length) return null;
-  const firstRow = nonemptyRows[0]!.map((cell) => valueForCell(cell));
-  const headerFields = firstRow.map(fieldForHeader);
-  const hasHeader = requiredHeaderCount(headerFields) >= 2;
-  const dataRows = hasHeader ? nonemptyRows.slice(1) : nonemptyRows;
+  const headerRowIndex = nonemptyRows.findIndex((row) =>
+    requiredHeaderCount(row.map((cell) => fieldForHeader(valueForCell(cell)))) >= 2,
+  );
+  const headerFields = headerRowIndex >= 0
+    ? nonemptyRows[headerRowIndex]!.map((cell) => fieldForHeader(valueForCell(cell)))
+    : undefined;
+  const dataRows = nonemptyRows
+    .map((row, index) => ({ row, sourceRow: index + 1 }))
+    .filter(({ sourceRow }) => sourceRow !== headerRowIndex + 1);
   const cards: ImportedGiftCard[] = [];
   let ignoredRows = 0;
-  dataRows.forEach((row, index) => {
-    const raw = rawFromColumns(row, index + 1, hasHeader ? headerFields : undefined);
-    const hasCardColumnValue = hasHeader
-      ? headerFields.some((field, columnIndex) =>
-          field !== null
-          && ['cardNumber', 'expiration', 'expirationMonth', 'expirationYear', 'securityCode'].includes(field)
-          && Boolean(valueForCell(row[columnIndex])),
-        )
-      : isCardRecord(raw);
-    if (!hasCardColumnValue) {
+  dataRows.forEach(({ row, sourceRow }) => {
+    const rowHeaderFields = row.map((cell) => fieldForHeader(valueForCell(cell)));
+    if (requiredHeaderCount(rowHeaderFields) >= 2) {
+      ignoredRows += 1;
+      return;
+    }
+    const raw = rawFromColumns(row, sourceRow, headerFields);
+    if (!isCardRecord(raw)) {
       ignoredRows += 1;
       return;
     }
@@ -555,12 +561,35 @@ function parseJsonValue(value: unknown): CardStockImport | null {
       const rows = value as unknown[][];
       return parseTable(rows, 'JSON table');
     }
-    const cards = value
-      .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === 'object' && !Array.isArray(entry))
-      .map((entry, index) => cardFromRaw(rawFromObject(entry, index + 1)));
-    return cards.length ? { format: 'JSON', cards, message: '' } : null;
+    const records = value.filter(
+      (entry): entry is Record<string, unknown> =>
+        Boolean(entry) && typeof entry === 'object' && !Array.isArray(entry),
+    );
+    const cards: ImportedGiftCard[] = [];
+    let ignoredRows = value.length - records.length;
+    records.forEach((entry, index) => {
+      const raw = rawFromObject(entry, index + 1);
+      if (!isCardRecord(raw)) {
+        ignoredRows += 1;
+        return;
+      }
+      cards.push(cardFromRaw(raw));
+    });
+    return {
+      format: 'JSON',
+      cards,
+      ignoredRows,
+      message: cards.length ? '' : messageWhenNoCards(ignoredRows),
+    };
   }
-  if (!value || typeof value !== 'object') return null;
+  if (!value || typeof value !== 'object') {
+    return {
+      format: 'JSON',
+      cards: [],
+      ignoredRows: 1,
+      message: messageWhenNoCards(1),
+    };
+  }
   const object = value as Record<string, unknown>;
   for (const key of ['cards', 'records', 'items', 'data', 'rows']) {
     const nested = object[key];
@@ -570,10 +599,14 @@ function parseJsonValue(value: unknown): CardStockImport | null {
     }
   }
   const raw = rawFromObject(object, 1);
-  if (Object.keys(raw.values).length) {
-    return { format: 'JSON', cards: [cardFromRaw(raw)], message: '' };
-  }
-  return null;
+  const cards = isCardRecord(raw) ? [cardFromRaw(raw)] : [];
+  const ignoredRows = cards.length ? 0 : 1;
+  return {
+    format: 'JSON',
+    cards,
+    ignoredRows,
+    message: cards.length ? '' : messageWhenNoCards(ignoredRows),
+  };
 }
 
 function parseJsonText(text: string): CardStockImport | null {
@@ -582,13 +615,33 @@ function parseJsonText(text: string): CardStockImport | null {
   } catch {
     const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
     if (!lines.length) return null;
-    try {
-      const entries = lines.map((line) => JSON.parse(line) as unknown);
-      const parsed = parseJsonValue(entries);
-      return parsed ? { ...parsed, format: 'JSON Lines' } : null;
-    } catch {
-      return null;
+    const cards: ImportedGiftCard[] = [];
+    let ignoredRows = 0;
+    let parsedLines = 0;
+    for (const [index, line] of lines.entries()) {
+      try {
+        const parsed = parseJsonValue(JSON.parse(line) as unknown);
+        parsedLines += 1;
+        if (parsed) {
+          cards.push(...parsed.cards.map((card) => ({
+            ...card,
+            sourceRow: index + 1,
+          })));
+          ignoredRows += parsed.ignoredRows;
+        } else {
+          ignoredRows += 1;
+        }
+      } catch {
+        ignoredRows += 1;
+      }
     }
+    if (!parsedLines) return null;
+    return {
+      format: 'JSON Lines',
+      cards,
+      ignoredRows,
+      message: cards.length ? '' : messageWhenNoCards(ignoredRows),
+    };
   }
 }
 
@@ -608,7 +661,11 @@ function bestDelimitedTable(text: string): CardStockImport | null {
     const widths = new Map<number, number>();
     for (const row of sample) widths.set(row.length, (widths.get(row.length) ?? 0) + 1);
     const [commonWidth, commonCount] = [...widths.entries()].sort((left, right) => right[1] - left[1] || right[0] - left[0])[0]!;
-    const headerCount = requiredHeaderCount(sample[0]!.map(fieldForHeader));
+    const headerCount = Math.max(
+      ...sample.map((row) =>
+        requiredHeaderCount(row.map((cell) => fieldForHeader(valueForCell(cell)))),
+      ),
+    );
     const score = headerCount >= 2 ? 1000 + headerCount * 100 + commonWidth : commonWidth >= 3 ? commonCount * 10 + commonWidth : 0;
     if (score > (best?.score ?? 0)) best = { rows, label: candidate.label, score };
   }
@@ -618,10 +675,17 @@ function bestDelimitedTable(text: string): CardStockImport | null {
 
 export function parseCardStockInput(input: string): CardStockImport {
   const text = input.replace(/^\uFEFF/, '').trim();
-  if (!text) return { format: 'Waiting for data', cards: [], message: 'Choose a card file or paste card data to preview it.' };
+  if (!text) {
+    return {
+      format: 'Waiting for data',
+      cards: [],
+      ignoredRows: 0,
+      message: 'Choose a file or paste content to scan for card records.',
+    };
+  }
 
   const json = parseJsonText(text);
-  if (json?.cards.length) return json;
+  if (json) return json;
 
   const labeled = parseLabeledText(text);
   if (labeled) return labeled;
@@ -632,6 +696,7 @@ export function parseCardStockInput(input: string): CardStockImport {
   return {
     format: 'Not recognized',
     cards: [],
-    message: 'Could not detect card records. Try a CSV, TSV, TXT, or JSON file with card numbers, expiration dates, and security codes.',
+    ignoredRows: text.split(/\r?\n/).filter((line) => line.trim()).length,
+    message: messageWhenNoCards(text.split(/\r?\n/).filter((line) => line.trim()).length),
   };
 }
