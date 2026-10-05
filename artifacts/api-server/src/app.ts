@@ -14,6 +14,27 @@ function asErrorRecord(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
+function missingColumnFromError(error: unknown): string | undefined {
+  const seen = new Set<Record<string, unknown>>();
+  let current = asErrorRecord(error);
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    const message = current.message;
+    if (typeof message === "string") {
+      const match =
+        /\bcolumn\s+"?([A-Za-z_][A-Za-z0-9_$]*)"?\s+of\s+relation\s+"?[A-Za-z_][A-Za-z0-9_$]*"?\s+does not exist\b/i.exec(
+          message,
+        ) ??
+        /\bcolumn\s+"?([A-Za-z_][A-Za-z0-9_$]*)"?\s+does not exist\b/i.exec(
+          message,
+        );
+      if (match?.[1]) return match[1];
+    }
+    current = asErrorRecord(current.cause);
+  }
+  return undefined;
+}
+
 function safeErrorLogContext(error: unknown): Record<string, string> {
   const safeToken = (value: unknown): string | undefined =>
     typeof value === "string" && /^[A-Za-z0-9_.-]{1,80}$/.test(value)
@@ -37,6 +58,10 @@ function safeErrorLogContext(error: unknown): Record<string, string> {
   for (const field of ["code", "schema", "table", "column", "constraint"]) {
     const value = safeToken(root?.[field]);
     if (value) context[field] = value;
+  }
+  if (!context.column) {
+    const column = safeToken(missingColumnFromError(error));
+    if (column) context.column = column;
   }
   return context;
 }

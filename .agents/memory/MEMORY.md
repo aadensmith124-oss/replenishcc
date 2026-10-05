@@ -9,6 +9,7 @@
 - [Workflow port ownership](workflow-port-ownership.md) — Failed artifact launches can leave child dev servers holding ports; inspect listeners before retrying.
 - [Development API database environment](database-workflow-env.md) — The current custom `DATABASE_URL` is production/external; never run development schema pushes against it.
 - [Database error log redaction](database-error-log-redaction.md) — Never serialize raw Drizzle/Postgres errors; wrapper messages can expose bound inventory values.
+- [Gift-card schema compatibility](gift-card-schema-compatibility.md) — Probe optional columns on the exact relation resolved by unqualified SQL, not just `current_schema()`.
 - [TypeScript build-info cache](typescript-build-cache.md) — After dependency changes, rule out stale build info before editing source to fix contradictory type errors.
 - [Patch application verification](patch-application-verification.md) — Verify intended symbols and diffs after multi-hunk patches; success output alone is not enough.
 - [Tailwind v4 dialog centering](tailwind-v4-dialog-centering.md) — Custom-centered Radix dialogs must clear inherited `translate`, not only override `transform`.

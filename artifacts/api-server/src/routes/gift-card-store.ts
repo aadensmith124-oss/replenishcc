@@ -61,10 +61,11 @@ async function supportsPerCardBinMetadata(): Promise<boolean> {
   try {
     const result = await db.execute(sql`
       SELECT COUNT(*)::integer AS count
-      FROM information_schema.columns
-      WHERE table_schema = current_schema()
-        AND table_name = 'gift_card_inventory'
-        AND column_name IN ('card_type', 'issuer', 'brand')
+      FROM pg_catalog.pg_attribute
+      WHERE attrelid = pg_catalog.to_regclass('gift_card_inventory')
+        AND attnum > 0
+        AND NOT attisdropped
+        AND attname IN ('card_type', 'issuer', 'brand')
     `);
     const row = result.rows[0] as { count?: number | string } | undefined;
     const supported = Number(row?.count ?? 0) === 3;
@@ -94,10 +95,11 @@ async function supportsPerCardPublicAddress(): Promise<boolean> {
   try {
     const result = await db.execute(sql`
       SELECT COUNT(*)::integer AS count
-      FROM information_schema.columns
-      WHERE table_schema = current_schema()
-        AND table_name = 'gift_card_inventory'
-        AND column_name = 'public_address'
+      FROM pg_catalog.pg_attribute
+      WHERE attrelid = pg_catalog.to_regclass('gift_card_inventory')
+        AND attnum > 0
+        AND NOT attisdropped
+        AND attname = 'public_address'
     `);
     const row = result.rows[0] as { count?: number | string } | undefined;
     const supported = Number(row?.count ?? 0) === 1;
