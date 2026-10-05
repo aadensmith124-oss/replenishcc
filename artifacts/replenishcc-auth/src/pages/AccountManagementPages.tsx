@@ -19,6 +19,7 @@ import {
 import { Link } from 'wouter';
 import { MemberShell } from '../components/MemberShell';
 import { Form } from '../components/ui/form';
+import { TelegramRewardCard } from './TelegramRewardCard';
 
 type PasswordFormValues = {
   currentPassword: string;
@@ -141,6 +142,7 @@ export function AccountManagementPage() {
         <div className="mfa-note"><ShieldCheck /> Your account remains protected by your password and signed-in session.</div>
       </section>
     </div>
+    <TelegramRewardCard />
     <section className="finance-panel deletion-panel" aria-labelledby="deletion-title">
       <div className="deletion-heading"><div><div className="panel-overline">Data &amp; privacy</div><h2 id="deletion-title">Permanent account deletion</h2><p>Request a review if you want your ReplenishCC account erased.</p></div><span className="deletion-heading-icon"><Trash2 /></span></div>
       <div className="deletion-consequence"><AlertTriangle /><p><strong>What permanent deletion means</strong><br />If approved, your user account and all linked records—including deposits, balances and ledger entries, sessions, and request history—will be permanently deleted. This cannot be undone.</p></div>

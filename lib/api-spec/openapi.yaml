@@ -14,6 +14,8 @@ tags:
     description: Account registration, sessions, and password recovery
   - name: accountManagement
     description: Authenticated member account and security settings
+  - name: telegramBot
+    description: Telegram reward claims and bot updates
   - name: announcements
     description: Published member announcements
   - name: adminAnnouncements
@@ -192,6 +194,51 @@ paths:
           description: Current password is incorrect or new password is invalid
         "401":
           description: Sign-in required
+  /telegram-reward-link:
+    post:
+      operationId: createTelegramRewardLink
+      tags: [accountManagement]
+      summary: Create a short-lived Telegram reward link for the signed-in member
+      description: Each ReplenishCC account and Telegram account may claim the $1 reward once per rolling 24 hours. The generated link expires after 10 minutes.
+      responses:
+        "200":
+          description: Short-lived link to claim the Telegram name reward
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelegramRewardLinkResponse"
+        "401":
+          description: Sign-in required
+        "503":
+          description: Telegram bot is not configured
+  /telegram/webhook:
+    post:
+      operationId: postTelegramWebhook
+      tags: [telegramBot]
+      summary: Receive an authenticated Telegram Bot API update
+      parameters:
+        - name: X-Telegram-Bot-Api-Secret-Token
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TelegramWebhookUpdate"
+      responses:
+        "200":
+          description: Update accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelegramWebhookAcknowledgement"
+        "400":
+          description: Invalid Telegram update
+        "401":
+          description: Webhook secret is invalid
   /account-deletion-requests/me:
     get:
       operationId: getMyAccountDeletionRequest
@@ -1838,6 +1885,48 @@ components:
       type: object
       properties:
         reason: { type: string, minLength: 1, maxLength: 500 }
+    TelegramRewardLinkResponse:
+      type: object
+      properties:
+        deepLink: { type: string, format: uri }
+        botUsername: { type: string }
+        expiresAt: { type: string, format: date-time }
+        amountCents: { type: integer, const: 100 }
+      required: [deepLink, botUsername, expiresAt, amountCents]
+    TelegramWebhookUser:
+      type: object
+      properties:
+        id: { type: integer, minimum: 1 }
+        is_bot: { type: boolean }
+        first_name: { type: string }
+        last_name: { type: ["string", "null"] }
+        username: { type: ["string", "null"] }
+      required: [id, is_bot, first_name]
+    TelegramWebhookChat:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, enum: [private, group, supergroup, channel] }
+      required: [id, type]
+    TelegramWebhookMessage:
+      type: object
+      properties:
+        message_id: { type: integer }
+        from: { $ref: "#/components/schemas/TelegramWebhookUser" }
+        chat: { $ref: "#/components/schemas/TelegramWebhookChat" }
+        text: { type: ["string", "null"] }
+      required: [message_id, chat]
+    TelegramWebhookUpdate:
+      type: object
+      properties:
+        update_id: { type: integer, minimum: 0 }
+        message: { $ref: "#/components/schemas/TelegramWebhookMessage" }
+      required: [update_id]
+    TelegramWebhookAcknowledgement:
+      type: object
+      properties:
+        ok: { type: boolean, const: true }
+      required: [ok]
     AdminAccountDeletionRequest:
       type: object
       properties:

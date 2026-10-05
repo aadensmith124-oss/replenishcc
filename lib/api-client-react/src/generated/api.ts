@@ -101,6 +101,9 @@ import type {
   SupportTicketRefundInput,
   SupportTicketRefundResponse,
   SupportTicketStatusInput,
+  TelegramRewardLinkResponse,
+  TelegramWebhookAcknowledgement,
+  TelegramWebhookUpdate,
   UpdateGiftCardProductMetadataInput,
   WeeklyLeaderboardResponse
 } from './api.schemas';
@@ -799,6 +802,168 @@ export const useChangeAuthPassword = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getChangeAuthPasswordMutationOptions(options));
+    }
+
+export const getCreateTelegramRewardLinkUrl = () => {
+
+
+
+
+  return `/api/telegram-reward-link`
+}
+
+/**
+ * @summary Create a short-lived Telegram reward link for the signed-in member
+ */
+export const createTelegramRewardLink = async ( options?: Parameters<typeof customFetch>[1]): Promise<TelegramRewardLinkResponse> => {
+
+  return customFetch<TelegramRewardLinkResponse>(getCreateTelegramRewardLinkUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCreateTelegramRewardLinkMutationKey = () => ['createTelegramRewardLink'] as const;
+
+export const getCreateTelegramRewardLinkMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTelegramRewardLink>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTelegramRewardLink>>, TError,void, TContext> => {
+
+const mutationKey = getCreateTelegramRewardLinkMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTelegramRewardLink>>, void> = () => {
+
+
+          return  createTelegramRewardLink(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateTelegramRewardLinkMutationResult = NonNullable<Awaited<ReturnType<typeof createTelegramRewardLink>>>
+
+    export type CreateTelegramRewardLinkMutationError = ErrorType<void>
+
+
+    /**
+ * @summary Create a short-lived Telegram reward link for the signed-in member
+ */
+export const useCreateTelegramRewardLink = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTelegramRewardLink>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createTelegramRewardLink>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCreateTelegramRewardLinkMutationOptions(options));
+    }
+
+export const getPostTelegramWebhookUrl = () => {
+
+
+
+
+  return `/api/telegram/webhook`
+}
+
+/**
+ * @summary Receive an authenticated Telegram Bot API update
+ */
+export const postTelegramWebhook = async (telegramWebhookUpdate: TelegramWebhookUpdate, options?: Parameters<typeof customFetch>[1]): Promise<TelegramWebhookAcknowledgement> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<TelegramWebhookAcknowledgement>(getPostTelegramWebhookUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(telegramWebhookUpdate)
+  }
+);}
+
+
+
+
+
+export const getPostTelegramWebhookMutationKey = () => ['postTelegramWebhook'] as const;
+
+export const getPostTelegramWebhookMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postTelegramWebhook>>, TError,PostTelegramWebhookMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postTelegramWebhook>>, TError,PostTelegramWebhookMutationVariables, TContext> => {
+
+const mutationKey = getPostTelegramWebhookMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postTelegramWebhook>>, PostTelegramWebhookMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  postTelegramWebhook(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostTelegramWebhookMutationResult = NonNullable<Awaited<ReturnType<typeof postTelegramWebhook>>>
+    export type PostTelegramWebhookMutationBody = BodyType<TelegramWebhookUpdate>
+    export type PostTelegramWebhookMutationError = ErrorType<void>
+    export type PostTelegramWebhookMutationVariables = {data: BodyType<TelegramWebhookUpdate>}
+
+    /**
+ * @summary Receive an authenticated Telegram Bot API update
+ */
+export const usePostTelegramWebhook = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postTelegramWebhook>>, TError,PostTelegramWebhookMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postTelegramWebhook>>,
+        TError,
+        PostTelegramWebhookMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostTelegramWebhookMutationOptions(options));
     }
 
 export const getGetMyAccountDeletionRequestUrl = () => {

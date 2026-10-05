@@ -180,6 +180,53 @@ export const ChangeAuthPasswordResponse = zod.object({
 
 
 /**
+ * @summary Create a short-lived Telegram reward link for the signed-in member
+ */
+export const CreateTelegramRewardLinkResponse = zod.object({
+  "deepLink": zod.string().url(),
+  "botUsername": zod.string(),
+  "expiresAt": zod.coerce.date(),
+  "amountCents": zod.literal(100)
+})
+
+
+/**
+ * @summary Receive an authenticated Telegram Bot API update
+ */
+export const PostTelegramWebhookHeader = zod.object({
+  "X-Telegram-Bot-Api-Secret-Token": zod.string()
+})
+
+export const postTelegramWebhookBodyUpdateIdMin = 0;
+
+
+
+
+export const PostTelegramWebhookBody = zod.object({
+  "update_id": zod.number().int().min(postTelegramWebhookBodyUpdateIdMin),
+  "message": zod.object({
+  "message_id": zod.number().int(),
+  "from": zod.object({
+  "id": zod.number().int().min(1),
+  "is_bot": zod.boolean(),
+  "first_name": zod.string(),
+  "last_name": zod.string().nullish(),
+  "username": zod.string().nullish()
+}).optional(),
+  "chat": zod.object({
+  "id": zod.number().int(),
+  "type": zod.enum(['private', 'group', 'supergroup', 'channel'])
+}),
+  "text": zod.string().nullish()
+}).optional()
+})
+
+export const PostTelegramWebhookResponse = zod.object({
+  "ok": zod.literal(true)
+})
+
+
+/**
  * @summary Get the signed-in user's latest deletion request
  */
 export const GetMyAccountDeletionRequestResponse = zod.object({

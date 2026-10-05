@@ -472,6 +472,58 @@ export interface AccountDeletionRequestInput {
   reason?: string;
 }
 
+export interface TelegramRewardLinkResponse {
+  deepLink: string;
+  botUsername: string;
+  expiresAt: string;
+  amountCents: 100;
+}
+
+export interface TelegramWebhookUser {
+  /** @minimum 1 */
+  id: number;
+  is_bot: boolean;
+  first_name: string;
+  /** @nullable */
+  last_name?: string | null;
+  /** @nullable */
+  username?: string | null;
+}
+
+export type TelegramWebhookChatType = typeof TelegramWebhookChatType[keyof typeof TelegramWebhookChatType];
+
+
+export const TelegramWebhookChatType = {
+  private: 'private',
+  group: 'group',
+  supergroup: 'supergroup',
+  channel: 'channel',
+} as const;
+
+export interface TelegramWebhookChat {
+  id: number;
+  type: TelegramWebhookChatType;
+}
+
+export interface TelegramWebhookMessage {
+  message_id: number;
+  from?: TelegramWebhookUser;
+  chat: TelegramWebhookChat;
+  /** @nullable */
+  text?: string | null;
+}
+
+export interface TelegramWebhookUpdate {
+  /** @minimum 0 */
+  update_id: number;
+  message?: TelegramWebhookMessage;
+}
+
+export const TelegramWebhookAcknowledgementValue = {
+  ok: true,
+} as const;
+export type TelegramWebhookAcknowledgement = typeof TelegramWebhookAcknowledgementValue;
+
 export interface AdminAccountDeletionRequest {
   id: string;
   userId: string;

@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { configureTelegramWebhook } from "./lib/telegram-bot";
 
 const rawPort = process.env["PORT"] ?? "3000";
 
@@ -16,4 +17,7 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+  void configureTelegramWebhook().catch(() => {
+    logger.error("Telegram reward bot webhook could not be configured.");
+  });
 });

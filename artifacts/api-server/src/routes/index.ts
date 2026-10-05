@@ -11,6 +11,7 @@ import licenseStoreRouter from "./license-store";
 import giftCardStoreRouter from "./gift-card-store";
 import adminUsersRouter from "./admin-users";
 import adminDashboardRouter from "./admin-dashboard";
+import telegramBotRouter from "./telegram-bot";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(licenseStoreRouter);
 router.use(giftCardStoreRouter);
 router.use(adminUsersRouter);
 router.use(adminDashboardRouter);
+router.use(telegramBotRouter);
 
 export default router;
