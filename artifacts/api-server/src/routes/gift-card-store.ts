@@ -46,8 +46,6 @@ import {
 const router: IRouter = Router();
 const MAX_AVAILABLE_CARDS_PER_BASE = 1_000;
 
-class DuplicateGiftCardBatchError extends Error {}
-
 let perCardBinMetadataSupportCache: {
   supported: boolean;
   checkedAt: number;
@@ -1294,12 +1292,6 @@ router.post(
     }
     const credentials = cards as GiftCardCredential[];
     const hashes = credentials.map(hashGiftCardCredential);
-    if (new Set(hashes).size !== hashes.length) {
-      res.status(400).json({
-        error: "Remove duplicate cards from the batch before uploading it.",
-      });
-      return;
-    }
 
     const defaultLocation = {
       address: parsed.data.address?.trim() || null,
@@ -1313,23 +1305,26 @@ router.post(
       state: card.publicLocation?.state?.trim() || defaultLocation.state,
       regionZip: card.publicLocation?.regionZip ?? defaultLocation.regionZip,
     }));
+    const incomingRows = credentials.map((credential, index) => ({
+      credential,
+      hash: hashes[index]!,
+      location: cardLocations[index]!,
+      prefix: getGiftCardBinMetadataPrefix(credential.cardNumber),
+    }));
     let stockResult:
       | { kind: "missing" }
       | { kind: "archived" }
-      | { kind: "capacity"; remainingCount: number }
       | {
           kind: "success";
+          addedCount: number;
           availableCount: number;
+          duplicateCount: number;
+          capacitySkippedCount: number;
+          redemptionZipApplied: boolean;
+          locationMetadataApplied: boolean;
           inventoryItems: Array<{ id: string; prefix: string }>;
         };
-    const prefixByHash = new Map(
-      hashes.map((hash, index) => [
-        hash,
-        getGiftCardBinMetadataPrefix(credentials[index]!.cardNumber),
-      ]),
-    );
-    try {
-      stockResult = await db.transaction(async (tx) => {
+    stockResult = await db.transaction(async (tx) => {
         const [product] = await tx
           .select({
             id: giftCardProductsTable.id,
@@ -1360,35 +1355,65 @@ router.post(
           0,
           MAX_AVAILABLE_CARDS_PER_BASE - currentAvailableCount,
         );
-        if (credentials.length > remainingCount) {
-          return { kind: "capacity" as const, remainingCount };
-        }
 
-        const values = credentials.map((credential, index) => ({
+        let duplicateCount = 0;
+        const uniqueRows = new Map<
+          string,
+          (typeof incomingRows)[number]
+        >();
+        for (const row of incomingRows) {
+          if (uniqueRows.has(row.hash)) {
+            duplicateCount += 1;
+          } else {
+            uniqueRows.set(row.hash, row);
+          }
+        }
+        const uniqueHashes = [...uniqueRows.keys()];
+        const existingRows = uniqueHashes.length
+          ? await tx
+              .select({ credentialHash: giftCardInventoryTable.credentialHash })
+              .from(giftCardInventoryTable)
+              .where(inArray(giftCardInventoryTable.credentialHash, uniqueHashes))
+          : [];
+        const existingHashes = new Set(
+          existingRows.map((row) => row.credentialHash),
+        );
+        const candidates = [...uniqueRows.values()].filter((row) => {
+          if (!existingHashes.has(row.hash)) return true;
+          duplicateCount += 1;
+          return false;
+        });
+        const acceptedRows = candidates.slice(0, remainingCount);
+        const capacitySkippedCount = candidates.length - acceptedRows.length;
+        const values = acceptedRows.map(({ credential, location }) => ({
           productId: product.id,
           hasEmail: Boolean(credential.email),
           hasPhone: Boolean(credential.phone),
-          publicAddress: cardLocations[index]?.address ?? product.address,
-          publicCity: cardLocations[index]?.city ?? product.city,
-          publicState: cardLocations[index]?.state ?? product.state,
-          publicRegionZip:
-            cardLocations[index]?.regionZip ?? product.regionZip,
+          publicAddress: location.address ?? product.address,
+          publicCity: location.city ?? product.city,
+          publicState: location.state ?? product.state,
+          publicRegionZip: location.regionZip ?? product.regionZip,
           ...encryptGiftCardCredential(credential),
         }));
-        const inserted = await tx
-          .insert(giftCardInventoryTable)
-          .values(values)
-          .onConflictDoNothing({
-            target: giftCardInventoryTable.credentialHash,
-          })
-          .returning({
-            id: giftCardInventoryTable.id,
-            credentialHash: giftCardInventoryTable.credentialHash,
-          });
-        if (inserted.length !== values.length) {
-          // Throw to roll back every row rather than commit a partial batch.
-          throw new DuplicateGiftCardBatchError();
-        }
+        const inserted = values.length
+          ? await tx
+              .insert(giftCardInventoryTable)
+              .values(values)
+              .onConflictDoNothing({
+                target: giftCardInventoryTable.credentialHash,
+              })
+              .returning({
+                id: giftCardInventoryTable.id,
+                credentialHash: giftCardInventoryTable.credentialHash,
+              })
+          : [];
+        duplicateCount += acceptedRows.length - inserted.length;
+        const insertedHashes = new Set(
+          inserted.map((item) => item.credentialHash),
+        );
+        const insertedRows = acceptedRows.filter((row) =>
+          insertedHashes.has(row.hash),
+        );
         const [availableStock] = await tx
           .select({ count: count() })
           .from(giftCardInventoryTable)
@@ -1400,20 +1425,29 @@ router.post(
           );
         return {
           kind: "success" as const,
+          addedCount: inserted.length,
           availableCount: Number(availableStock?.count ?? 0),
+          duplicateCount,
+          capacitySkippedCount,
+          redemptionZipApplied: insertedRows.some(
+            (row) => row.location.regionZip !== null,
+          ),
+          locationMetadataApplied: insertedRows.some(
+            (row) =>
+              Boolean(
+                row.location.address ||
+                  row.location.state ||
+                  row.location.city,
+              ),
+          ),
           inventoryItems: inserted.flatMap((item) => {
-            const prefix = prefixByHash.get(item.credentialHash);
+            const prefix = incomingRows.find(
+              (row) => row.hash === item.credentialHash,
+            )?.prefix;
             return prefix ? [{ id: item.id, prefix }] : [];
           }),
         };
       });
-    } catch (error) {
-      if (!(error instanceof DuplicateGiftCardBatchError)) throw error;
-      res.status(409).json({
-        error: "One or more cards already exist in inventory. No cards were added.",
-      });
-      return;
-    }
 
     if (stockResult.kind === "missing") {
       res.status(404).json({ error: "Gift-card product not found." });
@@ -1425,16 +1459,16 @@ router.post(
       });
       return;
     }
-    if (stockResult.kind === "capacity") {
-      res.status(409).json({
-        error:
-          stockResult.remainingCount > 0
-            ? `This base has room for ${stockResult.remainingCount} more available card${stockResult.remainingCount === 1 ? "" : "s"} (maximum ${MAX_AVAILABLE_CARDS_PER_BASE}).`
-            : `This base is at its ${MAX_AVAILABLE_CARDS_PER_BASE}-card available-stock limit. Sell some cards before adding more.`,
-      });
-      return;
+    if (stockResult.duplicateCount > 0 || stockResult.capacitySkippedCount > 0) {
+      req.log.warn(
+        {
+          duplicateCount: stockResult.duplicateCount,
+          capacitySkippedCount: stockResult.capacitySkippedCount,
+        },
+        "Gift-card stock upload completed with skipped rows.",
+      );
     }
-    // Only look up distinct 8-digit prefixes after the full batch has been accepted.
+    // Only look up distinct 8-digit prefixes for newly inserted cards.
     const cardsByPrefix = new Map<string, string[]>();
     for (const item of stockResult.inventoryItems) {
       const ids = cardsByPrefix.get(item.prefix) ?? [];
@@ -1492,15 +1526,15 @@ router.post(
     }
     res.json(
       AddAdminGiftCardStockResponse.parse({
-        addedCount: credentials.length,
+        addedCount: stockResult.addedCount,
         availableCount: stockResult.availableCount,
+        duplicateCount: stockResult.duplicateCount,
+        capacitySkippedCount: stockResult.capacitySkippedCount,
         binMetadataApplied: binMetadataCardsUpdated > 0,
         binMetadataCardsUpdated,
         binMetadataPrefixesLookedUp: lookups.size,
-        redemptionZipApplied: cardLocations.some((location) => location.regionZip !== null),
-        locationMetadataApplied: cardLocations.some(
-          (location) => Boolean(location.address || location.state || location.city),
-        ),
+        redemptionZipApplied: stockResult.redemptionZipApplied,
+        locationMetadataApplied: stockResult.locationMetadataApplied,
       }),
     );
   },

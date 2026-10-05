@@ -1426,7 +1426,7 @@ paths:
         "404":
           description: Product not found
         "409":
-          description: Base already has or previously had inventory or orders
+          description: Base is archived and must be restored before stock can be added
   /admin/gift-card-products/{productId}/refresh-bin-metadata:
     post:
       operationId: refreshAdminGiftCardBinMetadata

@@ -672,15 +672,19 @@ export function AdminCardInventoryPage() {
   const stockText = stockForm.watch('cards') ?? '';
   const stockImport = useMemo(() => parseCardStockInput(stockText), [stockText]);
   const stockCards = stockImport.cards;
+  const validStockCards = useMemo(
+    () => stockCards.filter((card) => card.issues.length === 0),
+    [stockCards],
+  );
   const stockBinPrefixes = useMemo(() => new Set(
-    stockCards.flatMap((card) => {
+    validStockCards.flatMap((card) => {
       const normalizedNumber = card.cardNumber.replace(/\s/g, '');
-      return card.issues.length === 0 && /^\d{13,19}$/.test(normalizedNumber)
+      return /^\d{13,19}$/.test(normalizedNumber)
         ? [normalizedNumber.slice(0, 8)]
         : [];
     }),
-  ), [stockCards]);
-  const stockIssueCount = stockCards.filter((card) => card.issues.length > 0).length;
+  ), [validStockCards]);
+  const stockIssueCount = stockCards.length - validStockCards.length;
   const stockLocationCounts = {
     address: stockCards.filter((card) => card.address).length,
     state: stockCards.filter((card) => card.state).length,
@@ -769,7 +773,7 @@ export function AdminCardInventoryPage() {
   if (session.isLoading || !session.data?.user?.isDepositAdmin) return <MemberShell pageTitle="Bases" user={null} loading shellMode="force" />;
   return <section className="gift-admin">
     <header className="gift-admin-heading"><div><div className="gift-eyebrow">Restricted operations · inventory only</div><h2>Bases</h2><p>Set a base name and per-card price, then upload encrypted card stock. Credentials are intentionally excluded from this table.</p></div><div className="gift-admin-stat"><small>Available cards</small><strong data-testid="text-admin-total-stock">{products.isLoading ? '—' : totalStock}</strong></div></header>
-    {feedback && <div className="gift-notice" role="status" data-testid="status-admin-card-action">{feedback}<button onClick={() => setFeedback('')} aria-label="Dismiss message" data-testid="button-dismiss-admin-message">×</button></div>}
+    {feedback && <div className={`gift-notice${feedback.startsWith('Warning:') ? ' gift-notice-warning' : ''}`} role="status" data-testid="status-admin-card-action">{feedback}<button onClick={() => setFeedback('')} aria-label="Dismiss message" data-testid="button-dismiss-admin-message">×</button></div>}
     <div className="gift-admin-forms">
       <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>01</span><div><h3>Create a base</h3><p>The base name and Price apply to every card uploaded under it.</p></div></div>
         <Form {...form}><form onSubmit={form.handleSubmit((values) => {
@@ -789,20 +793,17 @@ export function AdminCardInventoryPage() {
           <button className="gift-admin-submit" disabled={create.isPending} data-testid="button-create-card-listing">{create.isPending ? 'Creating…' : 'Create base'} <ArrowRight /></button>
         </form></Form>
       </section>
-      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload cards</h3><p>Paste a header such as Card|exp|cvv|name|address|city|state|zip|type|issuer|brand followed by card rows. Use separate Name, City, and State columns. Include a security code for every card; the preview shows only the last four digits. Import up to {MAX_CARDS_PER_BATCH} cards per batch. Each active base can hold up to {MAX_CARDS_PER_BASE.toLocaleString()} available cards; sold cards remain in history and free space for restocking.</p></div></div>
-        <Form {...stockForm}><form onSubmit={stockForm.handleSubmit((values) => {
+      <section className="gift-admin-panel"><div className="gift-admin-panel-title"><span>02</span><div><h3>Upload cards</h3><p>Paste a header such as Card|exp|cvv|name|address|city|state|zip|type|issuer|brand followed by card rows. Use separate Name, City, and State columns. Include a security code for every card; the preview shows only the last four digits. Uploads are automatically sent in batches of up to {MAX_CARDS_PER_BATCH} cards. Each active base can hold up to {MAX_CARDS_PER_BASE.toLocaleString()} available cards; sold cards remain in history and free space for restocking.</p></div></div>
+        <Form {...stockForm}><form onSubmit={stockForm.handleSubmit(async (values) => {
           const parsedBatch = parseCardStockInput(values.cards);
           if (!parsedBatch.cards.length) {
             setFeedback(parsedBatch.message || 'No card records were detected.');
             return;
           }
-          if (parsedBatch.cards.length > MAX_CARDS_PER_BATCH) {
-            setFeedback(`Split this upload into batches of no more than ${MAX_CARDS_PER_BATCH} cards.`);
-            return;
-          }
-          const invalidCardIndex = parsedBatch.cards.findIndex((card) => card.issues.length > 0);
-          if (invalidCardIndex >= 0) {
-            setFeedback(`Card ${invalidCardIndex + 1} needs review: ${parsedBatch.cards[invalidCardIndex]!.issues.join(' ')}`);
+          const uploadableCards = parsedBatch.cards.filter((card) => card.issues.length === 0);
+          const invalidCount = parsedBatch.cards.length - uploadableCards.length;
+          if (!uploadableCards.length) {
+            setFeedback(`Warning: no cards were uploaded. ${invalidCount} row${invalidCount === 1 ? '' : 's'} need review before they can be stored.`);
             return;
           }
           if (selectedStockProduct?.isArchived) {
@@ -813,48 +814,81 @@ export function AdminCardInventoryPage() {
             setFeedback('Select an active base before uploading cards.');
             return;
           }
-          if (parsedBatch.cards.length > selectedRemainingCapacity) {
-            setFeedback(selectedRemainingCapacity === 0
-              ? `This base is at the ${MAX_CARDS_PER_BASE}-card available-stock limit. Sell cards or choose another base.`
-              : `This base has room for ${selectedRemainingCapacity} more available card${selectedRemainingCapacity === 1 ? '' : 's'}. Split the upload to stay within the ${MAX_CARDS_PER_BASE}-card limit.`);
-            return;
-          }
-          const cards: GiftCardCredential[] = parsedBatch.cards.map((card) => ({
-            cardNumber: card.cardNumber,
-            expiration: card.expiration,
-            securityCode: card.securityCode,
-            cardholderName: card.cardholderName || null,
-            cardType: card.cardType || undefined,
-            issuer: card.issuer || undefined,
-            brand: card.brand || undefined,
-            email: card.email,
-            phone: card.phone,
-            publicLocation: {
-              address: card.address,
-              state: card.state,
-              city: card.city,
-              regionZip: card.regionZip,
-            },
-          }));
-          addStock.mutate({
-            productId: values.productId,
-            data: { cards },
-          }, { onSuccess: (result) => {
-            stockForm.reset();
-            setStockFileName('');
-            setStockFileError('');
-            if (stockFileInput.current) stockFileInput.current.value = '';
+          let addedCount = 0;
+          let duplicateCount = 0;
+          let capacitySkippedCount = 0;
+          let availableCount = selectedStockProduct.availableCount;
+          let binMetadataCardsUpdated = 0;
+          let binMetadataPrefixesLookedUp = 0;
+          let locationMetadataApplied = false;
+          let redemptionZipApplied = false;
+          try {
+            for (let offset = 0; offset < uploadableCards.length; offset += MAX_CARDS_PER_BATCH) {
+              const batch = uploadableCards.slice(offset, offset + MAX_CARDS_PER_BATCH);
+              const result = await addStock.mutateAsync({
+                productId: values.productId,
+                data: {
+                  cards: batch.map((card) => ({
+                    cardNumber: card.cardNumber,
+                    expiration: card.expiration,
+                    securityCode: card.securityCode,
+                    cardholderName: card.cardholderName || null,
+                    cardType: card.cardType || undefined,
+                    issuer: card.issuer || undefined,
+                    brand: card.brand || undefined,
+                    email: card.email,
+                    phone: card.phone,
+                    publicLocation: {
+                      address: card.address,
+                      state: card.state,
+                      city: card.city,
+                      regionZip: card.regionZip,
+                    },
+                  })),
+                },
+              });
+              addedCount += result.addedCount;
+              duplicateCount += result.duplicateCount;
+              capacitySkippedCount += result.capacitySkippedCount;
+              availableCount = result.availableCount;
+              binMetadataCardsUpdated += result.binMetadataCardsUpdated;
+              binMetadataPrefixesLookedUp += result.binMetadataPrefixesLookedUp;
+              locationMetadataApplied ||= result.locationMetadataApplied;
+              redemptionZipApplied ||= result.redemptionZipApplied;
+            }
             invalidate();
-            const label = `${result.addedCount} card${result.addedCount === 1 ? '' : 's'}`;
-            const binMetadataFeedback = result.binMetadataApplied
-              ? `BIN metadata auto-filled for ${result.binMetadataCardsUpdated} card${result.binMetadataCardsUpdated === 1 ? '' : 's'} across ${result.binMetadataPrefixesLookedUp} distinct prefix${result.binMetadataPrefixesLookedUp === 1 ? '' : 'es'}.`
-              : result.binMetadataPrefixesLookedUp === 0
-                ? 'Per-card BIN metadata is not enabled for the connected database, so no public lookup was sent. Apply the schema update before retrying.'
-                : 'The public BIN lookup returned no metadata or was unavailable. You can retry the lookup or edit the base defaults.';
-            setFeedback(`${label} added. This base now has ${result.availableCount}/${MAX_CARDS_PER_BASE} available. ${binMetadataFeedback} ${result.locationMetadataApplied ? 'Per-card public locations saved.' : 'Base location defaults were used.'} ${result.redemptionZipApplied ? 'Per-card ZIP values saved.' : 'Base ZIP defaults were used where available.'}`);
-          }, onError: () => setFeedback('Stock upload was rejected. Check the preview, duplicates, and the base’s remaining capacity.') });
+            const warnings = [
+              invalidCount > 0
+                ? `${invalidCount} row${invalidCount === 1 ? '' : 's'} with invalid or incomplete fields skipped.`
+                : '',
+              duplicateCount > 0
+                ? `${duplicateCount} duplicate card${duplicateCount === 1 ? '' : 's'} skipped.`
+                : '',
+              capacitySkippedCount > 0
+                ? `${capacitySkippedCount} card${capacitySkippedCount === 1 ? '' : 's'} skipped because the base reached its ${MAX_CARDS_PER_BASE}-card limit.`
+                : '',
+            ].filter(Boolean);
+            const binMetadataFeedback = binMetadataCardsUpdated > 0
+              ? `BIN metadata auto-filled for ${binMetadataCardsUpdated} card${binMetadataCardsUpdated === 1 ? '' : 's'} across ${binMetadataPrefixesLookedUp} prefix lookup${binMetadataPrefixesLookedUp === 1 ? '' : 's'}.`
+              : binMetadataPrefixesLookedUp > 0
+                ? 'No BIN metadata was returned for this upload; you can retry the lookup or edit the base defaults.'
+                : 'No valid 8-digit BIN prefixes were available for lookup.';
+            const resultText = `${addedCount} card${addedCount === 1 ? '' : 's'} added. This base now has ${availableCount}/${MAX_CARDS_PER_BASE} available. ${binMetadataFeedback} ${locationMetadataApplied ? 'Per-card public locations saved.' : 'Base location defaults were used.'} ${redemptionZipApplied ? 'Per-card ZIP values saved.' : 'Base ZIP defaults were used where available.'}`;
+            setFeedback(warnings.length
+              ? `Warning: ${resultText} ${warnings.join(' ')}`
+              : resultText);
+            if (!warnings.length) {
+              stockForm.reset();
+              setStockFileName('');
+              setStockFileError('');
+              if (stockFileInput.current) stockFileInput.current.value = '';
+            }
+          } catch {
+            invalidate();
+            setFeedback(`Warning: upload stopped after ${addedCount} card${addedCount === 1 ? '' : 's'} were added. You can retry; cards already in inventory will be skipped as duplicates.`);
+          }
         })} className="gift-form">
-           <FormField control={stockForm.control} name="productId" render={({ field }) => <FormItem><FormLabel>Base</FormLabel><FormControl><select {...field} data-testid="select-admin-stock-product"><option value="">Select a base</option>{rows.map((product) => <option key={product.id} value={product.id} disabled={!product.canReceiveStock}>{product.name} · {product.isArchived ? 'archived — restore before use' : product.canReceiveStock ? `${product.availableCount}/${MAX_CARDS_PER_BASE} available` : `${MAX_CARDS_PER_BASE}/${MAX_CARDS_PER_BASE} available — cap reached`}</option>)}</select></FormControl><FormMessage />{selectedStockProduct && <p className="gift-stock-capacity-note" aria-live="polite">{selectedRemainingCapacity.toLocaleString()} of {MAX_CARDS_PER_BASE.toLocaleString()} available-card spaces remain for this base.</p>}</FormItem>} />
+            <FormField control={stockForm.control} name="productId" render={({ field }) => <FormItem><FormLabel>Base</FormLabel><FormControl><select {...field} data-testid="select-admin-stock-product"><option value="">Select a base</option>{rows.map((product) => <option key={product.id} value={product.id} disabled={product.isArchived}>{product.name} · {product.isArchived ? 'archived — restore before use' : product.canReceiveStock ? `${product.availableCount}/${MAX_CARDS_PER_BASE} available` : `${MAX_CARDS_PER_BASE}/${MAX_CARDS_PER_BASE} available — excess cards will be skipped`}</option>)}</select></FormControl><FormMessage />{selectedStockProduct && <p className="gift-stock-capacity-note" aria-live="polite">{selectedRemainingCapacity.toLocaleString()} of {MAX_CARDS_PER_BASE.toLocaleString()} available-card spaces remain for this base.</p>}</FormItem>} />
            <div className="gift-stock-file">
              <label htmlFor="input-admin-card-stock-file">Choose a card file</label>
              <input ref={stockFileInput} id="input-admin-card-stock-file" type="file" accept=".txt,.text,.csv,.tsv,.json,.jsonl,.ndjson,.log,.dat,text/*,application/json" onChange={(event) => void loadStockFile(event)} data-testid="input-admin-card-stock-file" />
@@ -895,15 +929,16 @@ export function AdminCardInventoryPage() {
                     </table>
                   </div>
                   {stockCards.length > 4 && <span className="gift-stock-preview-more">Plus {stockCards.length - 4} more records</span>}
-                  {stockCards.length > MAX_CARDS_PER_BATCH && <span className="gift-stock-file-error">Split this into batches of at most {MAX_CARDS_PER_BATCH} cards.</span>}
+                  {validStockCards.length > MAX_CARDS_PER_BATCH && <span className="gift-stock-upload-warning" role="status">This upload will be sent in {Math.ceil(validStockCards.length / MAX_CARDS_PER_BATCH)} batches.</span>}
                 </> : <p>{stockImport.message}</p>}
+                {stockIssueCount > 0 && <p className="gift-stock-upload-warning" role="status" data-testid="status-invalid-stock-rows">{stockIssueCount} row{stockIssueCount === 1 ? '' : 's'} need review and will be skipped; valid cards will still be uploaded.</p>}
              </div>
              <FormMessage />
            </FormItem>} />
-            {stockCards.length > selectedRemainingCapacity && selectedStockProduct && <p className="gift-stock-file-error" role="alert">This batch exceeds the base’s remaining capacity of {selectedRemainingCapacity} card{selectedRemainingCapacity === 1 ? '' : 's'}.</p>}
+            {validStockCards.length > selectedRemainingCapacity && selectedStockProduct && <p className="gift-stock-upload-warning" role="status" data-testid="status-stock-capacity-warning">At most {selectedRemainingCapacity} more card{selectedRemainingCapacity === 1 ? '' : 's'} fit in this base. Duplicate cards do not use capacity; any other overflow will be skipped and reported.</p>}
             <div className="gift-upload-note"><LockKeyhole /> Address, state, city, and ZIP are public per card; each card can have a different location. Blank fields use the base defaults. BIN lookup uses the first 8 digits only after the batch is accepted.</div>
            <div className="gift-upload-note"><LockKeyhole /> Parsing stays in your browser. On upload, card credentials are sent to ReplenishCC and encrypted; actual credentials are revealed only to the purchaser.</div>
-            <button className="gift-admin-submit" disabled={addStock.isPending || !rows.some((product) => product.canReceiveStock) || !selectedStockProduct || !selectedStockProduct.canReceiveStock || stockCards.length === 0 || stockCards.length > MAX_CARDS_PER_BATCH || stockCards.length > selectedRemainingCapacity || stockIssueCount > 0 || Boolean(stockImport.message)} data-testid="button-upload-card-stock">{addStock.isPending ? 'Uploading…' : `Upload ${stockCards.length || ''} card${stockCards.length === 1 ? '' : 's'}`} <ArrowRight /></button>
+             <button className="gift-admin-submit" disabled={addStock.isPending || stockForm.formState.isSubmitting || !rows.some((product) => !product.isArchived) || !selectedStockProduct || selectedStockProduct.isArchived || validStockCards.length === 0 || Boolean(stockImport.message)} data-testid="button-upload-card-stock">{addStock.isPending || stockForm.formState.isSubmitting ? 'Uploading…' : `Upload ${validStockCards.length || ''} valid card${validStockCards.length === 1 ? '' : 's'}`} <ArrowRight /></button>
          </form></Form>
       </section>
     </div>
