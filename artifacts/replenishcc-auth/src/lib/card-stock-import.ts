@@ -19,6 +19,7 @@ export type ImportedGiftCard = {
 export type CardStockImport = {
   format: string;
   cards: ImportedGiftCard[];
+  ignoredRows: number;
   message: string;
 };
 
@@ -45,6 +46,7 @@ type CardField =
 type RawCard = {
   values: Partial<Record<CardField, string>>;
   numericSensitiveFields: Set<CardField>;
+  hasExplicitCardNumberField: boolean;
   sourceRow: number;
 };
 
@@ -103,7 +105,12 @@ function fieldForHeader(value: string): CardField | null {
 }
 
 function newRawCard(sourceRow: number): RawCard {
-  return { values: {}, numericSensitiveFields: new Set(), sourceRow };
+  return {
+    values: {},
+    numericSensitiveFields: new Set(),
+    hasExplicitCardNumberField: false,
+    sourceRow,
+  };
 }
 
 function setRawValue(raw: RawCard, field: CardField, value: unknown): void {
@@ -155,6 +162,33 @@ function looksLikeExpiration(value: string): boolean {
 
 function digitsOnly(value: string): string {
   return value.replace(/\D/g, '');
+}
+
+function isExplicitCardNumberLabel(value: string): boolean {
+  const normalized = normalizeHeader(value);
+  return fieldForHeader(value) === 'cardNumber'
+    && !['number', 'num', 'accountnumber'].includes(normalized);
+}
+
+function isCardRecord(raw: RawCard): boolean {
+  const cardNumber = raw.values.cardNumber ?? '';
+  const cardNumberLength = digitsOnly(cardNumber).length;
+  const hasExpiration = Boolean(
+    raw.values.expiration
+    || (raw.values.expirationMonth && raw.values.expirationYear),
+  );
+  const hasSecurityCode = Boolean(raw.values.securityCode);
+  return raw.hasExplicitCardNumberField
+    || (cardNumberLength >= 13 && cardNumberLength <= 19)
+    || (Boolean(cardNumber) && (hasExpiration || hasSecurityCode))
+    || (hasExpiration && hasSecurityCode);
+}
+
+function messageWhenNoCards(ignoredRows: number): string {
+  if (ignoredRows > 0) {
+    return `No card records detected; ${ignoredRows} unrelated row${ignoredRows === 1 ? '' : 's'} ignored.`;
+  }
+  return 'Could not detect card records. Try a CSV, TSV, TXT, or JSON file with card numbers, expiration dates, and security codes.';
 }
 
 function detectContacts(values: string[]): { email: string | null; phone: string | null } {
@@ -442,15 +476,28 @@ function parseTable(rows: unknown[][], format: string): CardStockImport | null {
   const headerFields = firstRow.map(fieldForHeader);
   const hasHeader = requiredHeaderCount(headerFields) >= 2;
   const dataRows = hasHeader ? nonemptyRows.slice(1) : nonemptyRows;
-  const cards = dataRows.map((row, index) =>
-    cardFromRaw(rawFromColumns(row, index + 1, hasHeader ? headerFields : undefined)),
-  );
+  const cards: ImportedGiftCard[] = [];
+  let ignoredRows = 0;
+  dataRows.forEach((row, index) => {
+    const raw = rawFromColumns(row, index + 1, hasHeader ? headerFields : undefined);
+    const hasCardColumnValue = hasHeader
+      ? headerFields.some((field, columnIndex) =>
+          field !== null
+          && ['cardNumber', 'expiration', 'expirationMonth', 'expirationYear', 'securityCode'].includes(field)
+          && Boolean(valueForCell(row[columnIndex])),
+        )
+      : isCardRecord(raw);
+    if (!hasCardColumnValue) {
+      ignoredRows += 1;
+      return;
+    }
+    cards.push(cardFromRaw(raw));
+  });
   return {
     format,
     cards,
-    message: cards.length
-      ? ''
-      : 'A header row was detected, but no card records were found.',
+    ignoredRows,
+    message: cards.length ? '' : messageWhenNoCards(ignoredRows),
   };
 }
 
@@ -477,15 +524,29 @@ function parseLabeledText(text: string): CardStockImport | null {
       if (!field) continue;
       if (field === 'cardNumber' && current.values.cardNumber) flush();
       current.sourceRow = lineNumber;
+      if (field === 'cardNumber' && isExplicitCardNumberLabel(match[1]!)) {
+        current.hasExplicitCardNumberField = true;
+      }
       setRawValue(current, field, match[2]!.replace(/^["']|["']$/g, ''));
     }
   }
   flush();
-  const cards = records
-    .filter((record) => record.values.cardNumber || record.values.expiration || record.values.securityCode)
-    .map(cardFromRaw);
-  if (!cards.length) return null;
-  return { format: 'Labeled text', cards, message: '' };
+  if (!records.length) return null;
+  const cards: ImportedGiftCard[] = [];
+  let ignoredRows = 0;
+  for (const record of records) {
+    if (!isCardRecord(record)) {
+      ignoredRows += 1;
+      continue;
+    }
+    cards.push(cardFromRaw(record));
+  }
+  return {
+    format: 'Labeled text',
+    cards,
+    ignoredRows,
+    message: cards.length ? '' : messageWhenNoCards(ignoredRows),
+  };
 }
 
 function parseJsonValue(value: unknown): CardStockImport | null {
