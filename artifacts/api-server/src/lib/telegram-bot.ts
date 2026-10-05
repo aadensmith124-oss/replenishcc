@@ -72,12 +72,23 @@ function webhookSecret(): string {
 
 function publicHost(): string | null {
   const vercelEnvironment = process.env.VERCEL_ENV?.trim();
+  const configuredVercelOrigin = process.env.TELEGRAM_WEBHOOK_BASE_URL?.trim();
   let configured: string | undefined;
   if (process.env.VERCEL === "1" || vercelEnvironment) {
-    if (vercelEnvironment !== "production") return null;
+    if (vercelEnvironment && vercelEnvironment !== "production") return null;
+    if (
+      !vercelEnvironment &&
+      process.env.VERCEL === "1" &&
+      !configuredVercelOrigin
+    ) {
+      return null;
+    }
     configured =
+      configuredVercelOrigin ||
       process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() ||
-      process.env.VERCEL_URL?.trim();
+      (vercelEnvironment === "production"
+        ? process.env.VERCEL_URL?.trim()
+        : undefined);
   } else {
     if (
       process.env.NODE_ENV !== "production" &&
@@ -163,7 +174,10 @@ export async function configureTelegramWebhook(): Promise<void> {
     allowed_updates: ["message"],
     drop_pending_updates: false,
   });
-  logger.info({ botUsername: identity.username }, "Telegram reward bot webhook configured.");
+  logger.info(
+    { botUsername: identity.username, host },
+    "Telegram reward bot webhook configured.",
+  );
 }
 
 function verifyStartToken(
