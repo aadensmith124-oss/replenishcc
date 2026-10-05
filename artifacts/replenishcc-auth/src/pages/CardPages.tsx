@@ -887,9 +887,23 @@ export function AdminCardInventoryPage() {
               setStockFileError('');
               if (stockFileInput.current) stockFileInput.current.value = '';
             }
-          } catch {
+          } catch (error) {
             invalidate();
-            setFeedback(`Warning: upload stopped after ${addedCount} card${addedCount === 1 ? '' : 's'} were added. You can retry; cards already in inventory will be skipped as duplicates.`);
+            let errorMessage = error instanceof Error
+              ? error.message
+              : 'The request failed without an error message.';
+            if (error && typeof error === 'object' && 'data' in error) {
+              const responseData = error.data;
+              if (
+                responseData &&
+                typeof responseData === 'object' &&
+                'error' in responseData &&
+                typeof responseData.error === 'string'
+              ) {
+                errorMessage = responseData.error;
+              }
+            }
+            setFeedback(`Warning: upload stopped after ${addedCount} card${addedCount === 1 ? '' : 's'} were added. ${errorMessage} Your card data is still in the form; retry to add any valid cards not already stored.`);
           }
         })} className="gift-form">
             <FormField control={stockForm.control} name="productId" render={({ field }) => <FormItem><FormLabel>Base</FormLabel><FormControl><select {...field} data-testid="select-admin-stock-product"><option value="">Select a base</option>{rows.map((product) => <option key={product.id} value={product.id} disabled={product.isArchived}>{product.name} · {product.isArchived ? 'archived — restore before use' : product.canReceiveStock ? `${product.availableCount}/${MAX_CARDS_PER_BASE} available` : `${MAX_CARDS_PER_BASE}/${MAX_CARDS_PER_BASE} available — excess cards will be skipped`}</option>)}</select></FormControl><FormMessage />{selectedStockProduct && <p className="gift-stock-capacity-note" aria-live="polite">{selectedRemainingCapacity.toLocaleString()} of {MAX_CARDS_PER_BASE.toLocaleString()} available-card spaces remain for this base.</p>}</FormItem>} />
