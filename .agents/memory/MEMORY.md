@@ -12,3 +12,4 @@
 - [Tailwind v4 dialog centering](tailwind-v4-dialog-centering.md) — Custom-centered Radix dialogs must clear inherited `translate`, not only override `transform`.
 - [Vercel production hosting](vercel-production-hosting.md) — Production ReplenishCC runs on Vercel; keep Replit development from taking over the live Telegram webhook.
 - [Telegram reward eligibility](telegram-reward-eligibility.md) — Keep the $1 award, rolling 24-hour account/Telegram limits, display-name check, and 10-minute code expiry unchanged.
+- [Telegram referral bonus](telegram-referral-bonus.md) — The one-time $0.50 group-join bonus is additive to the 5% deposit reward and requires server-verified membership.

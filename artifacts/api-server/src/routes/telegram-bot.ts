@@ -1,12 +1,14 @@
 import { timingSafeEqual } from "node:crypto";
 import { Router, type IRouter, type Request, type Response } from "express";
 import {
+  CreateTelegramReferralVerificationCodeResponse,
   CreateTelegramRewardCodeResponse,
   PostTelegramWebhookBody,
   PostTelegramWebhookResponse,
 } from "@workspace/api-zod";
 import {
   createTelegramRewardCode,
+  createTelegramReferralVerificationCode,
   configureTelegramWebhook,
   getExpectedTelegramWebhookSecret,
   getTelegramWebhookDiagnostics,
@@ -205,6 +207,57 @@ router.post(
     } catch {
       res.status(503).json({
         error: "The Telegram reward bot is not available right now.",
+      });
+    }
+  },
+);
+
+router.post(
+  "/telegram-referral-verification-code",
+  requireMemberPage("referrals"),
+  async (req, res): Promise<void> => {
+    res.setHeader("Cache-Control", "no-store");
+    const member = await getCurrentUser(req);
+    if (!member) {
+      res.status(401).json({
+        error: "Sign in to create a Telegram referral verification code.",
+      });
+      return;
+    }
+
+    try {
+      const result = await createTelegramReferralVerificationCode(member.id);
+      if (result.kind === "not-referred") {
+        res.status(409).json({
+          error: "This account was not created through a referral.",
+        });
+        return;
+      }
+      if (result.kind === "already-earned") {
+        res.status(409).json({
+          error: "This account has already earned its Telegram group bonus.",
+        });
+        return;
+      }
+      if (result.kind === "group-unavailable") {
+        res.status(503).json({
+          error: "The Telegram referral group is not configured yet.",
+        });
+        return;
+      }
+
+      res.json(
+        CreateTelegramReferralVerificationCodeResponse.parse({
+          code: result.code,
+          botUsername: result.botUsername,
+          expiresAt: result.expiresAt,
+          amountCents: 50,
+        }),
+      );
+    } catch (error) {
+      req.log.error({ error }, "Telegram referral code creation failed.");
+      res.status(503).json({
+        error: "The Telegram bot is not available right now.",
       });
     }
   },

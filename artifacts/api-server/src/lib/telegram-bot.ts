@@ -13,6 +13,7 @@ import type {
 import { logger } from "./logger";
 
 const REWARD_AMOUNT_CENTS = 100;
+const REFERRAL_BONUS_AMOUNT_CENTS = 50;
 const REWARD_TRIGGER = "ReplenishCC.xyz";
 const REWARD_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const LINK_LIFETIME_SECONDS = 10 * 60;
@@ -20,6 +21,7 @@ const WEBHOOK_PATH = "/api/telegram/webhook";
 const TELEGRAM_LINK_PAGE_URL = "https://www.replenishcc.xyz/link";
 const WEBHOOK_SECRET_LABEL = "replenishcc-telegram-webhook-v1";
 const LINK_SECRET_LABEL = "replenishcc-telegram-reward-link-v1";
+const REFERRAL_CODE_SECRET_LABEL = "replenishcc-telegram-referral-code-v1";
 
 type TelegramApiResponse<T> = {
   ok: boolean;
@@ -29,6 +31,11 @@ type TelegramApiResponse<T> = {
 
 type TelegramBotIdentity = {
   username?: string;
+};
+
+type TelegramChatMember = {
+  status: string;
+  is_member?: boolean;
 };
 
 type TelegramWebhookInfo = {
@@ -66,6 +73,7 @@ async function telegramApi<T>(
   method:
     | "getMe"
     | "getWebhookInfo"
+    | "getChatMember"
     | "setWebhook"
     | "setMyCommands"
     | "answerCallbackQuery"
@@ -224,6 +232,62 @@ export async function createTelegramRewardCode(userId: string): Promise<{
   };
 }
 
+export async function createTelegramReferralVerificationCode(
+  userId: string,
+): Promise<
+  | {
+      kind: "created";
+      code: string;
+      botUsername: string;
+      expiresAt: Date;
+    }
+  | { kind: "not-referred" }
+  | { kind: "already-earned" }
+  | { kind: "group-unavailable" }
+> {
+  const [member] = await db
+    .select({ referredById: usersTable.referredById })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId))
+    .limit(1);
+  if (!member?.referredById) return { kind: "not-referred" };
+
+  const requestId = telegramReferralBonusRequestId(userId);
+  const [existingBonus] = await db
+    .select({ id: accountLedgerTable.id })
+    .from(accountLedgerTable)
+    .where(eq(accountLedgerTable.adminRequestId, requestId))
+    .limit(1);
+  if (existingBonus) return { kind: "already-earned" };
+  if (telegramReferralGroupId() === null) {
+    return { kind: "group-unavailable" };
+  }
+
+  const identity = await telegramApi<TelegramBotIdentity>("getMe");
+  if (!identity.username || !/^[A-Za-z0-9_]{5,32}$/.test(identity.username)) {
+    throw new Error("Telegram bot identity is unavailable.");
+  }
+  botUsername = identity.username;
+
+  const expiresAtSeconds = Math.floor(Date.now() / 1000) + LINK_LIFETIME_SECONDS;
+  const payload = Buffer.alloc(20);
+  Buffer.from(userId.replaceAll("-", ""), "hex").copy(payload, 0, 0, 16);
+  payload.writeUInt32BE(expiresAtSeconds, 16);
+  const signature = createHmac("sha256", sessionSecret())
+    .update(REFERRAL_CODE_SECRET_LABEL)
+    .update(payload)
+    .digest()
+    .subarray(0, 12);
+  const code = Buffer.concat([payload, signature]).toString("base64url");
+
+  return {
+    kind: "created",
+    code,
+    botUsername: identity.username,
+    expiresAt: new Date(expiresAtSeconds * 1000),
+  };
+}
+
 export async function configureTelegramWebhook(): Promise<string | null> {
   if (!process.env.TELEGRAM_BOT_TOKEN) {
     logger.warn("Telegram reward bot is disabled because its token is not configured.");
@@ -254,6 +318,8 @@ export async function configureTelegramWebhook(): Promise<string | null> {
     commands: [
       { command: "start", description: "Show reward instructions" },
       { command: "link", description: "Get a secure $1 reward code" },
+      { command: "verify", description: "Verify referral group membership" },
+      { command: "groupid", description: "Show this group ID to administrators" },
       { command: "help", description: "Learn how the Telegram reward works" },
     ],
   });
@@ -299,9 +365,60 @@ function verifyRewardCode(
   return { userId, expiresAtSeconds };
 }
 
+function verifyReferralVerificationCode(token: string): { userId: string } | null {
+  if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
+  const decoded = Buffer.from(token, "base64url");
+  if (decoded.length !== 32 || decoded.toString("base64url") !== token) {
+    return null;
+  }
+
+  const payload = decoded.subarray(0, 20);
+  const signature = decoded.subarray(20);
+  const expected = createHmac("sha256", sessionSecret())
+    .update(REFERRAL_CODE_SECRET_LABEL)
+    .update(payload)
+    .digest()
+    .subarray(0, 12);
+  if (!timingSafeEqual(signature, expected)) return null;
+  if (payload.readUInt32BE(16) <= Math.floor(Date.now() / 1000)) return null;
+
+  const userIdHex = payload.subarray(0, 16).toString("hex");
+  const userId = [
+    userIdHex.slice(0, 8),
+    userIdHex.slice(8, 12),
+    userIdHex.slice(12, 16),
+    userIdHex.slice(16, 20),
+    userIdHex.slice(20),
+  ].join("-");
+  return { userId };
+}
+
+function telegramReferralGroupId(): number | null {
+  const value = process.env.TELEGRAM_REFERRAL_GROUP_ID?.trim();
+  if (!value || !/^-?\d+$/.test(value)) return null;
+  const groupId = Number(value);
+  return Number.isSafeInteger(groupId) && groupId < 0 ? groupId : null;
+}
+
 function rewardRequestId(telegramUserId: number, updateId: number): string {
   const digest = createHash("sha256")
     .update(`replenishcc:telegram-reward:v2:${telegramUserId}:${updateId}`)
+    .digest();
+  digest[6] = (digest[6]! & 0x0f) | 0x50;
+  digest[8] = (digest[8]! & 0x3f) | 0x80;
+  const hex = digest.subarray(0, 16).toString("hex");
+  return [
+    hex.slice(0, 8),
+    hex.slice(8, 12),
+    hex.slice(12, 16),
+    hex.slice(16, 20),
+    hex.slice(20),
+  ].join("-");
+}
+
+export function telegramReferralBonusRequestId(referredUserId: string): string {
+  const digest = createHash("sha256")
+    .update(`replenishcc:telegram-referral-bonus:v1:${referredUserId}`)
     .digest();
   digest[6] = (digest[6]! & 0x0f) | 0x50;
   digest[8] = (digest[8]! & 0x3f) | 0x80;
@@ -346,6 +463,19 @@ function rewardMenuKeyboard(): TelegramInlineKeyboardMarkup {
     inline_keyboard: [
       [{ text: "Generate a reward code", url: TELEGRAM_LINK_PAGE_URL }],
       [{ text: "How to claim", callback_data: "reward_help" }],
+    ],
+  };
+}
+
+function referralBonusKeyboard(): TelegramInlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [
+        {
+          text: "Open referral page",
+          url: "https://www.replenishcc.xyz/referrals",
+        },
+      ],
     ],
   };
 }
@@ -467,6 +597,77 @@ async function awardReward(
   return result;
 }
 
+async function checkTelegramReferralGroupMembership(
+  telegramUserId: number,
+): Promise<"member" | "not-member" | "group-unavailable"> {
+  const groupId = telegramReferralGroupId();
+  if (groupId === null) return "group-unavailable";
+
+  const membership = await telegramApi<TelegramChatMember>("getChatMember", {
+    chat_id: groupId,
+    user_id: telegramUserId,
+  });
+  return membership.status === "creator" ||
+    membership.status === "administrator" ||
+    membership.status === "member" ||
+    (membership.status === "restricted" && membership.is_member === true)
+    ? "member"
+    : "not-member";
+}
+
+async function awardTelegramReferralBonus(
+  referredUserId: string,
+): Promise<
+  | { kind: "credited"; balanceCents: number }
+  | { kind: "already-earned" }
+  | { kind: "not-referred" }
+  | { kind: "account-missing" }
+> {
+  const requestId = telegramReferralBonusRequestId(referredUserId);
+  return db.transaction(async (tx) => {
+    const [referredMember] = await tx
+      .select({
+        id: usersTable.id,
+        referredById: usersTable.referredById,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.id, referredUserId))
+      .for("update")
+      .limit(1);
+    if (!referredMember) return { kind: "account-missing" as const };
+    if (!referredMember.referredById) return { kind: "not-referred" as const };
+
+    const [existingBonus] = await tx
+      .select({ id: accountLedgerTable.id })
+      .from(accountLedgerTable)
+      .where(eq(accountLedgerTable.adminRequestId, requestId))
+      .limit(1);
+    if (existingBonus) return { kind: "already-earned" as const };
+
+    const [entry] = await tx
+      .insert(accountLedgerTable)
+      .values({
+        userId: referredMember.referredById,
+        adminRequestId: requestId,
+        reason: "Telegram group-join referral bonus",
+        entryType: "telegram_referral_reward",
+        amountCents: REFERRAL_BONUS_AMOUNT_CENTS,
+      })
+      .onConflictDoNothing({ target: accountLedgerTable.adminRequestId })
+      .returning({ id: accountLedgerTable.id });
+    if (!entry) return { kind: "already-earned" as const };
+
+    const [balanceRow] = await tx
+      .select({ balanceCents: sum(accountLedgerTable.amountCents) })
+      .from(accountLedgerTable)
+      .where(eq(accountLedgerTable.userId, referredMember.referredById));
+    return {
+      kind: "credited" as const,
+      balanceCents: Number(balanceRow?.balanceCents ?? 0),
+    };
+  });
+}
+
 function formatUtcDateTime(date: Date): string {
   return new Intl.DateTimeFormat("en-US", {
     timeZone: "UTC",
@@ -542,6 +743,85 @@ async function handleRewardCode(
   );
 }
 
+async function handleReferralVerificationCode(
+  message: TelegramWebhookMessage,
+  code: string,
+): Promise<void> {
+  const chatId = message.chat.id;
+  const telegramUser = message.from;
+  if (!telegramUser || telegramUser.is_bot) return;
+
+  const claim = verifyReferralVerificationCode(code);
+  if (!claim) {
+    await sendMessage(
+      chatId,
+      "⚠️ This verification code is invalid or expired. Sign in at ReplenishCC.xyz/referrals and create a new code.",
+      referralBonusKeyboard(),
+    );
+    return;
+  }
+
+  let membership: "member" | "not-member" | "group-unavailable";
+  try {
+    membership = await checkTelegramReferralGroupMembership(telegramUser.id);
+  } catch {
+    await sendMessage(
+      chatId,
+      "⚠️ Telegram group membership could not be checked right now. Please try again later.",
+      referralBonusKeyboard(),
+    );
+    return;
+  }
+  if (membership === "group-unavailable") {
+    await sendMessage(
+      chatId,
+      "⚠️ The Telegram referral group is not configured yet. Please try again later.",
+      referralBonusKeyboard(),
+    );
+    return;
+  }
+  if (membership === "not-member") {
+    await sendMessage(
+      chatId,
+      "Join the ReplenishCC Telegram group first, then send /verify with a fresh code.",
+      referralBonusKeyboard(),
+    );
+    return;
+  }
+
+  const result = await awardTelegramReferralBonus(claim.userId);
+  if (result.kind === "account-missing") {
+    await sendMessage(
+      chatId,
+      "⚠️ The ReplenishCC account for this code could not be found.",
+      referralBonusKeyboard(),
+    );
+    return;
+  }
+  if (result.kind === "not-referred") {
+    await sendMessage(
+      chatId,
+      "This account was not created through a referral, so it cannot earn the group-join bonus.",
+      referralBonusKeyboard(),
+    );
+    return;
+  }
+  if (result.kind === "already-earned") {
+    await sendMessage(
+      chatId,
+      "ℹ️ This referred ReplenishCC account has already earned its one-time Telegram group bonus.",
+      referralBonusKeyboard(),
+    );
+    return;
+  }
+
+  await sendMessage(
+    chatId,
+    `🎉 $0.50 has been added to your referrer's ReplenishCC account. Their new balance is $${(result.balanceCents / 100).toFixed(2)}.`,
+    referralBonusKeyboard(),
+  );
+}
+
 function commandArgument(
   message: TelegramWebhookMessage,
   command: string,
@@ -552,11 +832,51 @@ function commandArgument(
     ?.trim() || null;
 }
 
+async function handleGroupIdCommand(message: TelegramWebhookMessage): Promise<void> {
+  const sender = message.from;
+  if (!sender || sender.is_bot) return;
+
+  let member: TelegramChatMember;
+  try {
+    member = await telegramApi<TelegramChatMember>("getChatMember", {
+      chat_id: message.chat.id,
+      user_id: sender.id,
+    });
+  } catch {
+    await sendMessage(
+      message.chat.id,
+      "I could not check administrator permissions. Make sure this bot is an administrator, then try again.",
+    );
+    return;
+  }
+
+  if (member.status !== "creator" && member.status !== "administrator") {
+    await sendMessage(
+      message.chat.id,
+      "Only group administrators can request the numeric group ID.",
+    );
+    return;
+  }
+
+  await sendMessage(
+    message.chat.id,
+    `This group's numeric Telegram ID is ${message.chat.id}. Set TELEGRAM_REFERRAL_GROUP_ID to this value in the production environment.`,
+  );
+}
+
 async function sendRewardInstructions(chatId: number): Promise<void> {
   await sendMessage(
     chatId,
     `🎁 Claim $1 by signing in at ReplenishCC.xyz/link, creating a secure code, then sending the code here. Your Telegram display name must contain ${REWARD_TRIGGER}. Each ReplenishCC account and Telegram account can claim once every rolling 24 hours; codes expire after 10 minutes.`,
     rewardMenuKeyboard(),
+  );
+}
+
+async function sendReferralVerificationInstructions(chatId: number): Promise<void> {
+  await sendMessage(
+    chatId,
+    "🎁 Referred members can earn their referrer a one-time $0.50 bonus. Sign in at ReplenishCC.xyz/referrals, join the linked Telegram group, create a verification code, then send /verify followed by that code here. Codes expire after 10 minutes.",
+    referralBonusKeyboard(),
   );
 }
 
@@ -582,9 +902,17 @@ export async function handleTelegramUpdate(
   }
 
   const message = update.message;
-  if (!message || message.chat.type !== "private") return;
+  if (!message) return;
   const text = message.text?.trim();
   if (!text) return;
+
+  if (message.chat.type === "group" || message.chat.type === "supergroup") {
+    if (/^\/groupid(?:@[A-Za-z0-9_]+)?(?:\s|$)/.test(text)) {
+      await handleGroupIdCommand(message);
+    }
+    return;
+  }
+  if (message.chat.type !== "private") return;
 
   if (/^\/start(?:@[A-Za-z0-9_]+)?(?:\s|$)/.test(text)) {
     const code = commandArgument(message, "start");
@@ -606,6 +934,15 @@ export async function handleTelegramUpdate(
   }
   if (/^\/help(?:@[A-Za-z0-9_]+)?(?:\s|$)/.test(text)) {
     await sendRewardInstructions(message.chat.id);
+    return;
+  }
+  if (/^\/verify(?:@[A-Za-z0-9_]+)?(?:\s|$)/.test(text)) {
+    const code = commandArgument(message, "verify");
+    if (code) {
+      await handleReferralVerificationCode(message, code);
+    } else {
+      await sendReferralVerificationInstructions(message.chat.id);
+    }
     return;
   }
   if (/^[A-Za-z0-9_-]{43}$/.test(text)) {

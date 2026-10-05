@@ -15,6 +15,7 @@ import {
 } from '@workspace/api-client-react';
 import { Link } from 'wouter';
 import { MemberShell } from '../components/MemberShell';
+import { TelegramReferralBonusCard } from './TelegramReferralBonusCard';
 
 function errorText(error: unknown): string {
   if (error && typeof error === 'object') {
@@ -373,21 +374,23 @@ export function ReferralsPage() {
           {copied && <div className={`copy-feedback referral-copy-feedback${copied.startsWith('Copy failed') ? ' copy-failed' : ''}`} role={copied.startsWith('Copy failed') ? 'alert' : 'status'} aria-live="polite">{copied}</div>}
         </div>
       </section>
+      {summary.data.telegramBonusStatus !== 'not_referred' && <TelegramReferralBonusCard status={summary.data.telegramBonusStatus} />}
       <section className="referral-results-section" aria-labelledby="referral-results-title">
         <div className="referral-section-heading"><div><div className="panel-overline">Your account record</div><h2 id="referral-results-title">Referral results</h2></div><button type="button" className="quiet-button referral-refresh" onClick={() => void summary.refetch()} disabled={summary.isFetching} aria-label="Refresh referral results" data-testid="button-refresh-referrals"><RefreshCw className={summary.isFetching ? 'spin' : ''} aria-hidden="true" /> Refresh</button></div>
         <section className="referral-stats" aria-label="Verified referral results" aria-busy={summary.isFetching}>
           <Metric label="Total referrals" value={summary.data.totalReferrals} detail="Accounts linked to your code" />
           <Metric label="Paid referrals" value={summary.data.paidReferrals} detail="Have a confirmed qualifying deposit" />
           <Metric label="Pending referrals" value={summary.data.pendingReferrals} detail="Have not qualified yet" />
-          <Metric label="Rewards earned" value={dollars(summary.data.totalRewardsCents)} detail="Referral credits recorded" emphasis />
+          <Metric label="Rewards earned" value={dollars(summary.data.totalRewardsCents)} detail="Deposit and Telegram referral credits" emphasis />
         </section>
       </section>
       <section className="finance-panel referral-terms" aria-labelledby="referral-terms-title">
         <div className="referral-terms-symbol"><ShieldCheck aria-hidden="true" /></div>
-        <div className="referral-terms-copy"><div className="panel-overline">The reward rules</div><h2 id="referral-terms-title">{formattedRewardPercent}% when a deposit qualifies.</h2><p>A referred member’s deposit must be at least {dollars(summary.data.minimumDepositCents)} and confirmed before it qualifies. Your reward is added to your account balance automatically after confirmation. Processing and account updates may take time.</p></div>
+        <div className="referral-terms-copy"><div className="panel-overline">The reward rules</div><h2 id="referral-terms-title">{formattedRewardPercent}% when a deposit qualifies.</h2><p>A referred member’s deposit must be at least {dollars(summary.data.minimumDepositCents)} and confirmed before it qualifies. Your reward is added to your account balance automatically after confirmation. Separately, a referred member can earn you a one-time $0.50 credit by verifying membership in the Telegram group. Processing and account updates may take time.</p></div>
         <div className="referral-totals">
           <div><span>Confirmed referred deposits</span><strong>{dollars(summary.data.totalDepositsCents)}</strong><small>Includes all confirmed deposits from referred members, whether or not each meets the reward threshold.</small></div>
-          <div><span>Referral rewards recorded</span><strong>{dollars(summary.data.totalRewardsCents)}</strong></div>
+          <div><span>Deposit referral rewards</span><strong>{dollars(summary.data.totalRewardsCents - summary.data.telegramRewardsCents)}</strong></div>
+          <div><span>Telegram group bonuses</span><strong>{dollars(summary.data.telegramRewardsCents)}</strong></div>
         </div>
       </section>
     </>}

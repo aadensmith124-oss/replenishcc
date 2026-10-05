@@ -39,6 +39,7 @@ import {
   isMemberPageEnabled,
   requireMemberPage,
 } from "../lib/member-page-visibility";
+import { telegramReferralBonusRequestId } from "../lib/telegram-bot";
 
 const router: IRouter = Router();
 const MAXIMUM_AMOUNT_CENTS = 1_000_000;
@@ -722,8 +723,15 @@ router.get("/referrals/me", requireMemberPage("referrals"), async (req, res): Pr
   }
 
   const referralCode = await ensureReferralCode(user.id, user.referralCode);
-  const [referralCount, qualifiedReferrals, confirmedDeposits, rewards] =
-    await Promise.all([
+  const [
+    referralCount,
+    qualifiedReferrals,
+    confirmedDeposits,
+    rewards,
+    telegramRewards,
+    currentMember,
+    currentMemberBonus,
+  ] = await Promise.all([
       db
         .select({ total: count() })
         .from(usersTable)
@@ -758,9 +766,38 @@ router.get("/referrals/me", requireMemberPage("referrals"), async (req, res): Pr
             eq(accountLedgerTable.entryType, "referral_reward"),
           ),
         ),
+      db
+        .select({ total: sum(accountLedgerTable.amountCents) })
+        .from(accountLedgerTable)
+        .where(
+          and(
+            eq(accountLedgerTable.userId, user.id),
+            eq(accountLedgerTable.entryType, "telegram_referral_reward"),
+          ),
+        ),
+      db
+        .select({ referredById: usersTable.referredById })
+        .from(usersTable)
+        .where(eq(usersTable.id, user.id))
+        .limit(1),
+      db
+        .select({ id: accountLedgerTable.id })
+        .from(accountLedgerTable)
+        .where(
+          and(
+            eq(
+              accountLedgerTable.adminRequestId,
+              telegramReferralBonusRequestId(user.id),
+            ),
+            eq(accountLedgerTable.entryType, "telegram_referral_reward"),
+          ),
+        )
+        .limit(1),
     ]);
 
   const totalReferrals = referralCount[0]?.total ?? 0;
+  const depositRewardsCents = Number(rewards[0]?.total ?? 0);
+  const telegramRewardsCents = Number(telegramRewards[0]?.total ?? 0);
 
   res.json(
     GetMyReferralSummaryResponse.parse({
@@ -768,10 +805,16 @@ router.get("/referrals/me", requireMemberPage("referrals"), async (req, res): Pr
       totalReferrals,
       paidReferrals: qualifiedReferrals.length,
       pendingReferrals: Math.max(0, totalReferrals - qualifiedReferrals.length),
-      totalRewardsCents: Number(rewards[0]?.total ?? 0),
+      totalRewardsCents: depositRewardsCents + telegramRewardsCents,
+      telegramRewardsCents,
       totalDepositsCents: Number(confirmedDeposits[0]?.total ?? 0),
       minimumDepositCents: REFERRAL_MINIMUM_AMOUNT_CENTS,
       rewardPercent: REFERRAL_REWARD_PERCENT,
+      telegramBonusStatus: !currentMember[0]?.referredById
+        ? "not_referred"
+        : currentMemberBonus.length
+          ? "earned"
+          : "eligible",
     }),
   );
 });
