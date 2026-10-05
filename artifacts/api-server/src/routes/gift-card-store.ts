@@ -1352,8 +1352,6 @@ router.post(
       location: cardLocations[index]!,
       prefix: getGiftCardBinMetadataPrefix(credential.cardNumber),
     }));
-    const binMetadataStorageAvailable = await supportsPerCardBinMetadata();
-    const publicAddressStorageAvailable = await supportsPerCardPublicAddress();
     let stockResult:
       | { kind: "missing" }
       | { kind: "archived" }
@@ -1365,9 +1363,43 @@ router.post(
           capacitySkippedCount: number;
           redemptionZipApplied: boolean;
           locationMetadataApplied: boolean;
+          binMetadataStorageAvailable: boolean;
+          publicAddressStorageAvailable: boolean;
           inventoryItems: Array<{ id: string; prefix: string }>;
         };
     stockResult = await db.transaction(async (tx) => {
+        // Probe on the transaction connection so this matches the unqualified
+        // inventory relation resolution used by the INSERT below.
+        const inventorySchemaResult = await tx.execute(sql`
+          SELECT
+            COUNT(*) FILTER (
+              WHERE attname IN ('card_type', 'issuer', 'brand')
+            )::integer AS bin_metadata_count,
+            COUNT(*) FILTER (
+              WHERE attname = 'public_address'
+            )::integer AS public_address_count
+          FROM pg_catalog.pg_attribute
+          WHERE attrelid = pg_catalog.to_regclass('gift_card_inventory')
+            AND attnum > 0
+            AND NOT attisdropped
+            AND attname IN (
+              'card_type',
+              'issuer',
+              'brand',
+              'public_address'
+            )
+        `);
+        const inventorySchema = inventorySchemaResult.rows[0] as
+          | {
+              bin_metadata_count?: number | string;
+              public_address_count?: number | string;
+            }
+          | undefined;
+        const binMetadataStorageAvailable =
+          Number(inventorySchema?.bin_metadata_count ?? 0) === 3;
+        const publicAddressStorageAvailable =
+          Number(inventorySchema?.public_address_count ?? 0) === 1;
+
         const [product] = await tx
           .select({
             id: giftCardProductsTable.id,
@@ -1481,6 +1513,8 @@ router.post(
           availableCount: Number(availableStock?.count ?? 0),
           duplicateCount,
           capacitySkippedCount,
+          binMetadataStorageAvailable,
+          publicAddressStorageAvailable,
           redemptionZipApplied: insertedRows.some(
             (row) => row.location.regionZip !== null,
           ),
@@ -1527,7 +1561,7 @@ router.post(
       ids.push(item.id);
       cardsByPrefix.set(item.prefix, ids);
     }
-    const lookups = binMetadataStorageAvailable
+    const lookups = stockResult.binMetadataStorageAvailable
       ? await lookupBinMetadataForPrefixes([...cardsByPrefix.keys()])
       : new Map<string, BinLookupResult>();
     let binMetadataCardsUpdated = 0;
