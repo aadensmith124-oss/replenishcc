@@ -128,10 +128,24 @@ function publicHost(): string | null {
     if (url.protocol !== "https:" || url.pathname !== "/" || url.search || url.hash) {
       return null;
     }
+    if (
+      (process.env.VERCEL === "1" || vercelEnvironment) &&
+      (url.hostname === "replit.dev" ||
+        url.hostname.endsWith(".replit.dev") ||
+        url.hostname === "replit.app" ||
+        url.hostname.endsWith(".replit.app"))
+    ) {
+      return null;
+    }
     return url.host;
   } catch {
     return null;
   }
+}
+
+export function getTelegramWebhookTargetUrl(): string | null {
+  const host = publicHost();
+  return host ? `https://${host}${WEBHOOK_PATH}` : null;
 }
 
 export function getExpectedTelegramWebhookSecret(): string {
@@ -140,6 +154,7 @@ export function getExpectedTelegramWebhookSecret(): string {
 
 export async function getTelegramWebhookDiagnostics(): Promise<{
   botUsername: string | null;
+  targetWebhookUrl: string | null;
   webhookUrl: string;
   pendingUpdateCount: number;
   ipAddress: string | null;
@@ -151,6 +166,7 @@ export async function getTelegramWebhookDiagnostics(): Promise<{
 
   return {
     botUsername: identity.username ?? null,
+    targetWebhookUrl: getTelegramWebhookTargetUrl(),
     webhookUrl: webhook.url,
     pendingUpdateCount: webhook.pending_update_count,
     ipAddress: webhook.ip_address ?? null,
@@ -190,10 +206,10 @@ export async function createTelegramRewardLink(userId: string): Promise<{
   };
 }
 
-export async function configureTelegramWebhook(): Promise<void> {
+export async function configureTelegramWebhook(): Promise<string | null> {
   if (!process.env.TELEGRAM_BOT_TOKEN) {
     logger.warn("Telegram reward bot is disabled because its token is not configured.");
-    return;
+    return null;
   }
 
   const host = publicHost();
@@ -201,7 +217,7 @@ export async function configureTelegramWebhook(): Promise<void> {
     logger.warn(
       "Telegram webhook was not configured because this runtime is not an eligible production environment or its domain is unavailable.",
     );
-    return;
+    return null;
   }
 
   const identity = await telegramApi<TelegramBotIdentity>("getMe");
@@ -220,6 +236,7 @@ export async function configureTelegramWebhook(): Promise<void> {
     { botUsername: identity.username, host },
     "Telegram reward bot webhook configured.",
   );
+  return host;
 }
 
 function verifyStartToken(
