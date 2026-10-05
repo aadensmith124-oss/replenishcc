@@ -79,6 +79,39 @@ async function supportsPerCardBinMetadata(): Promise<boolean> {
   }
 }
 
+let perCardPublicAddressSupportCache: {
+  supported: boolean;
+  checkedAt: number;
+} | null = null;
+
+async function supportsPerCardPublicAddress(): Promise<boolean> {
+  if (
+    perCardPublicAddressSupportCache &&
+    Date.now() - perCardPublicAddressSupportCache.checkedAt < 30_000
+  ) {
+    return perCardPublicAddressSupportCache.supported;
+  }
+  try {
+    const result = await db.execute(sql`
+      SELECT COUNT(*)::integer AS count
+      FROM information_schema.columns
+      WHERE table_schema = current_schema()
+        AND table_name = 'gift_card_inventory'
+        AND column_name = 'public_address'
+    `);
+    const row = result.rows[0] as { count?: number | string } | undefined;
+    const supported = Number(row?.count ?? 0) === 1;
+    perCardPublicAddressSupportCache = { supported, checkedAt: Date.now() };
+    return supported;
+  } catch {
+    perCardPublicAddressSupportCache = {
+      supported: false,
+      checkedAt: Date.now(),
+    };
+    return false;
+  }
+}
+
 async function listProducts({
   includeStockEligibility = false,
   includeArchived = false,
@@ -455,6 +488,7 @@ router.get("/orders/gift-cards", requireMemberPage("myCardOrders"), async (req, 
 
   const orderIds = orders.map((order) => order.id);
   const hasPerCardMetadata = await supportsPerCardBinMetadata();
+  const hasPerCardPublicAddress = await supportsPerCardPublicAddress();
   const inventory = orderIds.length
     ? await db
         .select({
@@ -464,7 +498,9 @@ router.get("/orders/gift-cards", requireMemberPage("myCardOrders"), async (req, 
           credentialCiphertext: giftCardInventoryTable.credentialCiphertext,
           credentialIv: giftCardInventoryTable.credentialIv,
           credentialTag: giftCardInventoryTable.credentialTag,
-          publicAddress: giftCardInventoryTable.publicAddress,
+          publicAddress: hasPerCardPublicAddress
+            ? giftCardInventoryTable.publicAddress
+            : sql<string | null>`NULL`,
           publicCity: giftCardInventoryTable.publicCity,
           publicState: giftCardInventoryTable.publicState,
           publicRegionZip: giftCardInventoryTable.publicRegionZip,
@@ -553,6 +589,7 @@ router.post("/orders/gift-cards", requireMemberPage("buyCards"), async (req, res
   }
 
   const hasPerCardMetadata = await supportsPerCardBinMetadata();
+  const hasPerCardPublicAddress = await supportsPerCardPublicAddress();
   const result = await db.transaction(async (tx) => {
     await tx
       .select({ id: usersTable.id })
@@ -599,7 +636,9 @@ router.post("/orders/gift-cards", requireMemberPage("buyCards"), async (req, res
         credentialCiphertext: giftCardInventoryTable.credentialCiphertext,
         credentialIv: giftCardInventoryTable.credentialIv,
         credentialTag: giftCardInventoryTable.credentialTag,
-        publicAddress: giftCardInventoryTable.publicAddress,
+        publicAddress: hasPerCardPublicAddress
+          ? giftCardInventoryTable.publicAddress
+          : sql<string | null>`NULL`,
         publicCity: giftCardInventoryTable.publicCity,
         publicState: giftCardInventoryTable.publicState,
         publicRegionZip: giftCardInventoryTable.publicRegionZip,
@@ -1312,6 +1351,7 @@ router.post(
       prefix: getGiftCardBinMetadataPrefix(credential.cardNumber),
     }));
     const binMetadataStorageAvailable = await supportsPerCardBinMetadata();
+    const publicAddressStorageAvailable = await supportsPerCardPublicAddress();
     let stockResult:
       | { kind: "missing" }
       | { kind: "archived" }
@@ -1390,7 +1430,9 @@ router.post(
           productId: product.id,
           hasEmail: Boolean(credential.email),
           hasPhone: Boolean(credential.phone),
-          publicAddress: location.address ?? product.address,
+          ...(publicAddressStorageAvailable
+            ? { publicAddress: location.address ?? product.address }
+            : {}),
           publicCity: location.city ?? product.city,
           publicState: location.state ?? product.state,
           publicRegionZip: location.regionZip ?? product.regionZip,
@@ -1443,7 +1485,7 @@ router.post(
           locationMetadataApplied: insertedRows.some(
             (row) =>
               Boolean(
-                row.location.address ||
+                (publicAddressStorageAvailable && row.location.address) ||
                   row.location.state ||
                   row.location.city,
               ),
