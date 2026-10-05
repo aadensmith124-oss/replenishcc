@@ -1412,7 +1412,7 @@ paths:
               $ref: "#/components/schemas/AddGiftCardStockInput"
       responses:
         "200":
-          description: All valid gift cards in the batch added to the base
+          description: Valid gift cards are added; duplicates and cards over the base capacity are skipped and counted.
           content:
             application/json:
               schema:
@@ -2512,12 +2512,14 @@ components:
       properties:
         addedCount: { type: integer }
         availableCount: { type: integer }
+        duplicateCount: { type: integer }
+        capacitySkippedCount: { type: integer }
         binMetadataApplied: { type: boolean }
         binMetadataCardsUpdated: { type: integer }
         binMetadataPrefixesLookedUp: { type: integer }
         redemptionZipApplied: { type: boolean }
         locationMetadataApplied: { type: boolean }
-      required: [addedCount, availableCount, binMetadataApplied, binMetadataCardsUpdated, binMetadataPrefixesLookedUp, redemptionZipApplied, locationMetadataApplied]
+      required: [addedCount, availableCount, duplicateCount, capacitySkippedCount, binMetadataApplied, binMetadataCardsUpdated, binMetadataPrefixesLookedUp, redemptionZipApplied, locationMetadataApplied]
     RefreshGiftCardBinMetadataResponse:
       type: object
       properties:

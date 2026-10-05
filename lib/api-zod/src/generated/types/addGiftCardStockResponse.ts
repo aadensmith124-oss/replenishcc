@@ -9,6 +9,8 @@
 export interface AddGiftCardStockResponse {
   addedCount: number;
   availableCount: number;
+  duplicateCount: number;
+  capacitySkippedCount: number;
   binMetadataApplied: boolean;
   binMetadataCardsUpdated: number;
   binMetadataPrefixesLookedUp: number;

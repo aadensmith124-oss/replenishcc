@@ -1921,6 +1921,8 @@ export const AddAdminGiftCardStockBody = zod.object({
 export const AddAdminGiftCardStockResponse = zod.object({
   "addedCount": zod.number().int(),
   "availableCount": zod.number().int(),
+  "duplicateCount": zod.number().int(),
+  "capacitySkippedCount": zod.number().int(),
   "binMetadataApplied": zod.boolean(),
   "binMetadataCardsUpdated": zod.number().int(),
   "binMetadataPrefixesLookedUp": zod.number().int(),
