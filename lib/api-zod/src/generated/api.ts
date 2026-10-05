@@ -180,6 +180,7 @@ export const ChangeAuthPasswordResponse = zod.object({
 
 
 /**
+ * Each ReplenishCC account and Telegram account may claim the $1 reward once per rolling 24 hours. The generated link expires after 10 minutes.
  * @summary Create a short-lived Telegram reward link for the signed-in member
  */
 export const CreateTelegramRewardLinkResponse = zod.object({
