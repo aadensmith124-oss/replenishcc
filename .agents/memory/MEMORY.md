@@ -10,3 +10,4 @@
 - [TypeScript build-info cache](typescript-build-cache.md) — After dependency changes, rule out stale build info before editing source to fix contradictory type errors.
 - [Patch application verification](patch-application-verification.md) — Verify intended symbols and diffs after multi-hunk patches; success output alone is not enough.
 - [Tailwind v4 dialog centering](tailwind-v4-dialog-centering.md) — Custom-centered Radix dialogs must clear inherited `translate`, not only override `transform`.
+- [Vercel production hosting](vercel-production-hosting.md) — Production ReplenishCC runs on Vercel; keep Replit development from taking over the live Telegram webhook.

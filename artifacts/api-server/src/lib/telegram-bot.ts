@@ -74,12 +74,16 @@ function publicHost(): string | null {
   const vercelEnvironment = process.env.VERCEL_ENV?.trim();
   const configuredVercelOrigin = process.env.TELEGRAM_WEBHOOK_BASE_URL?.trim();
   let configured: string | undefined;
-  if (process.env.VERCEL === "1" || vercelEnvironment) {
+  if (
+    process.env.VERCEL === "1" ||
+    vercelEnvironment ||
+    configuredVercelOrigin
+  ) {
     if (vercelEnvironment && vercelEnvironment !== "production") return null;
     if (
       !vercelEnvironment &&
-      process.env.VERCEL === "1" &&
-      !configuredVercelOrigin
+      process.env.NODE_ENV !== "production" &&
+      process.env.TELEGRAM_ALLOW_DEV_WEBHOOK !== "true"
     ) {
       return null;
     }
