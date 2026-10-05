@@ -437,7 +437,7 @@ async function handleStartMessage(
   if (!token) {
     await sendMessage(
       chatId,
-      "To claim the $1 ReplenishCC reward (available once every 24 hours), sign in and create a Telegram reward link from Account management.",
+      "🎁 To claim the $1 ReplenishCC reward (available once every 24 hours), sign in and create a Telegram reward link from Account management.",
     );
     return;
   }
@@ -446,48 +446,48 @@ async function handleStartMessage(
   if (!claim) {
     await sendMessage(
       chatId,
-      "This reward link is invalid or expired. Sign in to ReplenishCC and create a new Telegram reward link.",
+      "⚠️ This reward link is invalid or expired. Sign in to ReplenishCC and create a new Telegram reward link.",
     );
     return;
   }
   if (!matchesRewardPhrase(message)) {
     await sendMessage(
       chatId,
-      `Your Telegram display name must contain ${REWARD_TRIGGER}. Telegram usernames cannot include periods, so this exact phrase can only match your display name. Update it and tap Start again within 10 minutes.`,
+      `📝 Your Telegram display name must contain ${REWARD_TRIGGER}. Telegram usernames cannot include periods, so this exact phrase can only match your display name. Update it and tap Start again within 10 minutes.`,
     );
     return;
   }
 
   const result = await awardReward(claim.userId, telegramUser.id, updateId);
   if (result.kind === "account-missing") {
-    await sendMessage(chatId, "The ReplenishCC account for this link could not be found.");
+    await sendMessage(chatId, "⚠️ The ReplenishCC account for this link could not be found.");
     return;
   }
   if (result.kind === "member-cooldown") {
     await sendMessage(
       chatId,
-      `This ReplenishCC account received a reward within the last 24 hours. You can claim again after ${formatUtcDateTime(result.nextEligibleAt)} UTC.`,
+      `⏳ This ReplenishCC account received a reward within the last 24 hours. You can claim again after ${formatUtcDateTime(result.nextEligibleAt)} UTC.`,
     );
     return;
   }
   if (result.kind === "telegram-cooldown") {
     await sendMessage(
       chatId,
-      `This Telegram account received a reward within the last 24 hours. You can claim again after ${formatUtcDateTime(result.nextEligibleAt)} UTC.`,
+      `⏳ This Telegram account received a reward within the last 24 hours. You can claim again after ${formatUtcDateTime(result.nextEligibleAt)} UTC.`,
     );
     return;
   }
   if (result.kind === "already-processed") {
     await sendMessage(
       chatId,
-      "This Telegram claim was already processed. A reward can be claimed once every 24 hours per ReplenishCC account and Telegram account.",
+      "ℹ️ This Telegram claim was already processed. A reward can be claimed once every 24 hours per ReplenishCC account and Telegram account.",
     );
     return;
   }
 
   await sendMessage(
     chatId,
-    `$1.00 has been added to your ReplenishCC account balance. Your new balance is $${(result.balanceCents / 100).toFixed(2)}.`,
+    `🎉 $1.00 has been added to your ReplenishCC account balance. Your new balance is $${(result.balanceCents / 100).toFixed(2)}.`,
   );
 }
 
@@ -506,7 +506,7 @@ export async function handleTelegramUpdate(
   if (/^\/help(?:@[A-Za-z0-9_]+)?(?:\s|$)/.test(text)) {
     await sendMessage(
       message.chat.id,
-      "Sign in to ReplenishCC, open Account management, create a Telegram reward link, then open it here. Set your Telegram display name to include ReplenishCC.xyz. Telegram usernames cannot include periods, so this exact phrase can only match the display name.",
+      "ℹ️ Sign in to ReplenishCC, open Account management, create a Telegram reward link, then open it here. Set your Telegram display name to include ReplenishCC.xyz. Telegram usernames cannot include periods, so this exact phrase can only match the display name.",
     );
   }
 }
