@@ -484,6 +484,18 @@ export interface TelegramRewardCodeResponse {
   amountCents: 100;
 }
 
+export interface TelegramReferralVerificationCodeResponse {
+  /**
+     * @minLength 43
+     * @maxLength 43
+     * @pattern ^[A-Za-z0-9_-]{43}$
+     */
+  code: string;
+  botUsername: string;
+  expiresAt: string;
+  amountCents: 50;
+}
+
 export interface TelegramWebhookUser {
   /** @minimum 1 */
   id: number;
@@ -890,15 +902,26 @@ export interface CryptoDepositResponse {
   deposit: Deposit;
 }
 
+export type ReferralSummaryTelegramBonusStatus = typeof ReferralSummaryTelegramBonusStatus[keyof typeof ReferralSummaryTelegramBonusStatus];
+
+
+export const ReferralSummaryTelegramBonusStatus = {
+  not_referred: 'not_referred',
+  eligible: 'eligible',
+  earned: 'earned',
+} as const;
+
 export interface ReferralSummary {
   referralCode: string;
   totalReferrals: number;
   paidReferrals: number;
   pendingReferrals: number;
   totalRewardsCents: number;
+  telegramRewardsCents: number;
   totalDepositsCents: number;
   minimumDepositCents: number;
   rewardPercent: number;
+  telegramBonusStatus: ReferralSummaryTelegramBonusStatus;
 }
 
 export interface AdminDepositsResponse {

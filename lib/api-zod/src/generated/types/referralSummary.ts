@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ReferralSummaryTelegramBonusStatus } from './referralSummaryTelegramBonusStatus';
 
 export interface ReferralSummary {
   referralCode: string;
@@ -12,7 +13,9 @@ export interface ReferralSummary {
   paidReferrals: number;
   pendingReferrals: number;
   totalRewardsCents: number;
+  telegramRewardsCents: number;
   totalDepositsCents: number;
   minimumDepositCents: number;
   rewardPercent: number;
+  telegramBonusStatus: ReferralSummaryTelegramBonusStatus;
 }

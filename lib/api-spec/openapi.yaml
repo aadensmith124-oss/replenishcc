@@ -211,6 +211,25 @@ paths:
           description: Sign-in required
         "503":
           description: Telegram bot is not configured
+  /telegram-referral-verification-code:
+    post:
+      operationId: createTelegramReferralVerificationCode
+      tags: [accountManagement]
+      summary: Create a short-lived Telegram group verification code for a referred member
+      description: A referred member can verify current membership in the configured Telegram group to award their referrer a one-time $0.50 account credit.
+      responses:
+        "200":
+          description: Short-lived code to verify Telegram group membership
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelegramReferralVerificationCodeResponse"
+        "401":
+          description: Sign-in required
+        "409":
+          description: This account was not referred or has already earned the group bonus
+        "503":
+          description: Telegram bot or referral group is not configured
   /telegram/webhook:
     post:
       operationId: postTelegramWebhook
@@ -1893,6 +1912,14 @@ components:
         expiresAt: { type: string, format: date-time }
         amountCents: { type: integer, const: 100 }
       required: [code, botUsername, expiresAt, amountCents]
+    TelegramReferralVerificationCodeResponse:
+      type: object
+      properties:
+        code: { type: string, minLength: 43, maxLength: 43, pattern: "^[A-Za-z0-9_-]{43}$" }
+        botUsername: { type: string }
+        expiresAt: { type: string, format: date-time }
+        amountCents: { type: integer, const: 50 }
+      required: [code, botUsername, expiresAt, amountCents]
     TelegramWebhookUser:
       type: object
       properties:
@@ -2166,10 +2193,12 @@ components:
         paidReferrals: { type: integer }
         pendingReferrals: { type: integer }
         totalRewardsCents: { type: integer }
+        telegramRewardsCents: { type: integer }
         totalDepositsCents: { type: integer }
         minimumDepositCents: { type: integer }
         rewardPercent: { type: integer }
-      required: [referralCode, totalReferrals, paidReferrals, pendingReferrals, totalRewardsCents, totalDepositsCents, minimumDepositCents, rewardPercent]
+        telegramBonusStatus: { type: string, enum: [not_referred, eligible, earned] }
+      required: [referralCode, totalReferrals, paidReferrals, pendingReferrals, totalRewardsCents, telegramRewardsCents, totalDepositsCents, minimumDepositCents, rewardPercent, telegramBonusStatus]
     AdminDepositsResponse:
       type: object
       properties:

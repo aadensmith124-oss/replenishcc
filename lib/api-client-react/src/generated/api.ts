@@ -101,6 +101,7 @@ import type {
   SupportTicketRefundInput,
   SupportTicketRefundResponse,
   SupportTicketStatusInput,
+  TelegramReferralVerificationCodeResponse,
   TelegramRewardCodeResponse,
   TelegramWebhookAcknowledgement,
   TelegramWebhookUpdate,
@@ -877,6 +878,81 @@ export const useCreateTelegramRewardCode = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getCreateTelegramRewardCodeMutationOptions(options));
+    }
+
+export const getCreateTelegramReferralVerificationCodeUrl = () => {
+
+
+
+
+  return `/api/telegram-referral-verification-code`
+}
+
+/**
+ * A referred member can verify current membership in the configured Telegram group to award their referrer a one-time $0.50 account credit.
+ * @summary Create a short-lived Telegram group verification code for a referred member
+ */
+export const createTelegramReferralVerificationCode = async ( options?: Parameters<typeof customFetch>[1]): Promise<TelegramReferralVerificationCodeResponse> => {
+
+  return customFetch<TelegramReferralVerificationCodeResponse>(getCreateTelegramReferralVerificationCodeUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCreateTelegramReferralVerificationCodeMutationKey = () => ['createTelegramReferralVerificationCode'] as const;
+
+export const getCreateTelegramReferralVerificationCodeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTelegramReferralVerificationCode>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTelegramReferralVerificationCode>>, TError,void, TContext> => {
+
+const mutationKey = getCreateTelegramReferralVerificationCodeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTelegramReferralVerificationCode>>, void> = () => {
+
+
+          return  createTelegramReferralVerificationCode(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateTelegramReferralVerificationCodeMutationResult = NonNullable<Awaited<ReturnType<typeof createTelegramReferralVerificationCode>>>
+
+    export type CreateTelegramReferralVerificationCodeMutationError = ErrorType<void>
+
+
+    /**
+ * @summary Create a short-lived Telegram group verification code for a referred member
+ */
+export const useCreateTelegramReferralVerificationCode = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTelegramReferralVerificationCode>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createTelegramReferralVerificationCode>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCreateTelegramReferralVerificationCodeMutationOptions(options));
     }
 
 export const getPostTelegramWebhookUrl = () => {

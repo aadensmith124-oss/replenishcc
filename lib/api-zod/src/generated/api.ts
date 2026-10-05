@@ -199,6 +199,25 @@ export const CreateTelegramRewardCodeResponse = zod.object({
 
 
 /**
+ * A referred member can verify current membership in the configured Telegram group to award their referrer a one-time $0.50 account credit.
+ * @summary Create a short-lived Telegram group verification code for a referred member
+ */
+export const createTelegramReferralVerificationCodeResponseCodeMin = 43;
+export const createTelegramReferralVerificationCodeResponseCodeMax = 43;
+
+
+export const createTelegramReferralVerificationCodeResponseCodeRegExp = new RegExp('^[A-Za-z0-9_-]{43}$');
+
+
+export const CreateTelegramReferralVerificationCodeResponse = zod.object({
+  "code": zod.string().min(createTelegramReferralVerificationCodeResponseCodeMin).max(createTelegramReferralVerificationCodeResponseCodeMax).regex(createTelegramReferralVerificationCodeResponseCodeRegExp),
+  "botUsername": zod.string(),
+  "expiresAt": zod.coerce.date(),
+  "amountCents": zod.literal(50)
+})
+
+
+/**
  * @summary Receive an authenticated Telegram Bot API update
  */
 export const PostTelegramWebhookHeader = zod.object({
@@ -1031,9 +1050,11 @@ export const GetMyReferralSummaryResponse = zod.object({
   "paidReferrals": zod.number().int(),
   "pendingReferrals": zod.number().int(),
   "totalRewardsCents": zod.number().int(),
+  "telegramRewardsCents": zod.number().int(),
   "totalDepositsCents": zod.number().int(),
   "minimumDepositCents": zod.number().int(),
-  "rewardPercent": zod.number().int()
+  "rewardPercent": zod.number().int(),
+  "telegramBonusStatus": zod.enum(['not_referred', 'eligible', 'earned'])
 })
 
 
