@@ -8,6 +8,39 @@ import { logger } from "./lib/logger";
 const app: Express = express();
 const sessionSecret = process.env.SESSION_SECRET;
 
+function asErrorRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function safeErrorLogContext(error: unknown): Record<string, string> {
+  const safeToken = (value: unknown): string | undefined =>
+    typeof value === "string" && /^[A-Za-z0-9_.-]{1,80}$/.test(value)
+      ? value
+      : undefined;
+  const outer = asErrorRecord(error);
+  let root = outer;
+  const seen = new Set<Record<string, unknown>>();
+  while (root && !seen.has(root)) {
+    seen.add(root);
+    const cause = asErrorRecord(root.cause);
+    if (!cause || seen.has(cause)) break;
+    root = cause;
+  }
+
+  const context: Record<string, string> = {
+    errorType: safeToken(outer?.name) ?? "Error",
+  };
+  const causeType = safeToken(root?.name);
+  if (causeType && root !== outer) context.causeType = causeType;
+  for (const field of ["code", "schema", "table", "column", "constraint"]) {
+    const value = safeToken(root?.[field]);
+    if (value) context[field] = value;
+  }
+  return context;
+}
+
 if (!sessionSecret) {
   throw new Error("SESSION_SECRET must be configured.");
 }
@@ -71,7 +104,12 @@ const jsonErrorHandler: ErrorRequestHandler = (error, req, res, next) => {
     });
     return;
   }
-  req.log.error({ err: error }, "Unhandled API request");
+  // Do not serialize raw ORM errors: their messages/stacks can include SQL
+  // parameters such as encrypted card credentials and per-card location data.
+  req.log.error(
+    { error: safeErrorLogContext(error), requestId: req.id },
+    "Unhandled API request",
+  );
   res.status(500).json({
     error: `An unexpected error occurred. Reference ID: ${req.id}`,
   });
