@@ -59,7 +59,7 @@ import { Brand } from './components/Brand';
 import { MemberShell } from './components/MemberShell';
 import { DepositsPage, MyDepositsPage, ReferralsPage } from './pages/FinancePages';
 import { RedeemCodePage } from './pages/RedeemCodePage';
-import { AccountManagementPage } from './pages/AccountManagementPages';
+import { AccountManagementPage, TelegramLinkPage } from './pages/AccountManagementPages';
 import { DashboardWorkspacePage } from './pages/DashboardWorkspacePage';
 import { WeeklyLeaderboardPage } from './pages/WeeklyLeaderboardPage';
 import { LicenseOrdersPage, LicenseProductsPage } from './pages/LicensePages';
@@ -993,6 +993,7 @@ function Router() {
       <Route path="/redeem-code" component={RedeemCodePage} />
       <Route path="/admin/deposits" component={AdminDashboardPage} />
       <Route path="/account-management" component={AccountManagementPage} />
+      <Route path="/link" component={TelegramLinkPage} />
       <Route path="/admin/account-deletion-requests" component={AdminDashboardPage} />
       <Route>
         <Frame>

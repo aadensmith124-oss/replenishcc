@@ -133,7 +133,7 @@ export function MemberShell({
                 : location === '/my-log-orders' || location === '/orders/license-keys' ? 'myLogOrders'
                   : location === '/my-card-orders' ? 'myCardOrders'
                     : location.startsWith('/support/') ? 'support'
-                      : location === '/account-management' ? 'accountManagement' : null;
+                      : location === '/account-management' || location === '/link' ? 'accountManagement' : null;
   const memberPageBlocked = Boolean(user && !user.isDepositAdmin && visibilityKey && ((memberVisibility.data && !memberVisibility.data.pages[visibilityKey]) || memberVisibility.isError));
   const checkingMemberPage = Boolean(visibilityKey && user && !user.isDepositAdmin && (memberVisibility.isLoading || memberVisibility.isFetching));
   const canShowPage = (page: keyof MemberPageVisibilityPages): boolean => {

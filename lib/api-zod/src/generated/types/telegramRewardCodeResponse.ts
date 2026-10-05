@@ -6,8 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface TelegramRewardLinkResponse {
-  deepLink: string;
+export interface TelegramRewardCodeResponse {
+  /**
+     * @minLength 43
+     * @maxLength 43
+     * @pattern ^[A-Za-z0-9_-]{43}$
+     */
+  code: string;
   botUsername: string;
   expiresAt: Date;
   amountCents: 100;

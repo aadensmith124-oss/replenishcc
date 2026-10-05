@@ -5,12 +5,14 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { TelegramWebhookCallbackQuery } from './telegramWebhookCallbackQuery';
 import type { TelegramWebhookMessage } from './telegramWebhookMessage';
+import type { TelegramWebhookUser } from './telegramWebhookUser';
 
-export interface TelegramWebhookUpdate {
-  /** @minimum 0 */
-  update_id: number;
+export interface TelegramWebhookCallbackQuery {
+  id: string;
+  from: TelegramWebhookUser;
   message?: TelegramWebhookMessage;
-  callback_query?: TelegramWebhookCallbackQuery;
+  chat_instance: string;
+  /** @nullable */
+  data?: string | null;
 }

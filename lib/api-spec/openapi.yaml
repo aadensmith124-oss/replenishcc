@@ -194,19 +194,19 @@ paths:
           description: Current password is incorrect or new password is invalid
         "401":
           description: Sign-in required
-  /telegram-reward-link:
+  /telegram-reward-code:
     post:
-      operationId: createTelegramRewardLink
+      operationId: createTelegramRewardCode
       tags: [accountManagement]
-      summary: Create a short-lived Telegram reward link for the signed-in member
-      description: Each ReplenishCC account and Telegram account may claim the $1 reward once per rolling 24 hours. The generated link expires after 10 minutes.
+      summary: Create a short-lived Telegram reward code for the signed-in member
+      description: Each ReplenishCC account and Telegram account may claim the $1 reward once per rolling 24 hours. The generated code expires after 10 minutes and is sent to the bot in a private Telegram chat.
       responses:
         "200":
-          description: Short-lived link to claim the Telegram name reward
+          description: Short-lived code to claim the Telegram name reward
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TelegramRewardLinkResponse"
+                $ref: "#/components/schemas/TelegramRewardCodeResponse"
         "401":
           description: Sign-in required
         "503":
@@ -1885,14 +1885,14 @@ components:
       type: object
       properties:
         reason: { type: string, minLength: 1, maxLength: 500 }
-    TelegramRewardLinkResponse:
+    TelegramRewardCodeResponse:
       type: object
       properties:
-        deepLink: { type: string, format: uri }
+        code: { type: string, minLength: 43, maxLength: 43, pattern: "^[A-Za-z0-9_-]{43}$" }
         botUsername: { type: string }
         expiresAt: { type: string, format: date-time }
         amountCents: { type: integer, const: 100 }
-      required: [deepLink, botUsername, expiresAt, amountCents]
+      required: [code, botUsername, expiresAt, amountCents]
     TelegramWebhookUser:
       type: object
       properties:
@@ -1921,7 +1921,17 @@ components:
       properties:
         update_id: { type: integer, minimum: 0 }
         message: { $ref: "#/components/schemas/TelegramWebhookMessage" }
+        callback_query: { $ref: "#/components/schemas/TelegramWebhookCallbackQuery" }
       required: [update_id]
+    TelegramWebhookCallbackQuery:
+      type: object
+      properties:
+        id: { type: string }
+        from: { $ref: "#/components/schemas/TelegramWebhookUser" }
+        message: { $ref: "#/components/schemas/TelegramWebhookMessage" }
+        chat_instance: { type: string }
+        data: { type: ["string", "null"] }
+      required: [id, from, chat_instance]
     TelegramWebhookAcknowledgement:
       type: object
       properties:

@@ -11,3 +11,4 @@
 - [Patch application verification](patch-application-verification.md) — Verify intended symbols and diffs after multi-hunk patches; success output alone is not enough.
 - [Tailwind v4 dialog centering](tailwind-v4-dialog-centering.md) — Custom-centered Radix dialogs must clear inherited `translate`, not only override `transform`.
 - [Vercel production hosting](vercel-production-hosting.md) — Production ReplenishCC runs on Vercel; keep Replit development from taking over the live Telegram webhook.
+- [Telegram reward eligibility](telegram-reward-eligibility.md) — Keep the $1 award, rolling 24-hour account/Telegram limits, display-name check, and 10-minute code expiry unchanged.

@@ -1,12 +1,12 @@
 import { timingSafeEqual } from "node:crypto";
 import { Router, type IRouter, type Request, type Response } from "express";
 import {
-  CreateTelegramRewardLinkResponse,
+  CreateTelegramRewardCodeResponse,
   PostTelegramWebhookBody,
   PostTelegramWebhookResponse,
 } from "@workspace/api-zod";
 import {
-  createTelegramRewardLink,
+  createTelegramRewardCode,
   configureTelegramWebhook,
   getExpectedTelegramWebhookSecret,
   getTelegramWebhookDiagnostics,
@@ -182,23 +182,23 @@ function secretMatches(received: string | undefined, expected: string): boolean 
 }
 
 router.post(
-  "/telegram-reward-link",
+  "/telegram-reward-code",
   requireMemberPage("accountManagement"),
   async (req, res): Promise<void> => {
     res.setHeader("Cache-Control", "no-store");
     const member = await getCurrentUser(req);
     if (!member) {
-      res.status(401).json({ error: "Sign in to create a Telegram reward link." });
+      res.status(401).json({ error: "Sign in to create a Telegram reward code." });
       return;
     }
 
     try {
-      const link = await createTelegramRewardLink(member.id);
+      const rewardCode = await createTelegramRewardCode(member.id);
       res.json(
-        CreateTelegramRewardLinkResponse.parse({
-          deepLink: link.deepLink,
-          botUsername: link.botUsername,
-          expiresAt: link.expiresAt,
+        CreateTelegramRewardCodeResponse.parse({
+          code: rewardCode.code,
+          botUsername: rewardCode.botUsername,
+          expiresAt: rewardCode.expiresAt,
           amountCents: 100,
         }),
       );

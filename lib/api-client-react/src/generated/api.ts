@@ -101,7 +101,7 @@ import type {
   SupportTicketRefundInput,
   SupportTicketRefundResponse,
   SupportTicketStatusInput,
-  TelegramRewardLinkResponse,
+  TelegramRewardCodeResponse,
   TelegramWebhookAcknowledgement,
   TelegramWebhookUpdate,
   UpdateGiftCardProductMetadataInput,
@@ -804,21 +804,21 @@ export const useChangeAuthPassword = <TError = ErrorType<void>,
       return useMutation(getChangeAuthPasswordMutationOptions(options));
     }
 
-export const getCreateTelegramRewardLinkUrl = () => {
+export const getCreateTelegramRewardCodeUrl = () => {
 
 
 
 
-  return `/api/telegram-reward-link`
+  return `/api/telegram-reward-code`
 }
 
 /**
- * Each ReplenishCC account and Telegram account may claim the $1 reward once per rolling 24 hours. The generated link expires after 10 minutes.
- * @summary Create a short-lived Telegram reward link for the signed-in member
+ * Each ReplenishCC account and Telegram account may claim the $1 reward once per rolling 24 hours. The generated code expires after 10 minutes and is sent to the bot in a private Telegram chat.
+ * @summary Create a short-lived Telegram reward code for the signed-in member
  */
-export const createTelegramRewardLink = async ( options?: Parameters<typeof customFetch>[1]): Promise<TelegramRewardLinkResponse> => {
+export const createTelegramRewardCode = async ( options?: Parameters<typeof customFetch>[1]): Promise<TelegramRewardCodeResponse> => {
 
-  return customFetch<TelegramRewardLinkResponse>(getCreateTelegramRewardLinkUrl(),
+  return customFetch<TelegramRewardCodeResponse>(getCreateTelegramRewardCodeUrl(),
   {
     ...options,
     method: 'POST'
@@ -831,13 +831,13 @@ export const createTelegramRewardLink = async ( options?: Parameters<typeof cust
 
 
 
-export const getCreateTelegramRewardLinkMutationKey = () => ['createTelegramRewardLink'] as const;
+export const getCreateTelegramRewardCodeMutationKey = () => ['createTelegramRewardCode'] as const;
 
-export const getCreateTelegramRewardLinkMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTelegramRewardLink>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof createTelegramRewardLink>>, TError,void, TContext> => {
+export const getCreateTelegramRewardCodeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTelegramRewardCode>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTelegramRewardCode>>, TError,void, TContext> => {
 
-const mutationKey = getCreateTelegramRewardLinkMutationKey();
+const mutationKey = getCreateTelegramRewardCodeMutationKey();
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -847,10 +847,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTelegramRewardLink>>, void> = () => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTelegramRewardCode>>, void> = () => {
 
 
-          return  createTelegramRewardLink(requestOptions)
+          return  createTelegramRewardCode(requestOptions)
         }
 
 
@@ -860,23 +860,23 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type CreateTelegramRewardLinkMutationResult = NonNullable<Awaited<ReturnType<typeof createTelegramRewardLink>>>
+    export type CreateTelegramRewardCodeMutationResult = NonNullable<Awaited<ReturnType<typeof createTelegramRewardCode>>>
 
-    export type CreateTelegramRewardLinkMutationError = ErrorType<void>
+    export type CreateTelegramRewardCodeMutationError = ErrorType<void>
 
 
     /**
- * @summary Create a short-lived Telegram reward link for the signed-in member
+ * @summary Create a short-lived Telegram reward code for the signed-in member
  */
-export const useCreateTelegramRewardLink = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTelegramRewardLink>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+export const useCreateTelegramRewardCode = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTelegramRewardCode>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
-        Awaited<ReturnType<typeof createTelegramRewardLink>>,
+        Awaited<ReturnType<typeof createTelegramRewardCode>>,
         TError,
         void,
         TContext
       > => {
-      return useMutation(getCreateTelegramRewardLinkMutationOptions(options));
+      return useMutation(getCreateTelegramRewardCodeMutationOptions(options));
     }
 
 export const getPostTelegramWebhookUrl = () => {

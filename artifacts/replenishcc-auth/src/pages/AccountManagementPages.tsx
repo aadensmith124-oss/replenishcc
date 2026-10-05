@@ -46,7 +46,7 @@ function dateTime(value: string): string {
   return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 }
 
-function PrivateGate({ title }: { title: string }) {
+export function PrivateGate({ title }: { title: string }) {
   return <div className="app-frame"><div className="member-gate"><ShieldCheck /><h1>Sign in required</h1><p>Your ReplenishCC session is needed to open {title.toLowerCase()}.</p><Link href="/login" className="primary-button">Return to sign in</Link></div></div>;
 }
 
@@ -172,6 +172,38 @@ export function AccountManagementPage() {
       {deletionMessage && <div className={`portal-alert portal-alert-${deletionMessage.kind}`} role={deletionMessage.kind === 'error' ? 'alert' : 'status'} data-testid={`status-deletion-${deletionMessage.kind}`}>{deletionMessage.text}</div>}
     </section>
   </MemberShell>;
+}
+
+export function TelegramLinkPage() {
+  const session = useGetAuthMe();
+  useEffect(() => { document.title = 'Telegram reward | ReplenishCC'; }, []);
+
+  if (session.isLoading) {
+    return <MemberShell pageTitle="Telegram reward" user={null} loading />;
+  }
+  if (session.isError || !session.data?.authenticated || !session.data.user) {
+    return <PrivateGate title="Telegram reward" />;
+  }
+
+  return (
+    <MemberShell
+      pageTitle="Telegram reward"
+      user={session.data.user}
+      contentClassName="finance-content account-management-content"
+    >
+      <div className="finance-heading">
+        <div>
+          <div className="welcome-eyebrow">Member reward</div>
+          <h1>Telegram reward code</h1>
+          <p>Create a short-lived code here, then send it to the ReplenishCC Telegram bot in a private chat.</p>
+        </div>
+        <Link href="/account-management" className="quiet-button" data-testid="link-telegram-account-management">
+          Account management
+        </Link>
+      </div>
+      <TelegramRewardCard />
+    </MemberShell>
+  );
 }
 
 export function AdminAccountDeletionRequestsPage() {

@@ -1678,10 +1678,11 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 .telegram-reward-generate svg,.telegram-reward-open svg,.telegram-reward-copy svg { width: 14px; height: 14px; }
 .telegram-reward-spinner { animation: telegram-reward-spin 1s linear infinite; }
 @keyframes telegram-reward-spin { to { transform: rotate(360deg); } }
-.telegram-reward-link-result { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 14px; border: 1px solid #484633; border-radius: 8px; padding: 13px 14px; background: #191d18; }
-.telegram-reward-link-result > div:first-child { display: grid; gap: 4px; min-width: 0; }
-.telegram-reward-link-result strong { color: #e0dfd2; font-size: 11px; }
-.telegram-reward-link-result span { color: #879185; font-size: 9px; }
+.telegram-reward-code-result { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 14px; border: 1px solid #484633; border-radius: 8px; padding: 13px 14px; background: #191d18; }
+.telegram-reward-code-result > div:first-child { display: grid; gap: 4px; min-width: 0; }
+.telegram-reward-code-result strong { color: #e0dfd2; font-size: 11px; }
+.telegram-reward-code-result span { color: #879185; font-size: 9px; }
+.telegram-reward-code { display: block; margin-top: 7px; border: 1px solid #42483b; border-radius: 6px; padding: 11px; color: #e4d58e; background: #121612; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; user-select: all; }
 .telegram-reward-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .telegram-reward-open { border-color: #6d6039; color: #e0ce8b; background: #27261d; }
 .telegram-reward-copy { border-color: #41483e; color: #aeb5a7; background: #20251f; }
@@ -1792,7 +1793,7 @@ button.legal-back { border: 0; padding: 0; background: transparent; font: inheri
 @keyframes dialog-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (max-width: 760px) {
   .account-settings-grid { grid-template-columns: 1fr; }
-  .telegram-reward-heading,.telegram-reward-details,.telegram-reward-link-result { align-items: stretch; flex-direction: column; }
+  .telegram-reward-heading,.telegram-reward-details,.telegram-reward-code-result { align-items: stretch; flex-direction: column; }
   .telegram-reward-amount { align-self: flex-start; }
   .telegram-reward-generate { width: 100%; }
   .telegram-reward-actions { display: grid; grid-template-columns: 1fr 1fr; }

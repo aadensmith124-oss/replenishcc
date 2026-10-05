@@ -6,6 +6,7 @@ import {
   usersTable,
 } from "@workspace/db";
 import type {
+  TelegramWebhookCallbackQuery,
   TelegramWebhookMessage,
   TelegramWebhookUpdate,
 } from "@workspace/api-zod";
@@ -16,6 +17,7 @@ const REWARD_TRIGGER = "ReplenishCC.xyz";
 const REWARD_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const LINK_LIFETIME_SECONDS = 10 * 60;
 const WEBHOOK_PATH = "/api/telegram/webhook";
+const TELEGRAM_LINK_PAGE_URL = "https://www.replenishcc.xyz/link";
 const WEBHOOK_SECRET_LABEL = "replenishcc-telegram-webhook-v1";
 const LINK_SECRET_LABEL = "replenishcc-telegram-reward-link-v1";
 
@@ -37,6 +39,16 @@ type TelegramWebhookInfo = {
   last_error_message?: string;
 };
 
+type TelegramInlineKeyboardButton = {
+  text: string;
+  url?: string;
+  callback_data?: string;
+};
+
+type TelegramInlineKeyboardMarkup = {
+  inline_keyboard: TelegramInlineKeyboardButton[][];
+};
+
 let botUsername: string | null = null;
 
 function sessionSecret(): string {
@@ -51,7 +63,13 @@ function telegramToken(): string | null {
 }
 
 async function telegramApi<T>(
-  method: "getMe" | "getWebhookInfo" | "setWebhook" | "sendMessage",
+  method:
+    | "getMe"
+    | "getWebhookInfo"
+    | "setWebhook"
+    | "setMyCommands"
+    | "answerCallbackQuery"
+    | "sendMessage",
   body: Record<string, unknown> = {},
 ): Promise<T> {
   const token = telegramToken();
@@ -177,8 +195,8 @@ export async function getTelegramWebhookDiagnostics(): Promise<{
   };
 }
 
-export async function createTelegramRewardLink(userId: string): Promise<{
-  deepLink: string;
+export async function createTelegramRewardCode(userId: string): Promise<{
+  code: string;
   botUsername: string;
   expiresAt: Date;
 }> {
@@ -197,10 +215,10 @@ export async function createTelegramRewardLink(userId: string): Promise<{
     .update(payload)
     .digest()
     .subarray(0, 12);
-  const startToken = Buffer.concat([payload, signature]).toString("base64url");
+  const code = Buffer.concat([payload, signature]).toString("base64url");
 
   return {
-    deepLink: `https://t.me/${identity.username}?start=${startToken}`,
+    code,
     botUsername: identity.username,
     expiresAt: new Date(expiresAtSeconds * 1000),
   };
@@ -229,8 +247,15 @@ export async function configureTelegramWebhook(): Promise<string | null> {
   await telegramApi<boolean>("setWebhook", {
     url: `https://${host}${WEBHOOK_PATH}`,
     secret_token: webhookSecret(),
-    allowed_updates: ["message"],
+    allowed_updates: ["message", "callback_query"],
     drop_pending_updates: false,
+  });
+  await telegramApi<boolean>("setMyCommands", {
+    commands: [
+      { command: "start", description: "Show reward instructions" },
+      { command: "link", description: "Get a secure $1 reward code" },
+      { command: "help", description: "Learn how the Telegram reward works" },
+    ],
   });
   logger.info(
     { botUsername: identity.username, host },
@@ -239,7 +264,7 @@ export async function configureTelegramWebhook(): Promise<string | null> {
   return host;
 }
 
-function verifyStartToken(
+function verifyRewardCode(
   token: string,
 ): { userId: string; expiresAtSeconds: number } | null {
   if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
@@ -316,8 +341,35 @@ function matchesRewardPhrase(message: TelegramWebhookMessage): boolean {
     .some((value) => value?.toLowerCase().includes(phrase) ?? false);
 }
 
-async function sendMessage(chatId: number, text: string): Promise<void> {
-  await telegramApi("sendMessage", { chat_id: chatId, text });
+function rewardMenuKeyboard(): TelegramInlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [{ text: "Generate a reward code", url: TELEGRAM_LINK_PAGE_URL }],
+      [{ text: "How to claim", callback_data: "reward_help" }],
+    ],
+  };
+}
+
+async function sendMessage(
+  chatId: number,
+  text: string,
+  replyMarkup?: TelegramInlineKeyboardMarkup,
+): Promise<void> {
+  await telegramApi("sendMessage", {
+    chat_id: chatId,
+    text,
+    ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+  });
+}
+
+async function answerCallbackQuery(
+  callbackQueryId: string,
+  text?: string,
+): Promise<void> {
+  await telegramApi("answerCallbackQuery", {
+    callback_query_id: callbackQueryId,
+    ...(text ? { text } : {}),
+  });
 }
 
 async function awardReward(
@@ -423,50 +475,46 @@ function formatUtcDateTime(date: Date): string {
   }).format(date);
 }
 
-async function handleStartMessage(
+async function handleRewardCode(
   message: TelegramWebhookMessage,
+  code: string,
   updateId: number,
 ): Promise<void> {
   const chatId = message.chat.id;
   const telegramUser = message.from;
-  const token = message.text?.match(
-    /^\/start(?:@[A-Za-z0-9_]+)?(?:\s+([A-Za-z0-9_-]+))?/,
-  )?.[1];
-
   if (!telegramUser || telegramUser.is_bot) return;
-  if (!token) {
-    await sendMessage(
-      chatId,
-      "🎁 To claim the $1 ReplenishCC reward (available once every 24 hours), sign in and create a Telegram reward link from Account management.",
-    );
-    return;
-  }
-
-  const claim = verifyStartToken(token);
+  const claim = verifyRewardCode(code);
   if (!claim) {
     await sendMessage(
       chatId,
-      "⚠️ This reward link is invalid or expired. Sign in to ReplenishCC and create a new Telegram reward link.",
+      "⚠️ This reward code is invalid or expired. Sign in at ReplenishCC.xyz/link and create a new code.",
+      rewardMenuKeyboard(),
     );
     return;
   }
   if (!matchesRewardPhrase(message)) {
     await sendMessage(
       chatId,
-      `📝 Your Telegram display name must contain ${REWARD_TRIGGER}. Telegram usernames cannot include periods, so this exact phrase can only match your display name. Update it and tap Start again within 10 minutes.`,
+      `📝 Your Telegram display name must contain ${REWARD_TRIGGER}. Telegram usernames cannot include periods, so this exact phrase can only match your display name. Update it, create a new code, and send it within 10 minutes.`,
+      rewardMenuKeyboard(),
     );
     return;
   }
 
   const result = await awardReward(claim.userId, telegramUser.id, updateId);
   if (result.kind === "account-missing") {
-    await sendMessage(chatId, "⚠️ The ReplenishCC account for this link could not be found.");
+    await sendMessage(
+      chatId,
+      "⚠️ The ReplenishCC account for this code could not be found.",
+      rewardMenuKeyboard(),
+    );
     return;
   }
   if (result.kind === "member-cooldown") {
     await sendMessage(
       chatId,
       `⏳ This ReplenishCC account received a reward within the last 24 hours. You can claim again after ${formatUtcDateTime(result.nextEligibleAt)} UTC.`,
+      rewardMenuKeyboard(),
     );
     return;
   }
@@ -474,6 +522,7 @@ async function handleStartMessage(
     await sendMessage(
       chatId,
       `⏳ This Telegram account received a reward within the last 24 hours. You can claim again after ${formatUtcDateTime(result.nextEligibleAt)} UTC.`,
+      rewardMenuKeyboard(),
     );
     return;
   }
@@ -481,6 +530,7 @@ async function handleStartMessage(
     await sendMessage(
       chatId,
       "ℹ️ This Telegram claim was already processed. A reward can be claimed once every 24 hours per ReplenishCC account and Telegram account.",
+      rewardMenuKeyboard(),
     );
     return;
   }
@@ -488,25 +538,77 @@ async function handleStartMessage(
   await sendMessage(
     chatId,
     `🎉 $1.00 has been added to your ReplenishCC account balance. Your new balance is $${(result.balanceCents / 100).toFixed(2)}.`,
+    rewardMenuKeyboard(),
   );
+}
+
+function commandArgument(
+  message: TelegramWebhookMessage,
+  command: string,
+): string | null {
+  return message.text
+    ?.match(new RegExp(`^\\/${command}(?:@[A-Za-z0-9_]+)?(?:\\s+([\\s\\S]+))?$`))
+    ?.[1]
+    ?.trim() || null;
+}
+
+async function sendRewardInstructions(chatId: number): Promise<void> {
+  await sendMessage(
+    chatId,
+    `🎁 Claim $1 by signing in at ReplenishCC.xyz/link, creating a secure code, then sending the code here. Your Telegram display name must contain ${REWARD_TRIGGER}. Each ReplenishCC account and Telegram account can claim once every rolling 24 hours; codes expire after 10 minutes.`,
+    rewardMenuKeyboard(),
+  );
+}
+
+async function handleCallbackQuery(
+  callbackQuery: TelegramWebhookCallbackQuery,
+): Promise<void> {
+  await answerCallbackQuery(callbackQuery.id);
+  if (
+    callbackQuery.data !== "reward_help" ||
+    callbackQuery.message?.chat.type !== "private"
+  ) {
+    return;
+  }
+  await sendRewardInstructions(callbackQuery.message.chat.id);
 }
 
 export async function handleTelegramUpdate(
   update: TelegramWebhookUpdate,
 ): Promise<void> {
+  if (update.callback_query) {
+    await handleCallbackQuery(update.callback_query);
+    return;
+  }
+
   const message = update.message;
   if (!message || message.chat.type !== "private") return;
   const text = message.text?.trim();
   if (!text) return;
 
   if (/^\/start(?:@[A-Za-z0-9_]+)?(?:\s|$)/.test(text)) {
-    await handleStartMessage(message, update.update_id);
+    const code = commandArgument(message, "start");
+    if (code) {
+      await handleRewardCode(message, code, update.update_id);
+    } else {
+      await sendRewardInstructions(message.chat.id);
+    }
+    return;
+  }
+  if (/^\/link(?:@[A-Za-z0-9_]+)?(?:\s|$)/.test(text)) {
+    const code = commandArgument(message, "link");
+    if (code) {
+      await handleRewardCode(message, code, update.update_id);
+    } else {
+      await sendRewardInstructions(message.chat.id);
+    }
     return;
   }
   if (/^\/help(?:@[A-Za-z0-9_]+)?(?:\s|$)/.test(text)) {
-    await sendMessage(
-      message.chat.id,
-      "ℹ️ Sign in to ReplenishCC, open Account management, create a Telegram reward link, then open it here. Set your Telegram display name to include ReplenishCC.xyz. Telegram usernames cannot include periods, so this exact phrase can only match the display name.",
-    );
+    await sendRewardInstructions(message.chat.id);
+    return;
+  }
+  if (/^[A-Za-z0-9_-]{43}$/.test(text)) {
+    await handleRewardCode(message, text, update.update_id);
   }
 }

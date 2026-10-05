@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { ArrowUpRight, Check, Copy, Gift, LoaderCircle, RefreshCw } from "lucide-react";
 import {
-  useCreateTelegramRewardLink,
-  type TelegramRewardLinkResponse,
+  useCreateTelegramRewardCode,
+  type TelegramRewardCodeResponse,
 } from "@workspace/api-client-react";
 
 type Notice = { kind: "success" | "error"; text: string };
@@ -18,7 +18,7 @@ function errorText(error: unknown): string {
     if (typeof candidate.data?.error === "string") return candidate.data.error;
     if (typeof candidate.message === "string") return candidate.message;
   }
-  return "The reward link could not be created. Please try again.";
+  return "The reward code could not be created. Please try again.";
 }
 
 function formatExpiry(value: string): string {
@@ -29,31 +29,31 @@ function formatExpiry(value: string): string {
 }
 
 export function TelegramRewardCard() {
-  const createLink = useCreateTelegramRewardLink();
-  const [link, setLink] = useState<TelegramRewardLinkResponse | null>(null);
+  const createCode = useCreateTelegramRewardCode();
+  const [rewardCode, setRewardCode] = useState<TelegramRewardCodeResponse | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const generateLink = () => {
+  const generateCode = () => {
     setNotice(null);
     setCopied(false);
-    createLink.mutate(undefined, {
+    createCode.mutate(undefined, {
       onSuccess: (response) => {
-        setLink(response);
-        setNotice({ kind: "success", text: "Your secure Telegram reward link is ready." });
+        setRewardCode(response);
+        setNotice({ kind: "success", text: "Your secure Telegram reward code is ready." });
       },
       onError: (error) => setNotice({ kind: "error", text: errorText(error) }),
     });
   };
 
-  const copyLink = async () => {
-    if (!link) return;
+  const copyCode = async () => {
+    if (!rewardCode) return;
     try {
-      await navigator.clipboard.writeText(link.deepLink);
+      await navigator.clipboard.writeText(rewardCode.code);
       setCopied(true);
-      setNotice({ kind: "success", text: "Telegram link copied." });
+      setNotice({ kind: "success", text: "Telegram reward code copied." });
     } catch {
-      setNotice({ kind: "error", text: "Clipboard access is unavailable. Use the Telegram button instead." });
+      setNotice({ kind: "error", text: "Clipboard access is unavailable. Select and copy the code manually." });
     }
   };
 
@@ -63,37 +63,38 @@ export function TelegramRewardCard() {
         <div>
           <div className="panel-overline">Member reward</div>
           <h2 id="telegram-reward-title">Get $1 in Telegram</h2>
-          <p>Link your signed-in ReplenishCC account, then message the bot from a Telegram account whose display name contains ReplenishCC.xyz. Telegram usernames cannot include periods, so this exact phrase can only match the display name.</p>
+          <p>Create a code while signed in, then send it to the Telegram bot from an account whose display name contains ReplenishCC.xyz. Telegram usernames cannot include periods, so this exact phrase can only match the display name.</p>
         </div>
         <div className="telegram-reward-amount"><Gift aria-hidden="true" /><span>$1.00</span></div>
       </div>
       <div className="telegram-reward-details">
-        <p>Each ReplenishCC account and Telegram account can receive this reward once per rolling 24 hours. The secure link expires in 10 minutes; do not share it.</p>
+        <p>Each ReplenishCC account and Telegram account can receive this reward once per rolling 24 hours. The secure code expires in 10 minutes; do not share it.</p>
         <button
           type="button"
           className="telegram-reward-generate"
-          onClick={generateLink}
-          disabled={createLink.isPending}
-          data-testid="button-create-telegram-reward-link"
+          onClick={generateCode}
+          disabled={createCode.isPending}
+          data-testid="button-create-telegram-reward-code"
         >
-          {createLink.isPending ? <LoaderCircle aria-hidden="true" className="telegram-reward-spinner" /> : <RefreshCw aria-hidden="true" />}
-          {createLink.isPending ? "Creating link…" : link ? "Create a new link" : "Create Telegram reward link"}
+          {createCode.isPending ? <LoaderCircle aria-hidden="true" className="telegram-reward-spinner" /> : <RefreshCw aria-hidden="true" />}
+          {createCode.isPending ? "Creating code…" : rewardCode ? "Create a new code" : "Create Telegram reward code"}
         </button>
       </div>
       {notice && <div className={`portal-alert portal-alert-${notice.kind}`} role={notice.kind === "error" ? "alert" : "status"} data-testid={`status-telegram-reward-${notice.kind}`}>{notice.text}</div>}
-      {link && (
-        <div className="telegram-reward-link-result" data-testid="panel-telegram-reward-link">
+      {rewardCode && (
+        <div className="telegram-reward-code-result" data-testid="panel-telegram-reward-code">
           <div>
-            <strong>Open @{link.botUsername} to claim</strong>
-            <span>Link expires {formatExpiry(link.expiresAt)}.</span>
+            <strong>Send this code to @{rewardCode.botUsername}</strong>
+            <span>Code expires {formatExpiry(rewardCode.expiresAt)}.</span>
+            <code className="telegram-reward-code" data-testid="text-telegram-reward-code">{rewardCode.code}</code>
           </div>
           <div className="telegram-reward-actions">
-            <a href={link.deepLink} target="_blank" rel="noreferrer" className="telegram-reward-open" data-testid="link-open-telegram-bot">
+            <a href={`https://t.me/${rewardCode.botUsername}`} target="_blank" rel="noreferrer" className="telegram-reward-open" data-testid="link-open-telegram-bot">
               Open Telegram <ArrowUpRight aria-hidden="true" />
             </a>
-            <button type="button" className="telegram-reward-copy" onClick={copyLink} data-testid="button-copy-telegram-reward-link">
+            <button type="button" className="telegram-reward-copy" onClick={copyCode} data-testid="button-copy-telegram-reward-code">
               {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
-              {copied ? "Copied" : "Copy link"}
+              {copied ? "Copied" : "Copy code"}
             </button>
           </div>
         </div>

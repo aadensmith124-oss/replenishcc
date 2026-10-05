@@ -180,11 +180,18 @@ export const ChangeAuthPasswordResponse = zod.object({
 
 
 /**
- * Each ReplenishCC account and Telegram account may claim the $1 reward once per rolling 24 hours. The generated link expires after 10 minutes.
- * @summary Create a short-lived Telegram reward link for the signed-in member
+ * Each ReplenishCC account and Telegram account may claim the $1 reward once per rolling 24 hours. The generated code expires after 10 minutes and is sent to the bot in a private Telegram chat.
+ * @summary Create a short-lived Telegram reward code for the signed-in member
  */
-export const CreateTelegramRewardLinkResponse = zod.object({
-  "deepLink": zod.string().url(),
+export const createTelegramRewardCodeResponseCodeMin = 43;
+export const createTelegramRewardCodeResponseCodeMax = 43;
+
+
+export const createTelegramRewardCodeResponseCodeRegExp = new RegExp('^[A-Za-z0-9_-]{43}$');
+
+
+export const CreateTelegramRewardCodeResponse = zod.object({
+  "code": zod.string().min(createTelegramRewardCodeResponseCodeMin).max(createTelegramRewardCodeResponseCodeMax).regex(createTelegramRewardCodeResponseCodeRegExp),
   "botUsername": zod.string(),
   "expiresAt": zod.coerce.date(),
   "amountCents": zod.literal(100)
@@ -199,6 +206,8 @@ export const PostTelegramWebhookHeader = zod.object({
 })
 
 export const postTelegramWebhookBodyUpdateIdMin = 0;
+
+
 
 
 
@@ -219,6 +228,33 @@ export const PostTelegramWebhookBody = zod.object({
   "type": zod.enum(['private', 'group', 'supergroup', 'channel'])
 }),
   "text": zod.string().nullish()
+}).optional(),
+  "callback_query": zod.object({
+  "id": zod.string(),
+  "from": zod.object({
+  "id": zod.number().int().min(1),
+  "is_bot": zod.boolean(),
+  "first_name": zod.string(),
+  "last_name": zod.string().nullish(),
+  "username": zod.string().nullish()
+}),
+  "message": zod.object({
+  "message_id": zod.number().int(),
+  "from": zod.object({
+  "id": zod.number().int().min(1),
+  "is_bot": zod.boolean(),
+  "first_name": zod.string(),
+  "last_name": zod.string().nullish(),
+  "username": zod.string().nullish()
+}).optional(),
+  "chat": zod.object({
+  "id": zod.number().int(),
+  "type": zod.enum(['private', 'group', 'supergroup', 'channel'])
+}),
+  "text": zod.string().nullish()
+}).optional(),
+  "chat_instance": zod.string(),
+  "data": zod.string().nullish()
 }).optional()
 })
 

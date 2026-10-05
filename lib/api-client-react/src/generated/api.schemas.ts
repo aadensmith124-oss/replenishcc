@@ -472,8 +472,13 @@ export interface AccountDeletionRequestInput {
   reason?: string;
 }
 
-export interface TelegramRewardLinkResponse {
-  deepLink: string;
+export interface TelegramRewardCodeResponse {
+  /**
+     * @minLength 43
+     * @maxLength 43
+     * @pattern ^[A-Za-z0-9_-]{43}$
+     */
+  code: string;
   botUsername: string;
   expiresAt: string;
   amountCents: 100;
@@ -513,10 +518,20 @@ export interface TelegramWebhookMessage {
   text?: string | null;
 }
 
+export interface TelegramWebhookCallbackQuery {
+  id: string;
+  from: TelegramWebhookUser;
+  message?: TelegramWebhookMessage;
+  chat_instance: string;
+  /** @nullable */
+  data?: string | null;
+}
+
 export interface TelegramWebhookUpdate {
   /** @minimum 0 */
   update_id: number;
   message?: TelegramWebhookMessage;
+  callback_query?: TelegramWebhookCallbackQuery;
 }
 
 export const TelegramWebhookAcknowledgementValue = {
