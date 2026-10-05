@@ -870,9 +870,13 @@ export function AdminCardInventoryPage() {
             ].filter(Boolean);
             const binMetadataFeedback = binMetadataCardsUpdated > 0
               ? `BIN metadata auto-filled for ${binMetadataCardsUpdated} card${binMetadataCardsUpdated === 1 ? '' : 's'} across ${binMetadataPrefixesLookedUp} prefix lookup${binMetadataPrefixesLookedUp === 1 ? '' : 's'}.`
-              : binMetadataPrefixesLookedUp > 0
-                ? 'No BIN metadata was returned for this upload; you can retry the lookup or edit the base defaults.'
-                : 'No valid 8-digit BIN prefixes were available for lookup.';
+              : addedCount === 0
+                ? 'No new cards were added, so no BIN lookups were sent.'
+                : stockBinPrefixes.size === 0
+                  ? 'No valid 8-digit BIN prefixes were available for lookup.'
+                  : binMetadataPrefixesLookedUp === 0
+                    ? 'Per-card BIN metadata is not enabled for the connected database, so no public lookup was sent. Apply the schema update before retrying.'
+                    : 'The public BIN lookup returned no metadata or was unavailable. You can retry the lookup or edit the base defaults.';
             const resultText = `${addedCount} card${addedCount === 1 ? '' : 's'} added. This base now has ${availableCount}/${MAX_CARDS_PER_BASE} available. ${binMetadataFeedback} ${locationMetadataApplied ? 'Per-card public locations saved.' : 'Base location defaults were used.'} ${redemptionZipApplied ? 'Per-card ZIP values saved.' : 'Base ZIP defaults were used where available.'}`;
             setFeedback(warnings.length
               ? `Warning: ${resultText} ${warnings.join(' ')}`
@@ -896,7 +900,7 @@ export function AdminCardInventoryPage() {
              {stockFileName && <span className="gift-stock-file-name">Loaded: {stockFileName}</span>}
              {stockFileError && <span className="gift-stock-file-error" role="alert">{stockFileError}</span>}
            </div>
-           <FormField control={stockForm.control} name="cards" render={({ field }) => <FormItem><FormLabel>Card data · {stockCards.length}/{MAX_CARDS_PER_BATCH} detected</FormLabel><FormControl><Textarea {...field} onChange={(event) => { field.onChange(event); setStockFileName(''); setStockFileError(''); setFeedback(''); }} rows={8} maxLength={100_000} placeholder="Import a file or paste CSV, TSV, JSON, labeled fields, or delimited card rows." data-testid="input-admin-card-stock" /></FormControl>
+            <FormField control={stockForm.control} name="cards" render={({ field }) => <FormItem><FormLabel>Card data · {stockCards.length} detected</FormLabel><FormControl><Textarea {...field} onChange={(event) => { field.onChange(event); setStockFileName(''); setStockFileError(''); setFeedback(''); }} rows={8} maxLength={100_000} placeholder="Import a file or paste CSV, TSV, JSON, labeled fields, or delimited card rows." data-testid="input-admin-card-stock" /></FormControl>
              <div className="gift-stock-detection" aria-live="polite"><span className={stockLocationCounts.address ? 'is-detected' : ''}>{stockLocationCounts.address ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Address {stockLocationCounts.address}/{stockCards.length}</span><span className={stockLocationCounts.state ? 'is-detected' : ''}>{stockLocationCounts.state ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}State {stockLocationCounts.state}/{stockCards.length}</span><span className={stockLocationCounts.city ? 'is-detected' : ''}>{stockLocationCounts.city ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}City {stockLocationCounts.city}/{stockCards.length}</span><span className={stockLocationCounts.zip ? 'is-detected' : ''}>{stockLocationCounts.zip ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}ZIP {stockLocationCounts.zip}/{stockCards.length}</span><span className={stockContactCounts.email ? 'is-detected' : ''}>{stockContactCounts.email ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Email {stockContactCounts.email}/{stockCards.length}</span><span className={stockContactCounts.phone ? 'is-detected' : ''}>{stockContactCounts.phone ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Phone {stockContactCounts.phone}/{stockCards.length}</span></div>
               {stockCards.length > 0 && <p className={`gift-stock-bin-hint${stockBinPrefixes.size > 0 ? ' is-ready' : ''}`} role="status" data-testid="text-stock-bin-lookup-status">
                 {stockBinPrefixes.size === 1
