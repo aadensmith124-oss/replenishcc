@@ -5,11 +5,44 @@ import {
   PostTelegramWebhookBody,
   PostTelegramWebhookResponse,
 } from "@workspace/api-zod";
-import { createTelegramRewardLink, getExpectedTelegramWebhookSecret, handleTelegramUpdate } from "../lib/telegram-bot";
-import { getCurrentUser } from "../lib/auth";
+import {
+  createTelegramRewardLink,
+  getExpectedTelegramWebhookSecret,
+  getTelegramWebhookDiagnostics,
+  handleTelegramUpdate,
+} from "../lib/telegram-bot";
+import { getCurrentUser, isDepositAdmin } from "../lib/auth";
 import { requireMemberPage } from "../lib/member-page-visibility";
 
 const router: IRouter = Router();
+
+router.get(
+  "/admin/telegram-webhook-status",
+  async (req, res): Promise<void> => {
+    res.setHeader("Cache-Control", "no-store");
+    const user = await getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: "Sign in to check Telegram webhook status." });
+      return;
+    }
+    if (!isDepositAdmin(user)) {
+      res.status(403).json({ error: "Admin access is required." });
+      return;
+    }
+
+    try {
+      res.json(await getTelegramWebhookDiagnostics());
+    } catch (error) {
+      const message =
+        error instanceof Error &&
+        error.message.startsWith("Telegram API request failed (")
+          ? error.message
+          : "Could not reach the Telegram Bot API.";
+      req.log.error({ message }, "Telegram webhook status check failed.");
+      res.status(502).json({ error: message });
+    }
+  },
+);
 
 function secretMatches(received: string | undefined, expected: string): boolean {
   if (!received || received.length !== expected.length) return false;
