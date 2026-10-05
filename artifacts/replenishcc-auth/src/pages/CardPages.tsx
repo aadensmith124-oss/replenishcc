@@ -680,7 +680,7 @@ export function AdminCardInventoryPage() {
     validStockCards.flatMap((card) => {
       const normalizedNumber = card.cardNumber.replace(/\s/g, '');
       return /^\d{13,19}$/.test(normalizedNumber)
-        ? [normalizedNumber.slice(0, 8)]
+        ? [normalizedNumber.slice(0, 6)]
         : [];
     }),
   ), [validStockCards]);
@@ -879,7 +879,7 @@ export function AdminCardInventoryPage() {
               : addedCount === 0
                 ? 'No new cards were added, so no BIN lookups were sent.'
                 : stockBinPrefixes.size === 0
-                  ? 'No valid 8-digit BIN prefixes were available for lookup.'
+                  ? 'No valid 6-digit BIN prefixes were available for lookup.'
                   : binMetadataPrefixesLookedUp === 0
                     ? 'The card upload succeeded, but per-card BIN metadata is not enabled for this database, so no public lookup was sent.'
                     : 'The public BIN lookup returned no metadata or was unavailable. You can retry the lookup or edit the base defaults.';
@@ -924,10 +924,10 @@ export function AdminCardInventoryPage() {
              <div className="gift-stock-detection" aria-live="polite"><span className={stockLocationCounts.address ? 'is-detected' : ''}>{stockLocationCounts.address ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Address {stockLocationCounts.address}/{stockCards.length}</span><span className={stockLocationCounts.state ? 'is-detected' : ''}>{stockLocationCounts.state ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}State {stockLocationCounts.state}/{stockCards.length}</span><span className={stockLocationCounts.city ? 'is-detected' : ''}>{stockLocationCounts.city ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}City {stockLocationCounts.city}/{stockCards.length}</span><span className={stockLocationCounts.zip ? 'is-detected' : ''}>{stockLocationCounts.zip ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}ZIP {stockLocationCounts.zip}/{stockCards.length}</span><span className={stockContactCounts.email ? 'is-detected' : ''}>{stockContactCounts.email ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Email {stockContactCounts.email}/{stockCards.length}</span><span className={stockContactCounts.phone ? 'is-detected' : ''}>{stockContactCounts.phone ? <Check aria-hidden="true" /> : <i aria-hidden="true" />}Phone {stockContactCounts.phone}/{stockCards.length}</span></div>
               {stockCards.length > 0 && <p className={`gift-stock-bin-hint${stockBinPrefixes.size > 0 ? ' is-ready' : ''}`} role="status" data-testid="text-stock-bin-lookup-status">
                 {stockBinPrefixes.size === 1
-                  ? 'One 8-digit BIN prefix detected. Type, issuer, and brand will be looked up after upload.'
+                  ? 'One 6-digit BIN prefix detected. Type, issuer, and brand will be looked up after upload.'
                   : stockBinPrefixes.size > 1
-                    ? `${stockBinPrefixes.size} distinct 8-digit BIN prefixes detected. Metadata will be looked up once per prefix after upload.`
-                    : 'No valid 8-digit BIN prefix detected in this batch.'}
+                    ? `${stockBinPrefixes.size} distinct 6-digit BIN prefixes detected. Metadata will be looked up once per prefix after upload.`
+                    : 'No valid 6-digit BIN prefix detected in this batch.'}
               </p>}
               <div className="gift-stock-preview" aria-live="polite" data-testid="preview-admin-card-stock">
                <div className="gift-stock-preview-header"><strong>{stockCards.length ? `${stockCards.length} card${stockCards.length === 1 ? '' : 's'} detected · ${stockImport.format}` : stockImport.format}</strong><span>{stockCards.length ? `${stockCards.length - stockIssueCount} ready · ${stockIssueCount} need review` : ''}</span></div>
@@ -961,7 +961,7 @@ export function AdminCardInventoryPage() {
              <FormMessage />
            </FormItem>} />
             {validStockCards.length > selectedRemainingCapacity && selectedStockProduct && <p className="gift-stock-upload-warning" role="status" data-testid="status-stock-capacity-warning">At most {selectedRemainingCapacity} more card{selectedRemainingCapacity === 1 ? '' : 's'} fit in this base. Duplicate cards do not use capacity; any other overflow will be skipped and reported.</p>}
-            <div className="gift-upload-note"><LockKeyhole /> Address, state, city, and ZIP are public per card; each card can have a different location. Blank fields use the base defaults. BIN lookup uses the first 8 digits only after the batch is accepted.</div>
+            <div className="gift-upload-note"><LockKeyhole /> Address, state, city, and ZIP are public per card; each card can have a different location. Blank fields use the base defaults. BIN lookup uses only the first 6 digits after the batch is accepted.</div>
            <div className="gift-upload-note"><LockKeyhole /> Parsing stays in your browser. On upload, card credentials are sent to ReplenishCC and encrypted; actual credentials are revealed only to the purchaser.</div>
              <button className="gift-admin-submit" disabled={addStock.isPending || stockForm.formState.isSubmitting || !rows.some((product) => !product.isArchived) || !selectedStockProduct || selectedStockProduct.isArchived || validStockCards.length === 0 || Boolean(stockImport.message)} data-testid="button-upload-card-stock">{addStock.isPending || stockForm.formState.isSubmitting ? 'Uploading…' : `Upload ${validStockCards.length || ''} valid card${validStockCards.length === 1 ? '' : 's'}`} <ArrowRight /></button>
          </form></Form>
@@ -984,7 +984,7 @@ export function AdminCardInventoryPage() {
                  <td><span className="gift-count-chip">{product.availableCount}/{MAX_CARDS_PER_BASE}</span></td><td>{product.isArchived ? 'Archived' : product.canReceiveStock ? product.hasHistory ? 'Ready for more cards' : 'Ready for first upload' : '1,000-card limit reached'}</td><td>{date(product.createdAt)}</td>
               <td>
                 <button className="gift-edit" type="button" onClick={() => { setEditingMetadata({ productId: product.id, productName: product.name }); setMetadataDraft({ address: product.address, state: product.state, city: product.city, regionZip: product.regionZip ?? '', cardType: product.cardType, issuer: product.issuer, brand: product.brand }); }} data-testid={`button-edit-card-metadata-${product.id}`}><Pencil /> Edit metadata</button>{' '}
-                <button className="gift-edit" type="button" disabled={refreshBinMetadata.isPending} title="Recheck BIN metadata on this base’s existing cards. Only 8-digit prefixes are sent to the public lookup." aria-label={`Refresh BIN metadata for ${product.name}`} onClick={() => refreshBinMetadata.mutate({ productId: product.id }, {
+                <button className="gift-edit" type="button" disabled={refreshBinMetadata.isPending} title="Recheck BIN metadata on this base’s existing cards. Only 6-digit prefixes are sent to the public lookup." aria-label={`Refresh BIN metadata for ${product.name}`} onClick={() => refreshBinMetadata.mutate({ productId: product.id }, {
                   onSuccess: (result) => {
                     invalidate();
                     void queryClient.invalidateQueries({ queryKey: getGetMyGiftCardOrdersQueryKey() });

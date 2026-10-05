@@ -1518,7 +1518,7 @@ router.post(
         "Gift-card stock upload completed with skipped rows.",
       );
     }
-    // Only look up distinct 8-digit prefixes for newly inserted cards.
+    // Only look up distinct 6-digit prefixes for newly inserted cards.
     const cardsByPrefix = new Map<string, string[]>();
     for (const item of stockResult.inventoryItems) {
       const ids = cardsByPrefix.get(item.prefix) ?? [];

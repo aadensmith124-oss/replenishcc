@@ -24,8 +24,7 @@ export function getGiftCardBinPrefix(cardNumber: string): string | null {
 }
 
 export function getGiftCardBinMetadataPrefix(cardNumber: string): string | null {
-  const digits = cardNumber.replace(/\D/g, "");
-  return digits.length >= 8 ? digits.slice(0, 8) : null;
+  return getGiftCardBinPrefix(cardNumber);
 }
 
 export function getGiftCardLastFour(cardNumber: string): string | null {
