@@ -71,9 +71,24 @@ function webhookSecret(): string {
 }
 
 function publicHost(): string | null {
-  const configured =
-    process.env.REPLIT_DOMAINS?.split(",").map((part) => part.trim()).find(Boolean) ??
-    process.env.REPLIT_DEV_DOMAIN?.trim();
+  const vercelEnvironment = process.env.VERCEL_ENV?.trim();
+  let configured: string | undefined;
+  if (vercelEnvironment) {
+    if (vercelEnvironment !== "production") return null;
+    configured =
+      process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() ??
+      process.env.VERCEL_URL?.trim();
+  } else {
+    if (
+      process.env.NODE_ENV !== "production" &&
+      process.env.TELEGRAM_ALLOW_DEV_WEBHOOK !== "true"
+    ) {
+      return null;
+    }
+    configured =
+      process.env.REPLIT_DOMAINS?.split(",").map((part) => part.trim()).find(Boolean) ??
+      process.env.REPLIT_DEV_DOMAIN?.trim();
+  }
   if (!configured) return null;
 
   try {
@@ -130,7 +145,9 @@ export async function configureTelegramWebhook(): Promise<void> {
 
   const host = publicHost();
   if (!host) {
-    logger.warn("Telegram webhook was not configured because the app domain is unavailable.");
+    logger.warn(
+      "Telegram webhook was not configured because this runtime is not an eligible production environment or its domain is unavailable.",
+    );
     return;
   }
 
