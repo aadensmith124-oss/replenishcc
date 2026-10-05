@@ -73,10 +73,10 @@ function webhookSecret(): string {
 function publicHost(): string | null {
   const vercelEnvironment = process.env.VERCEL_ENV?.trim();
   let configured: string | undefined;
-  if (vercelEnvironment) {
+  if (process.env.VERCEL === "1" || vercelEnvironment) {
     if (vercelEnvironment !== "production") return null;
     configured =
-      process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() ??
+      process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() ||
       process.env.VERCEL_URL?.trim();
   } else {
     if (
