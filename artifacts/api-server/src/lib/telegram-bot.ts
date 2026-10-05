@@ -22,10 +22,19 @@ const LINK_SECRET_LABEL = "replenishcc-telegram-reward-link-v1";
 type TelegramApiResponse<T> = {
   ok: boolean;
   result?: T;
+  error_code?: number;
 };
 
 type TelegramBotIdentity = {
   username?: string;
+};
+
+type TelegramWebhookInfo = {
+  url: string;
+  pending_update_count: number;
+  ip_address?: string;
+  last_error_date?: number;
+  last_error_message?: string;
 };
 
 let botUsername: string | null = null;
@@ -42,7 +51,7 @@ function telegramToken(): string | null {
 }
 
 async function telegramApi<T>(
-  method: "getMe" | "setWebhook" | "sendMessage",
+  method: "getMe" | "getWebhookInfo" | "setWebhook" | "sendMessage",
   body: Record<string, unknown> = {},
 ): Promise<T> {
   const token = telegramToken();
@@ -59,7 +68,13 @@ async function telegramApi<T>(
     | null;
 
   if (!response.ok || !payload?.ok || !("result" in payload)) {
-    throw new Error("Telegram API request failed.");
+    const failures = [
+      `HTTP ${response.status}`,
+      typeof payload?.error_code === "number"
+        ? `Telegram ${payload.error_code}`
+        : null,
+    ].filter(Boolean);
+    throw new Error(`Telegram API request failed (${failures.join(", ")}).`);
   }
   return payload.result as T;
 }
@@ -121,6 +136,29 @@ function publicHost(): string | null {
 
 export function getExpectedTelegramWebhookSecret(): string {
   return webhookSecret();
+}
+
+export async function getTelegramWebhookDiagnostics(): Promise<{
+  botUsername: string | null;
+  webhookUrl: string;
+  pendingUpdateCount: number;
+  ipAddress: string | null;
+  lastErrorAt: string | null;
+  lastErrorMessage: string | null;
+}> {
+  const identity = await telegramApi<TelegramBotIdentity>("getMe");
+  const webhook = await telegramApi<TelegramWebhookInfo>("getWebhookInfo");
+
+  return {
+    botUsername: identity.username ?? null,
+    webhookUrl: webhook.url,
+    pendingUpdateCount: webhook.pending_update_count,
+    ipAddress: webhook.ip_address ?? null,
+    lastErrorAt: webhook.last_error_date
+      ? new Date(webhook.last_error_date * 1000).toISOString()
+      : null,
+    lastErrorMessage: webhook.last_error_message ?? null,
+  };
 }
 
 export async function createTelegramRewardLink(userId: string): Promise<{
